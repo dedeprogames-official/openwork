@@ -25,6 +25,7 @@ import { SessionApi } from "./groups/session"
 import { SyncApi } from "./groups/sync"
 import { TuiApi } from "./groups/tui"
 import { WorkspaceApi } from "./groups/workspace"
+import { WorkApi } from "./groups/work"
 import { makeApi } from "@opencode-ai/protocol/api"
 import { LocationMiddleware } from "@opencode-ai/server/location"
 import { SessionLocationMiddleware } from "@opencode-ai/server/middleware/session-location"
@@ -55,6 +56,7 @@ export const RootHttpApi = HttpApi.make("opencode-root")
   .addHttpApi(ControlApi)
   .addHttpApi(ControlPlaneApi)
   .addHttpApi(GlobalApi)
+  .addHttpApi(WorkApi)
   .middleware(SchemaErrorMiddleware)
   .middleware(Authorization)
 

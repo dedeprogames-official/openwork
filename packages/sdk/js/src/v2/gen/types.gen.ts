@@ -93,6 +93,7 @@ export type Event =
   | EventWorktreeFailed
   | EventServerConnected
   | EventGlobalDisposed
+  | EventWorkUpdated
   | EventServerInstanceDisposed
 
 export type QuestionReplied = {
@@ -1600,6 +1601,14 @@ export type GlobalEvent = {
           [key: string]: unknown
         }
       }
+    | {
+        id: string
+        type: "work.updated"
+        properties: {
+          kind: "space" | "deployment" | "run" | "message" | "todo" | "agenda" | "memory" | "settings"
+          id?: string
+        }
+      }
     | EventServerInstanceDisposed
     | SyncEventSessionCreated
     | SyncEventSessionUpdated
@@ -2030,6 +2039,19 @@ export type Config = {
     mcp_timeout?: number
     policies?: Array<ConfigV2ExperimentalPolicy>
   }
+}
+
+export type WorkNotFoundError = {
+  _tag: "WorkNotFoundError"
+  kind: string
+  id: string
+  message: string
+}
+
+export type ConflictError = {
+  _tag: "ConflictError"
+  message: string
+  resource?: string
 }
 
 export type Model = {
@@ -2714,12 +2736,6 @@ export type PromptInput = {
   agents?: Array<PromptAgentAttachment>
 }
 
-export type ConflictError = {
-  _tag: "ConflictError"
-  message: string
-  resource?: string
-}
-
 export type ServiceUnavailableError = {
   _tag: "ServiceUnavailableError"
   message: string
@@ -2944,6 +2960,7 @@ export type V2Event =
   | WorktreeFailed
   | ServerConnected
   | GlobalDisposed
+  | WorkUpdated
 
 export type V2EventStream = string
 
@@ -3845,6 +3862,302 @@ export type ConfigV2ExperimentalPolicy = {
   action: "provider.use"
   effect: PolicyEffect
   resource: string
+}
+
+export type WorkColor = "purple" | "yellow" | "blue" | "green" | "pink" | "cyan" | "orange"
+
+export type WorkSpace = {
+  id: string
+  name: string
+  goal?: string
+  color: WorkColor
+  time: {
+    created: number
+    updated: number
+  }
+}
+
+export type WorkModelRef = {
+  providerID: string
+  modelID: string
+}
+
+export type WorkSchedule =
+  | {
+      type: "manual"
+    }
+  | {
+      type: "once"
+      at: number
+    }
+  | {
+      type: "interval"
+      /**
+       * Interval in milliseconds
+       */
+      every: number
+    }
+  | {
+      type: "daily"
+      /**
+       * Local time of day as HH:MM
+       */
+      at: string
+    }
+
+export type WorkAccess = "read" | "write" | "full"
+
+export type WorkDeploymentStatus = "active" | "paused" | "done"
+
+export type WorkDeployment = {
+  id: string
+  spaceID?: string
+  title: string
+  task: string
+  directory: string
+  agent: string
+  model?: WorkModelRef
+  skill?: string
+  schedule: WorkSchedule
+  access: WorkAccess
+  status: WorkDeploymentStatus
+  nextRunAt?: number
+  lastRunAt?: number
+  runRequestedAt?: number
+  runCount: number
+  chatSessionID?: string
+  time: {
+    created: number
+    updated: number
+  }
+}
+
+export type WorkRunStatus = "running" | "done" | "error" | "cancelled"
+
+export type WorkRunTrigger = "schedule" | "manual"
+
+export type WorkTokens = {
+  input: number
+  output: number
+  reasoning: number
+  cache: {
+    read: number
+    write: number
+  }
+}
+
+export type WorkRun = {
+  id: string
+  deploymentID: string
+  number: number
+  status: WorkRunStatus
+  trigger: WorkRunTrigger
+  sessionID?: string
+  summary?: string
+  error?: string
+  tokens: WorkTokens
+  cost: number
+  providerID?: string
+  modelID?: string
+  time: {
+    started: number
+    finished?: number
+  }
+}
+
+export type WorkUpcoming = {
+  deploymentID: string
+  at: number
+}
+
+export type WorkPriority = "normal" | "high"
+
+export type WorkMessage = {
+  id: string
+  deploymentID?: string
+  runID?: string
+  sessionID?: string
+  title: string
+  body: string
+  priority: WorkPriority
+  time: {
+    created: number
+    read?: number
+    done?: number
+  }
+}
+
+export type WorkTodo = {
+  id: string
+  content: string
+  source?: string
+  deploymentID?: string
+  position: number
+  time: {
+    created: number
+    done?: number
+  }
+}
+
+export type WorkAgenda = {
+  id: string
+  title: string
+  startsAt: number
+  endsAt?: number
+  spaceID?: string
+  note?: string
+  time: {
+    created: number
+  }
+}
+
+export type WorkMemory = {
+  id: string
+  content: string
+  source?: string
+  time: {
+    created: number
+  }
+}
+
+export type WorkProviderUsage = {
+  providerID: string
+  tokens: number
+  cost: number
+}
+
+export type WorkUsage = {
+  today: {
+    tokens: number
+    cost: number
+  }
+  hour: {
+    tokens: number
+    cost: number
+  }
+  providers: Array<WorkProviderUsage>
+  runsToday: number
+  runsRemaining: number
+}
+
+export type WorkState = {
+  now: number
+  paused: boolean
+  spaces: Array<WorkSpace>
+  deployments: Array<WorkDeployment>
+  /**
+   * Most recent run of each deployment
+   */
+  latest: Array<WorkRun>
+  /**
+   * Runs started today, oldest first
+   */
+  runs: Array<WorkRun>
+  /**
+   * Scheduled runs still to come today
+   */
+  upcoming: Array<WorkUpcoming>
+  messages: Array<WorkMessage>
+  todos: Array<WorkTodo>
+  agenda: Array<WorkAgenda>
+  memories: Array<WorkMemory>
+  usage: WorkUsage
+}
+
+export type WorkPauseInput = {
+  paused: boolean
+}
+
+export type WorkDemoInput = {
+  /**
+   * Folder the demo agents work in
+   */
+  directory?: string
+}
+
+export type WorkDemoResult = {
+  spaces: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  agents: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  directory: string
+}
+
+export type WorkDeploymentCreate = {
+  title: string
+  task: string
+  directory: string
+  spaceID?: string
+  agent?: string
+  model?: WorkModelRef
+  skill?: string
+  schedule: WorkSchedule
+  access?: WorkAccess
+  runNow?: boolean
+}
+
+export type WorkDeploymentPatch = {
+  title?: string
+  task?: string
+  directory?: string
+  spaceID?: string
+  agent?: string
+  model?: WorkModelRef
+  skill?: string
+  schedule?: WorkSchedule
+  access?: WorkAccess
+  status?: WorkDeploymentStatus
+}
+
+export type WorkChatResult = {
+  sessionID: string
+}
+
+export type WorkSpaceCreate = {
+  name: string
+  goal?: string
+  color?: WorkColor
+}
+
+export type WorkSpacePatch = {
+  name?: string
+  goal?: string
+  color?: WorkColor
+}
+
+export type WorkMessagePatch = {
+  read?: boolean
+  done?: boolean
+}
+
+export type WorkTodoCreate = {
+  content: string
+  source?: string
+  deploymentID?: string
+}
+
+export type WorkTodoPatch = {
+  content?: string
+  done?: boolean
+}
+
+export type WorkAgendaCreate = {
+  title: string
+  startsAt: number
+  endsAt?: number
+  spaceID?: string
+  note?: string
+}
+
+export type WorkAgendaPatch = {
+  title?: string
+  startsAt?: number
+  endsAt?: number
+  spaceID?: string
+  note?: string
+}
+
+export type WorkMemoryCreate = {
+  content: string
+  source?: string
 }
 
 export type ProjectDirectories = Array<{
@@ -6108,6 +6421,24 @@ export type GlobalDisposed = {
   }
 }
 
+export type WorkUpdated = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "work.updated"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    kind: "space" | "deployment" | "run" | "message" | "todo" | "agenda" | "memory" | "settings"
+    id?: string
+  }
+}
+
 export type QuestionV2Request = {
   id: string
   sessionID: string
@@ -7055,6 +7386,15 @@ export type EventGlobalDisposed = {
   }
 }
 
+export type EventWorkUpdated = {
+  id: string
+  type: "work.updated"
+  properties: {
+    kind: "space" | "deployment" | "run" | "message" | "todo" | "agenda" | "memory" | "settings"
+    id?: string
+  }
+}
+
 export type CredentialOAuth = {
   type: "oauth"
   methodID: string
@@ -7388,6 +7728,652 @@ export type GlobalUpgradeResponses = {
 }
 
 export type GlobalUpgradeResponse = GlobalUpgradeResponses[keyof GlobalUpgradeResponses]
+
+export type WorkStateData = {
+  body?: never
+  path?: never
+  query?: never
+  url: "/work/state"
+}
+
+export type WorkStateErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type WorkStateError = WorkStateErrors[keyof WorkStateErrors]
+
+export type WorkStateResponses = {
+  /**
+   * OpenWork dashboard state
+   */
+  200: WorkState
+}
+
+export type WorkStateResponse = WorkStateResponses[keyof WorkStateResponses]
+
+export type WorkPauseData = {
+  body?: WorkPauseInput
+  path?: never
+  query?: never
+  url: "/work/pause"
+}
+
+export type WorkPauseErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type WorkPauseError = WorkPauseErrors[keyof WorkPauseErrors]
+
+export type WorkPauseResponses = {
+  /**
+   * Agents paused or resumed
+   */
+  200: boolean
+}
+
+export type WorkPauseResponse = WorkPauseResponses[keyof WorkPauseResponses]
+
+export type WorkDemoData = {
+  body?: WorkDemoInput
+  path?: never
+  query?: never
+  url: "/work/demo"
+}
+
+export type WorkDemoErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+}
+
+export type WorkDemoError = WorkDemoErrors[keyof WorkDemoErrors]
+
+export type WorkDemoResponses = {
+  /**
+   * Demo workspace created
+   */
+  200: WorkDemoResult
+}
+
+export type WorkDemoResponse = WorkDemoResponses[keyof WorkDemoResponses]
+
+export type WorkDeploymentCreateData = {
+  body?: WorkDeploymentCreate
+  path?: never
+  query?: never
+  url: "/work/deployment"
+}
+
+export type WorkDeploymentCreateErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * WorkNotFoundError
+   */
+  404: WorkNotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+}
+
+export type WorkDeploymentCreateError = WorkDeploymentCreateErrors[keyof WorkDeploymentCreateErrors]
+
+export type WorkDeploymentCreateResponses = {
+  /**
+   * Deployed agent
+   */
+  200: WorkDeployment
+}
+
+export type WorkDeploymentCreateResponse = WorkDeploymentCreateResponses[keyof WorkDeploymentCreateResponses]
+
+export type WorkDeploymentRemoveData = {
+  body?: never
+  path: {
+    deploymentID: string
+  }
+  query?: never
+  url: "/work/deployment/{deploymentID}"
+}
+
+export type WorkDeploymentRemoveErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * WorkNotFoundError
+   */
+  404: WorkNotFoundError
+}
+
+export type WorkDeploymentRemoveError = WorkDeploymentRemoveErrors[keyof WorkDeploymentRemoveErrors]
+
+export type WorkDeploymentRemoveResponses = {
+  /**
+   * Agent removed
+   */
+  200: boolean
+}
+
+export type WorkDeploymentRemoveResponse = WorkDeploymentRemoveResponses[keyof WorkDeploymentRemoveResponses]
+
+export type WorkDeploymentUpdateData = {
+  body?: WorkDeploymentPatch
+  path: {
+    deploymentID: string
+  }
+  query?: never
+  url: "/work/deployment/{deploymentID}"
+}
+
+export type WorkDeploymentUpdateErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * WorkNotFoundError
+   */
+  404: WorkNotFoundError
+}
+
+export type WorkDeploymentUpdateError = WorkDeploymentUpdateErrors[keyof WorkDeploymentUpdateErrors]
+
+export type WorkDeploymentUpdateResponses = {
+  /**
+   * Updated agent
+   */
+  200: WorkDeployment
+}
+
+export type WorkDeploymentUpdateResponse = WorkDeploymentUpdateResponses[keyof WorkDeploymentUpdateResponses]
+
+export type WorkDeploymentRunData = {
+  body?: never
+  path: {
+    deploymentID: string
+  }
+  query?: never
+  url: "/work/deployment/{deploymentID}/run"
+}
+
+export type WorkDeploymentRunErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * WorkNotFoundError
+   */
+  404: WorkNotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+}
+
+export type WorkDeploymentRunError = WorkDeploymentRunErrors[keyof WorkDeploymentRunErrors]
+
+export type WorkDeploymentRunResponses = {
+  /**
+   * Started run
+   */
+  200: WorkRun
+}
+
+export type WorkDeploymentRunResponse = WorkDeploymentRunResponses[keyof WorkDeploymentRunResponses]
+
+export type WorkDeploymentRunsData = {
+  body?: never
+  path: {
+    deploymentID: string
+  }
+  query?: never
+  url: "/work/deployment/{deploymentID}/runs"
+}
+
+export type WorkDeploymentRunsErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * WorkNotFoundError
+   */
+  404: WorkNotFoundError
+}
+
+export type WorkDeploymentRunsError = WorkDeploymentRunsErrors[keyof WorkDeploymentRunsErrors]
+
+export type WorkDeploymentRunsResponses = {
+  /**
+   * Recent runs, newest first
+   */
+  200: Array<WorkRun>
+}
+
+export type WorkDeploymentRunsResponse = WorkDeploymentRunsResponses[keyof WorkDeploymentRunsResponses]
+
+export type WorkDeploymentChatData = {
+  body?: never
+  path: {
+    deploymentID: string
+  }
+  query?: never
+  url: "/work/deployment/{deploymentID}/chat"
+}
+
+export type WorkDeploymentChatErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * WorkNotFoundError
+   */
+  404: WorkNotFoundError
+}
+
+export type WorkDeploymentChatError = WorkDeploymentChatErrors[keyof WorkDeploymentChatErrors]
+
+export type WorkDeploymentChatResponses = {
+  /**
+   * Chat session for the agent
+   */
+  200: WorkChatResult
+}
+
+export type WorkDeploymentChatResponse = WorkDeploymentChatResponses[keyof WorkDeploymentChatResponses]
+
+export type WorkSpaceCreateData = {
+  body?: WorkSpaceCreate
+  path?: never
+  query?: never
+  url: "/work/space"
+}
+
+export type WorkSpaceCreateErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type WorkSpaceCreateError = WorkSpaceCreateErrors[keyof WorkSpaceCreateErrors]
+
+export type WorkSpaceCreateResponses = {
+  /**
+   * Created space
+   */
+  200: WorkSpace
+}
+
+export type WorkSpaceCreateResponse = WorkSpaceCreateResponses[keyof WorkSpaceCreateResponses]
+
+export type WorkSpaceRemoveData = {
+  body?: never
+  path: {
+    spaceID: string
+  }
+  query?: never
+  url: "/work/space/{spaceID}"
+}
+
+export type WorkSpaceRemoveErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * WorkNotFoundError
+   */
+  404: WorkNotFoundError
+}
+
+export type WorkSpaceRemoveError = WorkSpaceRemoveErrors[keyof WorkSpaceRemoveErrors]
+
+export type WorkSpaceRemoveResponses = {
+  /**
+   * Space removed
+   */
+  200: boolean
+}
+
+export type WorkSpaceRemoveResponse = WorkSpaceRemoveResponses[keyof WorkSpaceRemoveResponses]
+
+export type WorkSpaceUpdateData = {
+  body?: WorkSpacePatch
+  path: {
+    spaceID: string
+  }
+  query?: never
+  url: "/work/space/{spaceID}"
+}
+
+export type WorkSpaceUpdateErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * WorkNotFoundError
+   */
+  404: WorkNotFoundError
+}
+
+export type WorkSpaceUpdateError = WorkSpaceUpdateErrors[keyof WorkSpaceUpdateErrors]
+
+export type WorkSpaceUpdateResponses = {
+  /**
+   * Updated space
+   */
+  200: WorkSpace
+}
+
+export type WorkSpaceUpdateResponse = WorkSpaceUpdateResponses[keyof WorkSpaceUpdateResponses]
+
+export type WorkMessageRemoveData = {
+  body?: never
+  path: {
+    messageID: string
+  }
+  query?: never
+  url: "/work/message/{messageID}"
+}
+
+export type WorkMessageRemoveErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * WorkNotFoundError
+   */
+  404: WorkNotFoundError
+}
+
+export type WorkMessageRemoveError = WorkMessageRemoveErrors[keyof WorkMessageRemoveErrors]
+
+export type WorkMessageRemoveResponses = {
+  /**
+   * Inbox message removed
+   */
+  200: boolean
+}
+
+export type WorkMessageRemoveResponse = WorkMessageRemoveResponses[keyof WorkMessageRemoveResponses]
+
+export type WorkMessageUpdateData = {
+  body?: WorkMessagePatch
+  path: {
+    messageID: string
+  }
+  query?: never
+  url: "/work/message/{messageID}"
+}
+
+export type WorkMessageUpdateErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * WorkNotFoundError
+   */
+  404: WorkNotFoundError
+}
+
+export type WorkMessageUpdateError = WorkMessageUpdateErrors[keyof WorkMessageUpdateErrors]
+
+export type WorkMessageUpdateResponses = {
+  /**
+   * Updated inbox message
+   */
+  200: WorkMessage
+}
+
+export type WorkMessageUpdateResponse = WorkMessageUpdateResponses[keyof WorkMessageUpdateResponses]
+
+export type WorkTodoCreateData = {
+  body?: WorkTodoCreate
+  path?: never
+  query?: never
+  url: "/work/todo"
+}
+
+export type WorkTodoCreateErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type WorkTodoCreateError = WorkTodoCreateErrors[keyof WorkTodoCreateErrors]
+
+export type WorkTodoCreateResponses = {
+  /**
+   * Created todo
+   */
+  200: WorkTodo
+}
+
+export type WorkTodoCreateResponse = WorkTodoCreateResponses[keyof WorkTodoCreateResponses]
+
+export type WorkTodoRemoveData = {
+  body?: never
+  path: {
+    todoID: string
+  }
+  query?: never
+  url: "/work/todo/{todoID}"
+}
+
+export type WorkTodoRemoveErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * WorkNotFoundError
+   */
+  404: WorkNotFoundError
+}
+
+export type WorkTodoRemoveError = WorkTodoRemoveErrors[keyof WorkTodoRemoveErrors]
+
+export type WorkTodoRemoveResponses = {
+  /**
+   * Todo removed
+   */
+  200: boolean
+}
+
+export type WorkTodoRemoveResponse = WorkTodoRemoveResponses[keyof WorkTodoRemoveResponses]
+
+export type WorkTodoUpdateData = {
+  body?: WorkTodoPatch
+  path: {
+    todoID: string
+  }
+  query?: never
+  url: "/work/todo/{todoID}"
+}
+
+export type WorkTodoUpdateErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * WorkNotFoundError
+   */
+  404: WorkNotFoundError
+}
+
+export type WorkTodoUpdateError = WorkTodoUpdateErrors[keyof WorkTodoUpdateErrors]
+
+export type WorkTodoUpdateResponses = {
+  /**
+   * Updated todo
+   */
+  200: WorkTodo
+}
+
+export type WorkTodoUpdateResponse = WorkTodoUpdateResponses[keyof WorkTodoUpdateResponses]
+
+export type WorkAgendaCreateData = {
+  body?: WorkAgendaCreate
+  path?: never
+  query?: never
+  url: "/work/agenda"
+}
+
+export type WorkAgendaCreateErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type WorkAgendaCreateError = WorkAgendaCreateErrors[keyof WorkAgendaCreateErrors]
+
+export type WorkAgendaCreateResponses = {
+  /**
+   * Created event
+   */
+  200: WorkAgenda
+}
+
+export type WorkAgendaCreateResponse = WorkAgendaCreateResponses[keyof WorkAgendaCreateResponses]
+
+export type WorkAgendaRemoveData = {
+  body?: never
+  path: {
+    agendaID: string
+  }
+  query?: never
+  url: "/work/agenda/{agendaID}"
+}
+
+export type WorkAgendaRemoveErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * WorkNotFoundError
+   */
+  404: WorkNotFoundError
+}
+
+export type WorkAgendaRemoveError = WorkAgendaRemoveErrors[keyof WorkAgendaRemoveErrors]
+
+export type WorkAgendaRemoveResponses = {
+  /**
+   * Event removed
+   */
+  200: boolean
+}
+
+export type WorkAgendaRemoveResponse = WorkAgendaRemoveResponses[keyof WorkAgendaRemoveResponses]
+
+export type WorkAgendaUpdateData = {
+  body?: WorkAgendaPatch
+  path: {
+    agendaID: string
+  }
+  query?: never
+  url: "/work/agenda/{agendaID}"
+}
+
+export type WorkAgendaUpdateErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * WorkNotFoundError
+   */
+  404: WorkNotFoundError
+}
+
+export type WorkAgendaUpdateError = WorkAgendaUpdateErrors[keyof WorkAgendaUpdateErrors]
+
+export type WorkAgendaUpdateResponses = {
+  /**
+   * Updated event
+   */
+  200: WorkAgenda
+}
+
+export type WorkAgendaUpdateResponse = WorkAgendaUpdateResponses[keyof WorkAgendaUpdateResponses]
+
+export type WorkMemoryCreateData = {
+  body?: WorkMemoryCreate
+  path?: never
+  query?: never
+  url: "/work/memory"
+}
+
+export type WorkMemoryCreateErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type WorkMemoryCreateError = WorkMemoryCreateErrors[keyof WorkMemoryCreateErrors]
+
+export type WorkMemoryCreateResponses = {
+  /**
+   * Saved memory
+   */
+  200: WorkMemory
+}
+
+export type WorkMemoryCreateResponse = WorkMemoryCreateResponses[keyof WorkMemoryCreateResponses]
+
+export type WorkMemoryRemoveData = {
+  body?: never
+  path: {
+    memoryID: string
+  }
+  query?: never
+  url: "/work/memory/{memoryID}"
+}
+
+export type WorkMemoryRemoveErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * WorkNotFoundError
+   */
+  404: WorkNotFoundError
+}
+
+export type WorkMemoryRemoveError = WorkMemoryRemoveErrors[keyof WorkMemoryRemoveErrors]
+
+export type WorkMemoryRemoveResponses = {
+  /**
+   * Memory removed
+   */
+  200: boolean
+}
+
+export type WorkMemoryRemoveResponse = WorkMemoryRemoveResponses[keyof WorkMemoryRemoveResponses]
 
 export type EventSubscribeData = {
   body?: never

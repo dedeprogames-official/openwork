@@ -1,0 +1,7 @@
+Read and update the user's agenda in OpenWork ("Your Agenda").
+
+- list: events from today for the next `days` days (default 1)
+- add: create an event with `title` and `starts_at`. `starts_at` accepts "HH:MM" (today, local time) or any date the JavaScript Date parser understands, such as "2026-10-08T17:30".
+- remove: delete an event by `id`
+
+Optionally attach an event to a space by name with `space`, so the agents in that space show up next to it.

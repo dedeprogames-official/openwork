@@ -395,6 +395,62 @@ import type {
   VcsGetResponses,
   VcsStatusErrors,
   VcsStatusResponses,
+  WorkAgendaCreate,
+  WorkAgendaCreateErrors,
+  WorkAgendaCreateResponses,
+  WorkAgendaPatch,
+  WorkAgendaRemoveErrors,
+  WorkAgendaRemoveResponses,
+  WorkAgendaUpdateErrors,
+  WorkAgendaUpdateResponses,
+  WorkDemoErrors,
+  WorkDemoInput,
+  WorkDemoResponses,
+  WorkDeploymentChatErrors,
+  WorkDeploymentChatResponses,
+  WorkDeploymentCreate,
+  WorkDeploymentCreateErrors,
+  WorkDeploymentCreateResponses,
+  WorkDeploymentPatch,
+  WorkDeploymentRemoveErrors,
+  WorkDeploymentRemoveResponses,
+  WorkDeploymentRunErrors,
+  WorkDeploymentRunResponses,
+  WorkDeploymentRunsErrors,
+  WorkDeploymentRunsResponses,
+  WorkDeploymentUpdateErrors,
+  WorkDeploymentUpdateResponses,
+  WorkMemoryCreate,
+  WorkMemoryCreateErrors,
+  WorkMemoryCreateResponses,
+  WorkMemoryRemoveErrors,
+  WorkMemoryRemoveResponses,
+  WorkMessagePatch,
+  WorkMessageRemoveErrors,
+  WorkMessageRemoveResponses,
+  WorkMessageUpdateErrors,
+  WorkMessageUpdateResponses,
+  WorkPauseErrors,
+  WorkPauseInput,
+  WorkPauseResponses,
+  WorkSpaceCreate,
+  WorkSpaceCreateErrors,
+  WorkSpaceCreateResponses,
+  WorkSpacePatch,
+  WorkSpaceRemoveErrors,
+  WorkSpaceRemoveResponses,
+  WorkSpaceUpdateErrors,
+  WorkSpaceUpdateResponses,
+  WorkStateErrors,
+  WorkStateResponses,
+  WorkTodoCreate,
+  WorkTodoCreateErrors,
+  WorkTodoCreateResponses,
+  WorkTodoPatch,
+  WorkTodoRemoveErrors,
+  WorkTodoRemoveResponses,
+  WorkTodoUpdateErrors,
+  WorkTodoUpdateResponses,
   WorktreeCreateErrors,
   WorktreeCreateInput,
   WorktreeCreateResponses,
@@ -1379,6 +1435,588 @@ export class Global extends HeyApiClient {
   private _config?: Config
   get config(): Config {
     return (this._config ??= new Config({ client: this.client }))
+  }
+}
+
+export class Deployment extends HeyApiClient {
+  /**
+   * Deploy agent
+   *
+   * Deploy an agent that runs a task in a folder on a schedule.
+   */
+  public create<ThrowOnError extends boolean = false>(
+    parameters?: {
+      workDeploymentCreate?: WorkDeploymentCreate
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ key: "workDeploymentCreate", map: "body" }] }])
+    return (options?.client ?? this.client).post<
+      WorkDeploymentCreateResponses,
+      WorkDeploymentCreateErrors,
+      ThrowOnError
+    >({
+      url: "/work/deployment",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Remove agent
+   *
+   * Remove a deployed agent and its runs.
+   */
+  public remove<ThrowOnError extends boolean = false>(
+    parameters: {
+      deploymentID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "deploymentID" }] }])
+    return (options?.client ?? this.client).delete<
+      WorkDeploymentRemoveResponses,
+      WorkDeploymentRemoveErrors,
+      ThrowOnError
+    >({
+      url: "/work/deployment/{deploymentID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Update agent
+   *
+   * Edit, pause or resume a deployed agent.
+   */
+  public update<ThrowOnError extends boolean = false>(
+    parameters: {
+      deploymentID: string
+      workDeploymentPatch?: WorkDeploymentPatch
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "deploymentID" },
+            { key: "workDeploymentPatch", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).patch<
+      WorkDeploymentUpdateResponses,
+      WorkDeploymentUpdateErrors,
+      ThrowOnError
+    >({
+      url: "/work/deployment/{deploymentID}",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Run agent now
+   *
+   * Start a run of a deployed agent right away.
+   */
+  public run<ThrowOnError extends boolean = false>(
+    parameters: {
+      deploymentID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "deploymentID" }] }])
+    return (options?.client ?? this.client).post<WorkDeploymentRunResponses, WorkDeploymentRunErrors, ThrowOnError>({
+      url: "/work/deployment/{deploymentID}/run",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * List agent runs
+   *
+   * List the 50 most recent runs of an agent.
+   */
+  public runs<ThrowOnError extends boolean = false>(
+    parameters: {
+      deploymentID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "deploymentID" }] }])
+    return (options?.client ?? this.client).get<WorkDeploymentRunsResponses, WorkDeploymentRunsErrors, ThrowOnError>({
+      url: "/work/deployment/{deploymentID}/runs",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Chat with agent
+   *
+   * Get or create the session used to ask a deployed agent about its work.
+   */
+  public chat<ThrowOnError extends boolean = false>(
+    parameters: {
+      deploymentID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "deploymentID" }] }])
+    return (options?.client ?? this.client).post<WorkDeploymentChatResponses, WorkDeploymentChatErrors, ThrowOnError>({
+      url: "/work/deployment/{deploymentID}/chat",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class Space extends HeyApiClient {
+  /**
+   * Create space
+   *
+   * Create a space that groups agents.
+   */
+  public create<ThrowOnError extends boolean = false>(
+    parameters?: {
+      workSpaceCreate?: WorkSpaceCreate
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ key: "workSpaceCreate", map: "body" }] }])
+    return (options?.client ?? this.client).post<WorkSpaceCreateResponses, WorkSpaceCreateErrors, ThrowOnError>({
+      url: "/work/space",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Remove space
+   *
+   * Remove a space; its agents stay deployed.
+   */
+  public remove<ThrowOnError extends boolean = false>(
+    parameters: {
+      spaceID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "spaceID" }] }])
+    return (options?.client ?? this.client).delete<WorkSpaceRemoveResponses, WorkSpaceRemoveErrors, ThrowOnError>({
+      url: "/work/space/{spaceID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Update space
+   *
+   * Rename a space or change its goal or color.
+   */
+  public update<ThrowOnError extends boolean = false>(
+    parameters: {
+      spaceID: string
+      workSpacePatch?: WorkSpacePatch
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "spaceID" },
+            { key: "workSpacePatch", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).patch<WorkSpaceUpdateResponses, WorkSpaceUpdateErrors, ThrowOnError>({
+      url: "/work/space/{spaceID}",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
+export class Message extends HeyApiClient {
+  /**
+   * Remove inbox message
+   *
+   * Delete an Agent Inbox message.
+   */
+  public remove<ThrowOnError extends boolean = false>(
+    parameters: {
+      messageID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "messageID" }] }])
+    return (options?.client ?? this.client).delete<WorkMessageRemoveResponses, WorkMessageRemoveErrors, ThrowOnError>({
+      url: "/work/message/{messageID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Update inbox message
+   *
+   * Mark an Agent Inbox message as read or done.
+   */
+  public update<ThrowOnError extends boolean = false>(
+    parameters: {
+      messageID: string
+      workMessagePatch?: WorkMessagePatch
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "messageID" },
+            { key: "workMessagePatch", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).patch<WorkMessageUpdateResponses, WorkMessageUpdateErrors, ThrowOnError>({
+      url: "/work/message/{messageID}",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
+export class Todo extends HeyApiClient {
+  /**
+   * Add todo
+   *
+   * Add an item to the user's todo list.
+   */
+  public create<ThrowOnError extends boolean = false>(
+    parameters?: {
+      workTodoCreate?: WorkTodoCreate
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ key: "workTodoCreate", map: "body" }] }])
+    return (options?.client ?? this.client).post<WorkTodoCreateResponses, WorkTodoCreateErrors, ThrowOnError>({
+      url: "/work/todo",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Remove todo
+   *
+   * Delete a todo.
+   */
+  public remove<ThrowOnError extends boolean = false>(
+    parameters: {
+      todoID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "todoID" }] }])
+    return (options?.client ?? this.client).delete<WorkTodoRemoveResponses, WorkTodoRemoveErrors, ThrowOnError>({
+      url: "/work/todo/{todoID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Update todo
+   *
+   * Edit a todo or mark it done.
+   */
+  public update<ThrowOnError extends boolean = false>(
+    parameters: {
+      todoID: string
+      workTodoPatch?: WorkTodoPatch
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "todoID" },
+            { key: "workTodoPatch", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).patch<WorkTodoUpdateResponses, WorkTodoUpdateErrors, ThrowOnError>({
+      url: "/work/todo/{todoID}",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
+export class Agenda extends HeyApiClient {
+  /**
+   * Add event
+   *
+   * Add an event to the user's agenda.
+   */
+  public create<ThrowOnError extends boolean = false>(
+    parameters?: {
+      workAgendaCreate?: WorkAgendaCreate
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ key: "workAgendaCreate", map: "body" }] }])
+    return (options?.client ?? this.client).post<WorkAgendaCreateResponses, WorkAgendaCreateErrors, ThrowOnError>({
+      url: "/work/agenda",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Remove event
+   *
+   * Delete an agenda event.
+   */
+  public remove<ThrowOnError extends boolean = false>(
+    parameters: {
+      agendaID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "agendaID" }] }])
+    return (options?.client ?? this.client).delete<WorkAgendaRemoveResponses, WorkAgendaRemoveErrors, ThrowOnError>({
+      url: "/work/agenda/{agendaID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Update event
+   *
+   * Edit an agenda event.
+   */
+  public update<ThrowOnError extends boolean = false>(
+    parameters: {
+      agendaID: string
+      workAgendaPatch?: WorkAgendaPatch
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "agendaID" },
+            { key: "workAgendaPatch", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).patch<WorkAgendaUpdateResponses, WorkAgendaUpdateErrors, ThrowOnError>({
+      url: "/work/agenda/{agendaID}",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
+export class Memory extends HeyApiClient {
+  /**
+   * Save memory
+   *
+   * Save a fact for every OpenWork chat and agent.
+   */
+  public create<ThrowOnError extends boolean = false>(
+    parameters?: {
+      workMemoryCreate?: WorkMemoryCreate
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ key: "workMemoryCreate", map: "body" }] }])
+    return (options?.client ?? this.client).post<WorkMemoryCreateResponses, WorkMemoryCreateErrors, ThrowOnError>({
+      url: "/work/memory",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Forget memory
+   *
+   * Delete a saved memory.
+   */
+  public remove<ThrowOnError extends boolean = false>(
+    parameters: {
+      memoryID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "memoryID" }] }])
+    return (options?.client ?? this.client).delete<WorkMemoryRemoveResponses, WorkMemoryRemoveErrors, ThrowOnError>({
+      url: "/work/memory/{memoryID}",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class Work extends HeyApiClient {
+  /**
+   * Get OpenWork state
+   *
+   * Everything the OpenWork dashboard shows: spaces, deployed agents, today's runs, inbox, todos, agenda, memory and usage.
+   */
+  public state<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
+    return (options?.client ?? this.client).get<WorkStateResponses, WorkStateErrors, ThrowOnError>({
+      url: "/work/state",
+      ...options,
+    })
+  }
+
+  /**
+   * Pause agents
+   *
+   * Pause or resume every scheduled agent.
+   */
+  public pause<ThrowOnError extends boolean = false>(
+    parameters?: {
+      workPauseInput?: WorkPauseInput
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ key: "workPauseInput", map: "body" }] }])
+    return (options?.client ?? this.client).post<WorkPauseResponses, WorkPauseErrors, ThrowOnError>({
+      url: "/work/pause",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Load demo
+   *
+   * Seed a demo workspace with spaces, agents, runs, inbox, todos and agenda.
+   */
+  public demo<ThrowOnError extends boolean = false>(
+    parameters?: {
+      workDemoInput?: WorkDemoInput
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ key: "workDemoInput", map: "body" }] }])
+    return (options?.client ?? this.client).post<WorkDemoResponses, WorkDemoErrors, ThrowOnError>({
+      url: "/work/demo",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  private _deployment?: Deployment
+  get deployment(): Deployment {
+    return (this._deployment ??= new Deployment({ client: this.client }))
+  }
+
+  private _space?: Space
+  get space(): Space {
+    return (this._space ??= new Space({ client: this.client }))
+  }
+
+  private _message?: Message
+  get message(): Message {
+    return (this._message ??= new Message({ client: this.client }))
+  }
+
+  private _todo?: Todo
+  get todo(): Todo {
+    return (this._todo ??= new Todo({ client: this.client }))
+  }
+
+  private _agenda?: Agenda
+  get agenda(): Agenda {
+    return (this._agenda ??= new Agenda({ client: this.client }))
+  }
+
+  private _memory?: Memory
+  get memory(): Memory {
+    return (this._memory ??= new Memory({ client: this.client }))
   }
 }
 
@@ -7100,6 +7738,11 @@ export class OpencodeClient extends HeyApiClient {
   private _global?: Global
   get global(): Global {
     return (this._global ??= new Global({ client: this.client }))
+  }
+
+  private _work?: Work
+  get work(): Work {
+    return (this._work ??= new Work({ client: this.client }))
   }
 
   private _event?: Event

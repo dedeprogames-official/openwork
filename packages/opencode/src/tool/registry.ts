@@ -16,6 +16,12 @@ import { WebFetchTool } from "./webfetch"
 import { WriteTool } from "./write"
 import { InvalidTool } from "./invalid"
 import { SkillTool } from "./skill"
+import { InboxTool } from "./inbox"
+import { UserTodoTool } from "./user-todo"
+import { AgendaTool } from "./agenda"
+import { MemoryTool } from "./memory"
+import { DeployTool } from "./deploy"
+import { Work } from "@opencode-ai/core/work"
 import * as Tool from "./tool"
 import { Config } from "@/config/config"
 import { type ToolContext as PluginToolContext, type ToolDefinition } from "@opencode-ai/plugin"
@@ -114,6 +120,11 @@ const layer = Layer.effect(
     const greptool = yield* GrepTool
     const patchtool = yield* ApplyPatchTool
     const skilltool = yield* SkillTool
+    const inbox = yield* InboxTool
+    const usertodo = yield* UserTodoTool
+    const agenda = yield* AgendaTool
+    const memory = yield* MemoryTool
+    const deploy = yield* DeployTool
     const agent = yield* Agent.Service
     const codeMode = flags.experimentalCodeMode ? yield* Effect.promise(() => import("./code-mode")) : undefined
     const codeModeTool = codeMode ? yield* codeMode.CodeModeTool : undefined
@@ -223,6 +234,11 @@ const layer = Layer.effect(
           question: Tool.init(question),
           lsp: Tool.init(lsptool),
           plan: Tool.init(plan),
+          inbox: Tool.init(inbox),
+          usertodo: Tool.init(usertodo),
+          agenda: Tool.init(agenda),
+          memory: Tool.init(memory),
+          deploy: Tool.init(deploy),
           ...(codeModeTool ? { execute: Tool.init(codeModeTool) } : {}),
         })
 
@@ -243,6 +259,11 @@ const layer = Layer.effect(
             tool.search,
             tool.skill,
             tool.patch,
+            tool.inbox,
+            tool.usertodo,
+            tool.agenda,
+            tool.memory,
+            tool.deploy,
             ...(tool.execute ? [tool.execute] : []),
             ...(flags.experimentalLspTool ? [tool.lsp] : []),
             ...(flags.experimentalPlanMode && flags.client === "cli" ? [tool.plan] : []),
@@ -449,6 +470,7 @@ export const node = LayerNode.make({
     MCP.node,
     Database.node,
     Ripgrep.node,
+    Work.node,
   ],
 })
 

@@ -82,6 +82,22 @@ describe("Work", () => {
       expect(state.latest[0]?.summary).toBe("Sunny")
       expect(state.latest[0]?.tokens.input).toBe(1200)
       expect(state.runs).toHaveLength(1)
+      expect(state.usage.today.tokens).toBe(1280)
+      expect(state.usage.runsToday).toBe(1)
+
+      const recorded = yield* work.run.record({
+        deploymentID: deployment.id,
+        trigger: "schedule",
+        status: "done",
+        summary: "Imported",
+        tokens: { input: 100, output: 20, reasoning: 0, cache: { read: 0, write: 0 } },
+        cost: 0,
+        providerID: "ollama",
+        started: now - 1000,
+        finished: now - 500,
+      })
+      expect(recorded.number).toBe(2)
+      expect((yield* work.state(now)).usage.providers.find((item) => item.providerID === "ollama")?.tokens).toBe(120)
     }),
   )
 

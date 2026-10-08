@@ -24,6 +24,9 @@ import { LocationServiceMap, locationServiceMapLayer } from "@opencode-ai/core/l
 import { Reference } from "@opencode-ai/core/reference"
 import { MCP } from "@/mcp"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import { Work } from "@opencode-ai/core/work"
+import { WorkPrompt } from "@/work/prompt"
+import { WorkSession } from "@/work/session"
 
 export function provider(model: Provider.Model) {
   if (model.api.id.includes("muse")) {
@@ -54,6 +57,12 @@ export interface Interface {
   readonly environment: (model: Provider.Model) => Effect.Effect<string[]>
   readonly skills: (agent: Agent.Info) => Effect.Effect<string | undefined>
   readonly mcp: (agent: Agent.Info, permission?: PermissionV1.Ruleset) => Effect.Effect<string | undefined>
+  /** OpenWork context: saved memories and, for deployed agents, what they were deployed to do. */
+  readonly work: (input: {
+    agent: Agent.Info
+    permission?: PermissionV1.Ruleset
+    metadata?: Record<string, unknown>
+  }) => Effect.Effect<string | undefined>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/SystemPrompt") {}
@@ -64,6 +73,7 @@ const layer = Layer.effect(
     const skill = yield* Skill.Service
     const mcp = yield* MCP.Service
     const locations = yield* LocationServiceMap.Service
+    const work = yield* Work.Service
 
     return Service.of({
       environment: Effect.fn("SystemPrompt.environment")(function* (model: Provider.Model) {
@@ -135,6 +145,16 @@ const layer = Layer.effect(
           "</mcp_instructions>",
         ].join("\n")
       }),
+
+      work: Effect.fn("SystemPrompt.work")(function* (input) {
+        const ruleset = Permission.merge(input.agent.permission, input.permission ?? [])
+        const memories = Permission.disabled(["memory"], ruleset).has("memory") ? [] : yield* work.memory.list()
+        const owner = WorkSession.meta(input.metadata)
+        const deployment = owner ? yield* work.deployment.get(owner.deploymentID) : undefined
+        const runs = deployment ? (yield* work.run.list(deployment.id, 4)).filter((run) => run.id !== owner?.runID).slice(0, 3) : []
+        const space = deployment?.spaceID ? yield* work.space.get(deployment.spaceID) : undefined
+        return WorkPrompt.context({ memories, deployment, runs, space })
+      }),
     })
   }),
 )
@@ -148,7 +168,7 @@ const locationServiceMapNode = LayerNode.make({
 export const node = LayerNode.make({
   service: Service,
   layer: layer,
-  deps: [Skill.node, MCP.node, locationServiceMapNode],
+  deps: [Skill.node, MCP.node, locationServiceMapNode, Work.node],
 })
 
 export * as SystemPrompt from "./system"

@@ -183,6 +183,7 @@ function withContext<A, E>(
           llmText: (value) => Effect.suspend(() => llm().text(value)),
           llmWait: (count) => Effect.suspend(() => llm().wait(count)),
           tuiRequest: (request) => Effect.sync(() => modules.Tui.submitTuiRequest(request)),
+          work: (fn) => run(modules.Work.Service.use((svc) => fn(svc).pipe(Effect.orDie))),
         }
         yield* trace(options, scenario, `${label} seed start`)
         const state = yield* scenario.seed(base)

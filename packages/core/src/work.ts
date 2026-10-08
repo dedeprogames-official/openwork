@@ -46,6 +46,7 @@ export type Schedule = Work.Schedule
 export type Access = Work.Access
 export type Tokens = Work.Tokens
 export type Kind = Work.Kind
+export type Color = Work.Color
 export type RunTrigger = Work.RunTrigger
 export type SpaceCreate = Work.SpaceCreate
 export type DeploymentCreate = Work.DeploymentCreate
@@ -94,6 +95,8 @@ export interface Interface {
     /** Asks whichever process runs the scheduler to start this agent as soon as possible. */
     readonly requestRun: (id: DeploymentID) => Effect.Effect<void, NotFoundError>
     readonly setChat: (id: DeploymentID, sessionID: string) => Effect.Effect<void>
+    /** Moves the next scheduled run, e.g. to stagger imported agents. */
+    readonly reschedule: (id: DeploymentID, nextRunAt: number | undefined) => Effect.Effect<void>
     /** Deployments whose scheduled or requested run is due and that are not already running. */
     readonly due: (now: number) => Effect.Effect<Work.Deployment[]>
   }
@@ -109,6 +112,15 @@ export interface Interface {
       readonly pid: number
     }) => Effect.Effect<Work.Run | undefined, NotFoundError>
     readonly attach: (id: RunID, sessionID: string) => Effect.Effect<void>
+    /** Stores an already finished run, e.g. history imported from elsewhere. */
+    readonly record: (
+      input: RunOutcome & {
+        readonly deploymentID: DeploymentID
+        readonly trigger: Work.RunTrigger
+        readonly started: number
+        readonly finished: number
+      },
+    ) => Effect.Effect<Work.Run, NotFoundError>
     readonly finish: (id: RunID, outcome: RunOutcome) => Effect.Effect<void>
     readonly get: (id: RunID) => Effect.Effect<Work.Run | undefined>
     readonly list: (deploymentID: DeploymentID, limit?: number) => Effect.Effect<Work.Run[]>
@@ -203,8 +215,9 @@ const layer = Layer.effect(
       const from = Math.min(since, hour)
       const tokens = sql<number>`coalesce(json_extract(${MessageTable.data}, '$.tokens.input'), 0) + coalesce(json_extract(${MessageTable.data}, '$.tokens.output'), 0) + coalesce(json_extract(${MessageTable.data}, '$.tokens.reasoning'), 0) + coalesce(json_extract(${MessageTable.data}, '$.tokens.cache.read'), 0) + coalesce(json_extract(${MessageTable.data}, '$.tokens.cache.write'), 0)`
       const cost = sql<number>`coalesce(json_extract(${MessageTable.data}, '$.cost'), 0)`
-      // Filter sessions first so the message scan can use the (session_id, time_created) index.
-      const rows = yield* db
+      // Chats only: agent runs are counted from work_run below. Filtering sessions first lets the message
+      // scan use the (session_id, time_created) index.
+      const chats = yield* db
         .select({
           providerID: sql<string | null>`json_extract(${MessageTable.data}, '$.providerID')`,
           today: sql<number>`coalesce(sum(case when ${MessageTable.time_created} >= ${since} then ${tokens} else 0 end), 0)`,
@@ -217,7 +230,15 @@ const layer = Layer.effect(
           and(
             inArray(
               MessageTable.session_id,
-              db.select({ id: SessionTable.id }).from(SessionTable).where(gte(SessionTable.time_updated, from)),
+              db
+                .select({ id: SessionTable.id })
+                .from(SessionTable)
+                .where(
+                  and(
+                    gte(SessionTable.time_updated, from),
+                    sql`json_extract(${SessionTable.metadata}, '$.openwork.kind') is not 'run'`,
+                  ),
+                ),
             ),
             gte(MessageTable.time_created, from),
             sql`json_extract(${MessageTable.data}, '$.role') = 'assistant'`,
@@ -226,6 +247,27 @@ const layer = Layer.effect(
         .groupBy(sql`json_extract(${MessageTable.data}, '$.providerID')`)
         .all()
         .pipe(Effect.orDie)
+      const runTokens = sql<number>`${WorkRunTable.tokens_input} + ${WorkRunTable.tokens_output} + ${WorkRunTable.tokens_reasoning} + ${WorkRunTable.tokens_cache_read} + ${WorkRunTable.tokens_cache_write}`
+      const runs = yield* db
+        .select({
+          providerID: WorkRunTable.provider_id,
+          today: sql<number>`coalesce(sum(case when ${WorkRunTable.time_started} >= ${since} then ${runTokens} else 0 end), 0)`,
+          todayCost: sql<number>`coalesce(sum(case when ${WorkRunTable.time_started} >= ${since} then ${WorkRunTable.cost} else 0 end), 0)`,
+          hour: sql<number>`coalesce(sum(case when ${WorkRunTable.time_started} >= ${hour} then ${runTokens} else 0 end), 0)`,
+          hourCost: sql<number>`coalesce(sum(case when ${WorkRunTable.time_started} >= ${hour} then ${WorkRunTable.cost} else 0 end), 0)`,
+        })
+        .from(WorkRunTable)
+        .where(gte(WorkRunTable.time_started, from))
+        .groupBy(WorkRunTable.provider_id)
+        .all()
+        .pipe(Effect.orDie)
+      const rows = [...chats, ...runs]
+      const providers = new Map<string, { tokens: number; cost: number }>()
+      for (const row of rows) {
+        const key = row.providerID ?? "unknown"
+        const current = providers.get(key) ?? { tokens: 0, cost: 0 }
+        providers.set(key, { tokens: current.tokens + Number(row.today), cost: current.cost + Number(row.todayCost) })
+      }
       return {
         today: {
           tokens: rows.reduce((sum, row) => sum + Number(row.today), 0),
@@ -235,9 +277,9 @@ const layer = Layer.effect(
           tokens: rows.reduce((sum, row) => sum + Number(row.hour), 0),
           cost: rows.reduce((sum, row) => sum + Number(row.hourCost), 0),
         },
-        providers: rows
-          .filter((row) => Number(row.today) > 0)
-          .map((row) => ({ providerID: row.providerID ?? "unknown", tokens: Number(row.today), cost: Number(row.todayCost) })),
+        providers: Array.from(providers.entries())
+          .filter((entry) => entry[1].tokens > 0)
+          .map((entry) => ({ providerID: entry[0], tokens: entry[1].tokens, cost: entry[1].cost })),
       }
     })
 
@@ -442,6 +484,15 @@ const layer = Layer.effect(
             .pipe(Effect.orDie)
           yield* changed("deployment", id)
         }),
+        reschedule: Effect.fn("Work.deployment.reschedule")(function* (id: DeploymentID, nextRunAt: number | undefined) {
+          yield* db
+            .update(WorkDeploymentTable)
+            .set({ next_run_at: nextRunAt ?? null })
+            .where(eq(WorkDeploymentTable.id, id))
+            .run()
+            .pipe(Effect.orDie)
+          yield* changed("deployment", id)
+        }),
         due: Effect.fn("Work.deployment.due")(function* (now: number) {
           const isPaused = yield* paused()
           const busy = yield* running()
@@ -524,6 +575,46 @@ const layer = Layer.effect(
           if (!claimed) return
           yield* changed("run", id)
           return yield* getRun(id)
+        }),
+        record: Effect.fn("Work.run.record")(function* (input) {
+          const current = yield* getDeployment(input.deploymentID)
+          if (!current) return yield* missing("deployment", input.deploymentID)
+          const id = RunID.create()
+          yield* db
+            .transaction((tx) =>
+              Effect.gen(function* () {
+                yield* tx
+                  .update(WorkDeploymentTable)
+                  .set({ run_count: current.runCount + 1, last_run_at: Math.max(current.lastRunAt ?? 0, input.started) })
+                  .where(eq(WorkDeploymentTable.id, current.id))
+                  .run()
+                yield* tx
+                  .insert(WorkRunTable)
+                  .values({
+                    id,
+                    deployment_id: current.id,
+                    number: current.runCount + 1,
+                    status: input.status,
+                    trigger: input.trigger,
+                    summary: input.summary,
+                    error: input.error,
+                    tokens_input: input.tokens?.input,
+                    tokens_output: input.tokens?.output,
+                    tokens_reasoning: input.tokens?.reasoning,
+                    tokens_cache_read: input.tokens?.cache.read,
+                    tokens_cache_write: input.tokens?.cache.write,
+                    cost: input.cost,
+                    provider_id: input.providerID,
+                    model_id: input.modelID,
+                    time_started: input.started,
+                    time_finished: input.finished,
+                  })
+                  .run()
+              }),
+            )
+            .pipe(Effect.orDie)
+          yield* changed("run", id)
+          return (yield* getRun(id))!
         }),
         attach: Effect.fn("Work.run.attach")(function* (id: RunID, sessionID: string) {
           yield* db.update(WorkRunTable).set({ session_id: sessionID }).where(eq(WorkRunTable.id, id)).run().pipe(Effect.orDie)
