@@ -24,9 +24,10 @@ export function createBuiltinPlugins(options: { experimentalEventSystem: boolean
     HomeTips,
     SidebarContext,
     SidebarMcp,
-    SidebarLsp,
+    // OpenWork is not code-first: LSP and changed-files panels start disabled (enable them in /plugins).
+    { ...SidebarLsp, enabled: false },
     SidebarTodo,
-    SidebarFiles,
+    { ...SidebarFiles, enabled: false },
     SidebarFooter,
     Notifications,
     PluginManager,

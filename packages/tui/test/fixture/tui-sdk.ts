@@ -103,6 +103,27 @@ export function createFetch(override?: FetchHandler, events?: ReturnType<typeof 
     if (url.pathname === "/provider") return json({ all: [], default: {}, connected: [] })
     if (url.pathname === "/session") return json([])
     if (url.pathname === "/vcs") return json({ branch: "main" })
+    if (url.pathname === "/work/state")
+      return json({
+        now: 0,
+        paused: false,
+        spaces: [],
+        deployments: [],
+        latest: [],
+        runs: [],
+        upcoming: [],
+        messages: [],
+        todos: [],
+        agenda: [],
+        memories: [],
+        usage: {
+          today: { tokens: 0, cost: 0 },
+          hour: { tokens: 0, cost: 0 },
+          providers: [],
+          runsToday: 0,
+          runsRemaining: 0,
+        },
+      })
     throw new Error(`unexpected request: ${url.pathname}`)
   }) as typeof globalThis.fetch
   return { fetch, session }

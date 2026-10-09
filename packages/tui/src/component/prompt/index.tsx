@@ -69,6 +69,8 @@ export type PromptProps = {
   hint?: JSX.Element
   right?: JSX.Element
   showPlaceholder?: boolean
+  /** Dashboards set this to false so their list keys work until the prompt is clicked or focused. */
+  autoFocus?: boolean
   placeholders?: {
     normal?: string[]
     shell?: string[]
@@ -639,6 +641,7 @@ export function Prompt(props: PromptProps) {
       return
     }
 
+    if (props.autoFocus === false) return
     // Slot/plugin updates can remount the background prompt while a dialog is open.
     // Keep focus with the dialog and let the prompt reclaim it after the dialog closes.
     if (!input.focused) input.focus()
@@ -963,6 +966,22 @@ export function Prompt(props: PromptProps) {
     const trimmed = store.prompt.input.trim()
     if (trimmed === "exit" || trimmed === "quit" || trimmed === ":q") {
       void exit()
+      return true
+    }
+    // Palette commands with `slashArgs` take the rest of the line, e.g. `/deploy check the cam every 10m`.
+    const slash = trimmed.startsWith("/") ? /^\/(\S+)\s*([\s\S]*)$/.exec(trimmed) : undefined
+    const withArgs = slash
+      ? keymap
+          .getCommandEntries({ visibility: "reachable", namespace: "palette" })
+          .find((entry) => entry.command.slashName === slash[1] && typeof entry.command.slashArgs === "function")
+      : undefined
+    if (slash && withArgs && typeof withArgs.command.slashArgs === "function") {
+      history.append({ ...store.prompt, mode: store.mode })
+      input.clear()
+      input.extmarks.clear()
+      setStore("prompt", { input: "", parts: [] })
+      setStore("extmarkToPartIndex", new Map())
+      withArgs.command.slashArgs(slash[2])
       return true
     }
     const selectedModel = local.model.current()

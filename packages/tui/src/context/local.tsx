@@ -94,7 +94,12 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           return agents()
         },
         current() {
-          return agents().find((x) => x.name === agentStore.current) ?? agents().at(0)
+          // OpenWork starts in the work agent unless the user configured a default agent.
+          return (
+            agents().find((x) => x.name === agentStore.current) ??
+            (sync.data.config.default_agent ? undefined : agents().find((x) => x.name === "work")) ??
+            agents().at(0)
+          )
         },
         set(name: string) {
           if (!agents().some((x) => x.name === name))

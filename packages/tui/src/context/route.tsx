@@ -20,14 +20,33 @@ export type PluginRoute = {
   data?: Record<string, unknown>
 }
 
-export type Route = HomeRoute | SessionRoute | PluginRoute
+export const WorkPages = [
+  "day",
+  "chats",
+  "spaces",
+  "agents",
+  "agent",
+  "skills",
+  "memory",
+  "models",
+  "integrations",
+] as const
+export type WorkPage = (typeof WorkPages)[number]
+
+export type WorkRoute = {
+  type: "work"
+  page: WorkPage
+  id?: string
+}
+
+export type Route = HomeRoute | SessionRoute | PluginRoute | WorkRoute
 
 export const { use: useRoute, provider: RouteProvider } = createSimpleContext({
   name: "Route",
   init: (props: { initialRoute?: Route }) => {
     const startup = useTuiStartup()
     const [store, setStore] = createStore<Route>(
-      props.initialRoute ?? initialRoute(startup.initialRoute) ?? { type: "home" },
+      props.initialRoute ?? initialRoute(startup.initialRoute) ?? { type: "work", page: "day" },
     )
 
     return {
@@ -49,6 +68,10 @@ function initialRoute(value: unknown): Route | undefined {
   }
   if (value.type === "plugin" && "id" in value && typeof value.id === "string") {
     return { type: "plugin", id: value.id }
+  }
+  if (value.type === "work" && "page" in value && WorkPages.some((page) => page === value.page)) {
+    const page = WorkPages.find((item) => item === value.page) ?? "day"
+    return { type: "work", page, ...("id" in value && typeof value.id === "string" ? { id: value.id } : {}) }
   }
 }
 
