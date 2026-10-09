@@ -11,10 +11,11 @@ import { useTheme } from "../../context/theme"
 import { HomeSessionDestinationProvider } from "../../routes/home/session-destination"
 import { DialogPrompt } from "../../ui/dialog-prompt"
 import { useDialog } from "../../ui/dialog"
+import { useOpencodeKeymap } from "../../keymap"
 import { useWork } from "../context"
 import { Hints, Pill, SectionTitle } from "../components"
 import { ACCESS, ago, clock, day, truncate, until } from "../format"
-import { step, usePageKeys } from "../keys"
+import { step, useFollowSelection, usePageKeys, usePressed, useRowClick } from "../keys"
 import { spaceColor } from "../palette"
 import { useShellInset } from "../shell"
 
@@ -28,6 +29,9 @@ export function DayPage() {
   const dialog = useDialog()
   const kv = useKV()
   const promptRef = usePromptRef()
+  const keymap = useOpencodeKeymap()
+  const click = useRowClick()
+  const pressed = usePressed()
   const dimensions = useTerminalDimensions()
   const inset = useShellInset()
   const showAgents = () => kv.get("work_show_agents", true) === true
@@ -76,6 +80,7 @@ export function DayPage() {
 
   const addTodo = async () => {
     const content = await DialogPrompt.show(dialog, "New todo", { placeholder: "Book a table for Friday" })
+    dialog.clear()
     if (content?.trim()) await work.todo.add(content.trim())
   }
 
@@ -84,6 +89,7 @@ export function DayPage() {
       placeholder: "14:30 Call with Ana",
       description: () => <text>Start time (HH:MM, today) followed by a title.</text>,
     })
+    dialog.clear()
     const match = value ? /^(\d{1,2})[:h](\d{2})\s+(.+)$/.exec(value.trim()) : undefined
     if (!match) return
     const at = new Date(work.now())
@@ -167,6 +173,9 @@ export function DayPage() {
   ])
 
   const row = (section: Section, index: number) => (selected(section, index) ? theme.backgroundElement : undefined)
+  const followTodos = useFollowSelection("todo", () => (selection.section === "todos" ? selection.index : undefined))
+  const followInbox = useFollowSelection("inbox", () => (selection.section === "inbox" ? selection.index : undefined))
+  const followAgents = useFollowSelection("agent", () => (selection.section === "agents" ? selection.index : undefined))
 
   return (
     <box flexGrow={1} minHeight={0} paddingLeft={2} paddingRight={2} paddingTop={1}>
@@ -203,7 +212,9 @@ export function DayPage() {
               <box
                 flexShrink={0}
                 backgroundColor={row("agenda", index())}
-                onMouseUp={() => setSelection({ section: "agenda", index: index() })}
+                onMouseUp={() =>
+                  click(selected("agenda", index()), () => setSelection({ section: "agenda", index: index() }), open)
+                }
               >
                 <text wrapMode="none">
                   <span style={{ fg: item.startsAt < work.now() ? theme.textMuted : theme.text }}>
@@ -227,24 +238,37 @@ export function DayPage() {
             )}
           </For>
           <Show when={agenda().length === 0}>
-            <text fg={theme.textMuted}>Nothing on the agenda today. Press n to add an event.</text>
+            <text fg={theme.textMuted}>Nothing on the agenda today.</text>
           </Show>
+          <text fg={theme.textMuted} flexShrink={0} selectable={false} onMouseUp={() => void addEvent()}>
+            + Add an event...
+          </text>
           <box height={1} flexShrink={0} />
           <SectionTitle title="Your Todos" />
           <box height={1} flexShrink={0} />
-          <scrollbox flexGrow={1} minHeight={0} verticalScrollbarOptions={{ visible: false }}>
+          <scrollbox ref={followTodos} flexGrow={1} minHeight={0} verticalScrollbarOptions={{ visible: false }}>
             <For each={todos()}>
               {(item, index) => (
                 <box
+                  id={`todo-${index()}`}
                   flexDirection="row"
                   gap={1}
                   backgroundColor={row("todos", index())}
-                  onMouseUp={() => {
-                    setSelection({ section: "todos", index: index() })
-                    void work.todo.toggle(item.id, !item.time.done)
-                  }}
+                  onMouseUp={() =>
+                    click(selected("todos", index()), () => setSelection({ section: "todos", index: index() }), open)
+                  }
                 >
-                  <text fg={item.time.done ? theme.success : theme.textMuted} flexShrink={0}>
+                  <text
+                    fg={item.time.done ? theme.success : theme.textMuted}
+                    flexShrink={0}
+                    selectable={false}
+                    onMouseUp={(event: { stopPropagation(): void }) => {
+                      // The checkbox toggles right away; the rest of the row selects first.
+                      event.stopPropagation()
+                      setSelection({ section: "todos", index: index() })
+                      void work.todo.toggle(item.id, !item.time.done)
+                    }}
+                  >
                     {item.time.done ? "✓" : "○"}
                   </text>
                   <box flexGrow={1}>
@@ -262,7 +286,7 @@ export function DayPage() {
                 </box>
               )}
             </For>
-            <text fg={theme.textMuted} onMouseUp={() => void addTodo()}>
+            <text fg={theme.textMuted} selectable={false} onMouseUp={() => void addTodo()}>
               + Add a todo...
             </text>
           </scrollbox>
@@ -270,19 +294,26 @@ export function DayPage() {
         <box width={middle()} flexShrink={0} minHeight={0}>
           <SectionTitle title="Agent Inbox" meta={unread() > 0 ? `${unread()} unread` : "all caught up"} />
           <box height={1} flexShrink={0} />
-          <scrollbox flexGrow={1} minHeight={0} verticalScrollbarOptions={{ visible: false }}>
+          <scrollbox ref={followInbox} flexGrow={1} minHeight={0} verticalScrollbarOptions={{ visible: false }}>
             <For each={inbox()}>
               {(item, index) => (
                 <InboxRow
+                  id={`inbox-${index()}`}
                   message={item}
                   agent={titleOf(item.deploymentID)}
                   width={middle()}
                   now={work.now()}
                   background={row("inbox", index())}
-                  onClick={() => {
-                    setSelection({ section: "inbox", index: index() })
-                    if (!item.time.read) void work.message.read(item.id)
-                  }}
+                  onClick={() =>
+                    click(
+                      selected("inbox", index()),
+                      () => {
+                        setSelection({ section: "inbox", index: index() })
+                        if (!item.time.read) void work.message.read(item.id)
+                      },
+                      open,
+                    )
+                  }
                   onToggle={() => void work.message.done(item.id, !item.time.done)}
                 />
               )}
@@ -307,7 +338,7 @@ export function DayPage() {
           <box width={right()} flexShrink={0} minHeight={0}>
             <SectionTitle title="Agents" meta={`${deployments().length} agents · ${running()} running now`} />
             <box height={1} flexShrink={0} />
-            <scrollbox flexGrow={1} minHeight={0} verticalScrollbarOptions={{ visible: false }}>
+            <scrollbox ref={followAgents} flexGrow={1} minHeight={0} verticalScrollbarOptions={{ visible: false }}>
               <For each={groups()}>
                 {(group) => (
                   <box paddingBottom={1}>
@@ -330,6 +361,7 @@ export function DayPage() {
                     <For each={group.agents}>
                       {(agent) => (
                         <AgentRow
+                          id={`agent-${agentList().findIndex((item) => item.id === agent.id)}`}
                           agent={agent}
                           run={latest(agent.id)}
                           width={right()}
@@ -340,7 +372,7 @@ export function DayPage() {
                               ? theme.backgroundElement
                               : undefined
                           }
-                          onClick={() => route.navigate({ type: "work", page: "agent", id: agent.id })}
+                          onClick={() => pressed() && route.navigate({ type: "work", page: "agent", id: agent.id })}
                         />
                       )}
                     </For>
@@ -360,13 +392,13 @@ export function DayPage() {
         <Hints
           items={[
             ["↑↓", "select"],
-            ["tab", "section"],
-            ["enter", "open"],
-            ["space", "done"],
-            ["n", "new"],
-            ["c", "chat"],
-            ["a", "agents"],
-            ["ctrl+x d", "deploy"],
+            ["tab", "section", () => cycle(1)],
+            ["enter", "open", open],
+            ["space", "done", toggle],
+            ["n", "new", () => void (selection.section === "agenda" ? addEvent() : addTodo())],
+            ["c", "chat", () => promptRef.current?.focus()],
+            ["a", "agents", () => setShowAgents(!showAgents())],
+            ["ctrl+x d", "deploy", () => keymap.dispatchCommand("work.deploy")],
           ]}
         />
       </box>
@@ -375,6 +407,7 @@ export function DayPage() {
 }
 
 function InboxRow(props: {
+  id: string
   message: WorkMessage
   agent: string | undefined
   width: number
@@ -391,9 +424,18 @@ function InboxRow(props: {
   const room = () => Math.max(16, props.width - 18)
   const agentWidth = () => Math.min(agent().length, Math.max(10, room() - props.message.title.length))
   return (
-    <box flexShrink={0} paddingBottom={1} backgroundColor={props.background} onMouseUp={props.onClick}>
+    <box id={props.id} flexShrink={0} paddingBottom={1} backgroundColor={props.background} onMouseUp={props.onClick}>
       <box flexDirection="row">
-        <text fg={theme.textMuted} flexShrink={0} onMouseUp={props.onToggle}>
+        <text
+          fg={theme.textMuted}
+          flexShrink={0}
+          selectable={false}
+          onMouseUp={(event: { stopPropagation(): void }) => {
+            // Only toggle done; the row's own click would also select and mark the message read.
+            event.stopPropagation()
+            props.onToggle()
+          }}
+        >
           {done() ? "☑ " : "☐ "}
         </text>
         <text flexGrow={1} wrapMode="none">
@@ -416,6 +458,7 @@ function InboxRow(props: {
 }
 
 function AgentRow(props: {
+  id: string
   agent: WorkDeployment
   run: ReturnType<typeof useWork>["state"]["latest"][number] | undefined
   width: number
@@ -437,7 +480,7 @@ function AgentRow(props: {
       : `${ago(props.agent.lastRunAt, props.now)} · ${props.agent.status === "paused" ? "paused" : until(props.agent.nextRunAt, props.now)}`
   const summary = () => props.run?.summary ?? props.run?.error ?? props.agent.task
   return (
-    <box paddingLeft={2} paddingTop={1} backgroundColor={props.background} onMouseUp={props.onClick}>
+    <box id={props.id} paddingLeft={2} paddingTop={1} backgroundColor={props.background} onMouseUp={props.onClick}>
       <text wrapMode="none">
         <span style={{ fg: status().fg }}>{status().icon} </span>
         <span style={{ fg: theme.textMuted }}>Agent: </span>

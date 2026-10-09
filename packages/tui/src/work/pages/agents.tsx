@@ -10,7 +10,7 @@ import { useWork } from "../context"
 import { Card, Hints, PageHeader, Pill } from "../components"
 import { useDeploy } from "../dialog-deploy"
 import { clock, count, money, tokens, truncate } from "../format"
-import { step, usePageKeys } from "../keys"
+import { step, usePageKeys, useRowClick } from "../keys"
 import { spaceColor } from "../palette"
 import { Donut, Gauge } from "../raster"
 import { useShellInset } from "../shell"
@@ -37,6 +37,7 @@ export function AgentsPage() {
   const zoom = () => (kv.get("work_calendar_zoom", "detail") === "day" ? "day" : "detail")
   const [live, setLive] = createSignal(true)
   const [selected, setSelected] = createSignal(0)
+  const click = useRowClick()
 
   const stats = createMemo(() => usage(work.state, sync.data.provider))
   const slices = createMemo(() => shares(work.state))
@@ -74,9 +75,16 @@ export function AgentsPage() {
   const calendarWidth = () => width() - STATS_WIDTH - 2
   // The running run is drawn with a border and takes three lines.
   const visibleRows = () => Math.max(3, dimensions().height - 15)
-  const windowStart = createMemo(() =>
-    Math.max(0, Math.min(entries().length - visibleRows(), selected() - Math.floor(visibleRows() / 3))),
-  )
+  // Live keeps "now" a third of the way down; otherwise the window only scrolls once the selection leaves it,
+  // so clicking a row never moves the rows under the pointer.
+  const windowStart = createMemo<number>((previous) => {
+    const rows = visibleRows()
+    const clamp = (value: number) => Math.max(0, Math.min(entries().length - rows, value))
+    if (live()) return clamp(selected() - Math.floor(rows / 3))
+    if (selected() < previous) return clamp(selected())
+    if (selected() >= previous + rows) return clamp(selected() - rows + 1)
+    return clamp(previous)
+  }, 0)
   const visible = createMemo(() => entries().slice(windowStart(), windowStart() + visibleRows()))
 
   const hours = createMemo(() => {
@@ -95,20 +103,25 @@ export function AgentsPage() {
     const entry = entries()[selected()]
     if (entry?.deployment) route.navigate({ type: "work", page: "agent", id: entry.deployment.id })
   }
+  const move = (delta: number) => {
+    setLive(false)
+    setSelected((index) => step(index, delta, entries().length))
+  }
+  const setZoom = (value: "day" | "detail") => kv.set("work_calendar_zoom", value)
+  // Whole-day rows zoom into that hour: select its first run and switch to the detail view.
+  const openHour = (items: ReadonlyArray<Entry>) => {
+    const index = items[0] ? entries().indexOf(items[0]) : -1
+    if (index === -1) return
+    setLive(false)
+    setSelected(index)
+    setZoom("detail")
+  }
 
   usePageKeys(() => [
-    {
-      key: "up,k",
-      desc: "Earlier run",
-      run: () => (setLive(false), setSelected((index) => step(index, -1, entries().length))),
-    },
-    {
-      key: "down,j",
-      desc: "Later run",
-      run: () => (setLive(false), setSelected((index) => step(index, 1, entries().length))),
-    },
+    { key: "up,k", desc: "Earlier run", run: () => move(-1) },
+    { key: "down,j", desc: "Later run", run: () => move(1) },
     { key: "return", desc: "Open agent", run: open },
-    { key: "z", desc: "Zoom calendar", run: () => kv.set("work_calendar_zoom", zoom() === "day" ? "detail" : "day") },
+    { key: "z", desc: "Zoom calendar", run: () => setZoom(zoom() === "day" ? "detail" : "day") },
     { key: "l", desc: "Follow live", run: () => setLive(!live()) },
     { key: "p", desc: "Pause agents", run: () => void work.pause(!work.state.paused) },
     { key: "n", desc: "Create agent", run: () => void deploy() },
@@ -183,7 +196,13 @@ export function AgentsPage() {
               <box flexGrow={1}>
                 <For each={slices()}>
                   {(item) => (
-                    <box flexDirection="row">
+                    <box
+                      flexDirection="row"
+                      onMouseUp={() => {
+                        if (work.state.spaces.some((space) => space.id === item.key))
+                          route.navigate({ type: "work", page: "spaces", id: item.key })
+                      }}
+                    >
                       <text flexGrow={1} wrapMode="none">
                         <span style={{ fg: spaceColor(theme, item.color) }}>● </span>
                         <span style={{ fg: theme.textMuted }}>{truncate(item.label, 12)}</span>
@@ -204,11 +223,41 @@ export function AgentsPage() {
             <text fg={theme.text} flexGrow={1}>
               <b>Agent Calendar</b>
             </text>
-            <text fg={theme.textMuted} wrapMode="none">
-              <span style={{ fg: zoom() === "day" ? theme.text : theme.textMuted }}>whole day </span>
-              <span style={{ fg: theme.borderActive }}>{zoom() === "day" ? "●━━━━━━━━" : "━━━━━━━━●"}</span>
-              <span style={{ fg: zoom() === "detail" ? theme.text : theme.textMuted }}> detail</span>
-              <span style={{ fg: live() ? theme.success : theme.textMuted }}>{live() ? "   ● Live" : "   ○ Live"}</span>
+            <text
+              fg={zoom() === "day" ? theme.text : theme.textMuted}
+              wrapMode="none"
+              flexShrink={0}
+              selectable={false}
+              onMouseUp={() => setZoom("day")}
+            >
+              whole day{" "}
+            </text>
+            <text
+              fg={theme.borderActive}
+              wrapMode="none"
+              flexShrink={0}
+              selectable={false}
+              onMouseUp={() => setZoom(zoom() === "day" ? "detail" : "day")}
+            >
+              {zoom() === "day" ? "●━━━━━━━━" : "━━━━━━━━●"}
+            </text>
+            <text
+              fg={zoom() === "detail" ? theme.text : theme.textMuted}
+              wrapMode="none"
+              flexShrink={0}
+              selectable={false}
+              onMouseUp={() => setZoom("detail")}
+            >
+              {" detail"}
+            </text>
+            <text
+              fg={live() ? theme.success : theme.textMuted}
+              wrapMode="none"
+              flexShrink={0}
+              selectable={false}
+              onMouseUp={() => setLive(!live())}
+            >
+              {live() ? "   ● Live" : "   ○ Live"}
             </text>
           </box>
           <text fg={theme.textMuted} flexShrink={0}>
@@ -221,7 +270,7 @@ export function AgentsPage() {
               <box flexGrow={1} minHeight={0}>
                 <For each={hours()}>
                   {(hour) => (
-                    <box flexDirection="row" flexShrink={0}>
+                    <box flexDirection="row" flexShrink={0} onMouseUp={() => openHour(hour.items)}>
                       <text fg={hour.hour === currentHour() ? theme.text : theme.textMuted} width={7} flexShrink={0}>
                         {`${String(hour.hour).padStart(2, "0")}:00`}
                       </text>
@@ -249,7 +298,14 @@ export function AgentsPage() {
               </box>
             }
           >
-            <box flexGrow={1} minHeight={0}>
+            <box
+              flexGrow={1}
+              minHeight={0}
+              onMouseScroll={(event: { scroll?: { direction: string; delta: number } }) => {
+                if (event.scroll?.direction === "up") move(-Math.max(1, event.scroll.delta))
+                if (event.scroll?.direction === "down") move(Math.max(1, event.scroll.delta))
+              }}
+            >
               <For each={visible()}>
                 {(entry, index) => (
                   <CalendarRow
@@ -258,11 +314,16 @@ export function AgentsPage() {
                     space={spaceOf(entry.deployment)}
                     selected={windowStart() + index() === selected()}
                     showTime={index() === 0 || clock(visible()[index() - 1]?.at ?? 0) !== clock(entry.at)}
-                    onClick={() => {
-                      setLive(false)
-                      setSelected(windowStart() + index())
-                      open()
-                    }}
+                    onClick={() =>
+                      click(
+                        windowStart() + index() === selected(),
+                        () => {
+                          setLive(false)
+                          setSelected(windowStart() + index())
+                        },
+                        open,
+                      )
+                    }
                   />
                 )}
               </For>
@@ -280,11 +341,11 @@ export function AgentsPage() {
         <Hints
           items={[
             ["↑↓", "runs"],
-            ["enter", "open agent"],
-            ["z", "zoom"],
-            ["l", "live"],
-            ["p", work.state.paused ? "resume" : "pause"],
-            ["n", "create agent"],
+            ["enter", "open agent", open],
+            ["z", "zoom", () => setZoom(zoom() === "day" ? "detail" : "day")],
+            ["l", "live", () => setLive(!live())],
+            ["p", work.state.paused ? "resume" : "pause", () => void work.pause(!work.state.paused)],
+            ["n", "create agent", () => void deploy()],
           ]}
         />
       </box>

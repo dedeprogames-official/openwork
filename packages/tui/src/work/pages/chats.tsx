@@ -6,7 +6,8 @@ import { useTuiPaths } from "../../context/runtime"
 import { useWork } from "../context"
 import { Empty, Hints, PageHeader, Pill } from "../components"
 import { ago, tokens, truncate } from "../format"
-import { step, usePageKeys } from "../keys"
+import { step, useFollowSelection, usePageKeys, usePressed } from "../keys"
+import { useOpencodeKeymap } from "../../keymap"
 import { isWorkRun, workMeta } from "../session"
 
 export function ChatsPage() {
@@ -22,18 +23,18 @@ export function ChatsPage() {
       .toSorted((a, b) => b.time.updated - a.time.updated),
   )
   const agentOf = (id: string | undefined) => work.state.deployments.find((item) => item.id === id)?.title
+  const keymap = useOpencodeKeymap()
+  const pressed = usePressed()
+  const follow = useFollowSelection("chat", selected)
+  const open = () => {
+    const session = sessions()[selected()]
+    if (session) route.navigate({ type: "session", sessionID: session.id })
+  }
 
   usePageKeys(() => [
     { key: "up,k", desc: "Previous chat", run: () => setSelected((index) => step(index, -1, sessions().length)) },
     { key: "down,j", desc: "Next chat", run: () => setSelected((index) => step(index, 1, sessions().length)) },
-    {
-      key: "return",
-      desc: "Open chat",
-      run: () => {
-        const session = sessions()[selected()]
-        if (session) route.navigate({ type: "session", sessionID: session.id })
-      },
-    },
+    { key: "return", desc: "Open chat", run: open },
     { key: "n", desc: "New chat", run: () => route.navigate({ type: "home" }) },
   ])
 
@@ -44,14 +45,15 @@ export function ChatsPage() {
         subtitle="Conversations with OpenWork. Agent runs live on their agent's page."
         right={<Pill label="+ New chat" active onClick={() => route.navigate({ type: "home" })} />}
       />
-      <scrollbox flexGrow={1} minHeight={0} verticalScrollbarOptions={{ visible: false }}>
+      <scrollbox ref={follow} flexGrow={1} minHeight={0} verticalScrollbarOptions={{ visible: false }}>
         <For each={sessions()}>
           {(session, index) => (
             <box
+              id={`chat-${index()}`}
               flexDirection="row"
               paddingBottom={1}
               backgroundColor={index() === selected() ? theme.backgroundElement : undefined}
-              onMouseUp={() => route.navigate({ type: "session", sessionID: session.id })}
+              onMouseUp={() => pressed() && route.navigate({ type: "session", sessionID: session.id })}
             >
               <box flexGrow={1}>
                 <text fg={theme.text} wrapMode="none">
@@ -82,9 +84,9 @@ export function ChatsPage() {
         <Hints
           items={[
             ["↑↓", "select"],
-            ["enter", "open"],
-            ["n", "new chat"],
-            ["ctrl+x l", "all sessions"],
+            ["enter", "open", open],
+            ["n", "new chat", () => route.navigate({ type: "home" })],
+            ["ctrl+x l", "all sessions", () => keymap.dispatchCommand("session.list")],
           ]}
         />
       </box>

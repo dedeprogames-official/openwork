@@ -5,7 +5,7 @@ import { useDialog } from "../../ui/dialog"
 import { useWork } from "../context"
 import { Empty, Hints, PageHeader, Pill } from "../components"
 import { ago } from "../format"
-import { step, usePageKeys } from "../keys"
+import { step, useFollowSelection, usePageKeys, usePressed } from "../keys"
 
 export function MemoryPage() {
   const work = useWork()
@@ -13,6 +13,12 @@ export function MemoryPage() {
   const { theme } = useTheme()
   const [selected, setSelected] = createSignal(0)
   const memories = createMemo(() => work.state.memories)
+  const pressed = usePressed()
+  const follow = useFollowSelection("memory", selected)
+  const forget = () => {
+    const memory = memories()[selected()]
+    if (memory) void work.memory.remove(memory.id)
+  }
 
   const add = async () => {
     const content = await DialogPrompt.show(dialog, "Remember", {
@@ -26,14 +32,7 @@ export function MemoryPage() {
     { key: "up,k", desc: "Previous memory", run: () => setSelected((index) => step(index, -1, memories().length)) },
     { key: "down,j", desc: "Next memory", run: () => setSelected((index) => step(index, 1, memories().length)) },
     { key: "n", desc: "Remember something", run: () => void add() },
-    {
-      key: "x",
-      desc: "Forget",
-      run: () => {
-        const memory = memories()[selected()]
-        if (memory) void work.memory.remove(memory.id)
-      },
-    },
+    { key: "x", desc: "Forget", run: forget },
   ])
 
   return (
@@ -43,14 +42,15 @@ export function MemoryPage() {
         subtitle="What OpenWork remembers about you. Every chat and agent sees these facts; agents can save new ones."
         right={<Pill label="+ Remember" active onClick={() => void add()} />}
       />
-      <scrollbox flexGrow={1} minHeight={0} verticalScrollbarOptions={{ visible: false }}>
+      <scrollbox ref={follow} flexGrow={1} minHeight={0} verticalScrollbarOptions={{ visible: false }}>
         <For each={memories()}>
           {(memory, index) => (
             <box
+              id={`memory-${index()}`}
               flexDirection="row"
               paddingBottom={1}
               backgroundColor={index() === selected() ? theme.backgroundElement : undefined}
-              onMouseUp={() => setSelected(index())}
+              onMouseUp={() => pressed() && setSelected(index())}
             >
               <text fg={theme.primary} flexShrink={0}>
                 {"◍ "}
@@ -61,6 +61,19 @@ export function MemoryPage() {
               <text fg={theme.textMuted} flexShrink={0}>
                 {`${memory.source ? `${memory.source} · ` : ""}${ago(memory.time.created, work.now())}`}
               </text>
+              <Show when={index() === selected()}>
+                <text
+                  fg={theme.error}
+                  flexShrink={0}
+                  selectable={false}
+                  onMouseUp={(event: { stopPropagation(): void }) => {
+                    event.stopPropagation()
+                    void work.memory.remove(memory.id)
+                  }}
+                >
+                  {"  ✕ forget"}
+                </text>
+              </Show>
             </box>
           )}
         </For>
@@ -72,8 +85,8 @@ export function MemoryPage() {
         <Hints
           items={[
             ["↑↓", "select"],
-            ["n", "remember"],
-            ["x", "forget"],
+            ["n", "remember", () => void add()],
+            ["x", "forget", forget],
           ]}
         />
       </box>

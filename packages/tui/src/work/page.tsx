@@ -46,7 +46,8 @@ export function WorkPage() {
           <IntegrationsPage />
         </Match>
       </Switch>
-      <Toast />
+      {/* Below the page header, whose action buttons sit in the top-right corner. */}
+      <Toast top={4} />
     </box>
   )
 }

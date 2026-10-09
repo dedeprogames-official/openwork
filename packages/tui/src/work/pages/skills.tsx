@@ -3,9 +3,9 @@ import { useData } from "../../context/data"
 import { useRoute } from "../../context/route"
 import { useTheme } from "../../context/theme"
 import { useTuiPaths } from "../../context/runtime"
-import { Empty, Hints, PageHeader } from "../components"
+import { Empty, Hints, PageHeader, Pill } from "../components"
 import { truncate } from "../format"
-import { step, usePageKeys } from "../keys"
+import { step, useFollowSelection, usePageKeys, useRowClick } from "../keys"
 
 export function SkillsPage() {
   const data = useData()
@@ -15,6 +15,8 @@ export function SkillsPage() {
   const [selected, setSelected] = createSignal(0)
   const skills = createMemo(() => (data.location.skill.list() ?? []).toSorted((a, b) => a.name.localeCompare(b.name)))
   const skill = createMemo(() => skills()[selected()])
+  const click = useRowClick()
+  const follow = useFollowSelection("skill", selected)
   onMount(() => void data.location.skill.refresh().catch(() => undefined))
 
   const use = () => {
@@ -37,13 +39,14 @@ export function SkillsPage() {
         subtitle="Reusable instructions your chats and agents load when a task matches. Add SKILL.md files to .opencode/skills or ~/.agents/skills."
       />
       <box flexDirection="row" flexGrow={1} minHeight={0} gap={3}>
-        <box width={44} flexShrink={0}>
+        <scrollbox ref={follow} width={44} flexShrink={0} verticalScrollbarOptions={{ visible: false }}>
           <For each={skills()}>
             {(item, index) => (
               <box
+                id={`skill-${index()}`}
                 paddingBottom={1}
                 backgroundColor={index() === selected() ? theme.backgroundElement : undefined}
-                onMouseUp={() => setSelected(index())}
+                onMouseUp={() => click(index() === selected(), () => setSelected(index()), use)}
               >
                 <text fg={theme.text} wrapMode="none">
                   <span style={{ fg: theme.primary }}>✦ </span>
@@ -58,16 +61,20 @@ export function SkillsPage() {
           <Show when={skills().length === 0}>
             <Empty>No skills found. Create a SKILL.md in .opencode/skills/name/ and press r.</Empty>
           </Show>
-        </box>
+        </scrollbox>
         <box flexGrow={1} minHeight={0}>
           <Show when={skill()}>
             {(current) => (
               <>
-                <text fg={theme.text}>
+                <text fg={theme.text} flexShrink={0}>
                   <b>{current().name}</b>
                 </text>
-                <text fg={theme.textMuted}>{current().location.replace(paths.home, "~")}</text>
-                <box height={1} />
+                <text fg={theme.textMuted} flexShrink={0}>
+                  {current().location.replace(paths.home, "~")}
+                </text>
+                <box flexDirection="row" flexShrink={0} paddingTop={1} paddingBottom={1}>
+                  <Pill label="▷ Use in a chat" active onClick={use} />
+                </box>
                 <scrollbox flexGrow={1} minHeight={0} verticalScrollbarOptions={{ visible: false }}>
                   <text fg={theme.text} wrapMode="word">
                     {current().content.trim()}
@@ -82,8 +89,8 @@ export function SkillsPage() {
         <Hints
           items={[
             ["↑↓", "select"],
-            ["enter", "use in a chat"],
-            ["r", "reload"],
+            ["enter", "use in a chat", use],
+            ["r", "reload", () => void data.location.skill.refresh()],
           ]}
         />
       </box>

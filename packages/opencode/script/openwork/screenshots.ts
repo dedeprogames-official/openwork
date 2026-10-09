@@ -6,7 +6,9 @@
  * workspace, lets the agents really run, walks through the pages with keystrokes and renders each capture with
  * ansi2png.py. Run from packages/opencode:
  *
- *   TZ=Pacific/Kiritimati bun script/openwork/screenshots.ts --out ../../docs/openwork/screenshots
+ *   TZ=Europe/London bun script/openwork/screenshots.ts --out ../../docs/openwork/screenshots
+ *
+ * Pick a TZ where it is late afternoon: the demo's run history starts at 06:00 local time.
  */
 import { $ } from "bun"
 import fs from "fs/promises"

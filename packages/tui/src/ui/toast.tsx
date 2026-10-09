@@ -12,7 +12,8 @@ export type ToastOptions = {
 }
 type ToastInput = Omit<ToastOptions, "duration"> & { duration?: number }
 
-export function Toast() {
+/** `top` moves the toast down, e.g. below a page header with action buttons in the top-right corner. */
+export function Toast(props: { top?: number }) {
   const toast = useToast()
   const { theme } = useTheme()
   const dimensions = useTerminalDimensions()
@@ -22,9 +23,11 @@ export function Toast() {
       {(current) => (
         <box
           position="absolute"
+          // Above page content even when a route change mounts that content after the toast; dialogs stay on top.
+          zIndex={2000}
           justifyContent="center"
           alignItems="flex-start"
-          top={2}
+          top={props.top ?? 2}
           right={2}
           maxWidth={Math.min(60, dimensions().width - 6)}
           paddingLeft={2}

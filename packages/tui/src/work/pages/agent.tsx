@@ -12,7 +12,7 @@ import { useDialog } from "../../ui/dialog"
 import { useWork } from "../context"
 import { Hints, Pill } from "../components"
 import { ACCESS, ago, clock, kind, money, schedule, tokens, truncate, until } from "../format"
-import { usePageKeys } from "../keys"
+import { usePageKeys, usePressed } from "../keys"
 import { spaceColor } from "../palette"
 import { runTokens } from "../stats"
 
@@ -83,6 +83,16 @@ export function AgentPage(props: { deploymentID: string }) {
     return `  ${index() === 0 ? "last run" : "run"} #${current.number} · ${clock(current.time.started)} · ${tokens(runTokens(current))} tokens · ${money(current.cost)}${provider}`
   })
 
+  const older = () => setIndex((value) => Math.min(runs().length - 1, value + 1))
+  const newer = () => setIndex((value) => Math.max(0, value - 1))
+  const back = () => route.navigate({ type: "work", page: "agents" })
+  const transcript = () => {
+    const sessionID = run()?.sessionID
+    if (sessionID) route.navigate({ type: "session", sessionID })
+  }
+  const togglePause = () =>
+    void work.update(props.deploymentID, { status: deployment()?.status === "paused" ? "active" : "paused" })
+
   const remove = async () => {
     const ok = await DialogConfirm.show(dialog, "Remove agent", `Remove "${deployment()?.title}" and its run history?`)
     if (!ok) return
@@ -92,25 +102,13 @@ export function AgentPage(props: { deploymentID: string }) {
 
   usePageKeys(() => [
     { key: "r", desc: "Run now", run: () => void work.run(props.deploymentID) },
-    {
-      key: "p",
-      desc: "Pause or resume",
-      run: () =>
-        void work.update(props.deploymentID, { status: deployment()?.status === "paused" ? "active" : "paused" }),
-    },
+    { key: "p", desc: "Pause or resume", run: togglePause },
     { key: "x", desc: "Remove agent", run: () => void remove() },
-    {
-      key: "o",
-      desc: "Open run transcript",
-      run: () => {
-        const sessionID = run()?.sessionID
-        if (sessionID) route.navigate({ type: "session", sessionID })
-      },
-    },
-    { key: "left,h", desc: "Older run", run: () => setIndex((value) => Math.min(runs().length - 1, value + 1)) },
-    { key: "right,l", desc: "Newer run", run: () => setIndex((value) => Math.max(0, value - 1)) },
+    { key: "o", desc: "Open run transcript", run: transcript },
+    { key: "left,h", desc: "Older run", run: older },
+    { key: "right,l", desc: "Newer run", run: newer },
     { key: "c", desc: "Ask about this agent", run: () => promptRef.current?.focus() },
-    { key: "escape", desc: "Back", run: () => route.navigate({ type: "work", page: "agents" }) },
+    { key: "escape", desc: "Back", run: back },
   ])
 
   return (
@@ -125,8 +123,10 @@ export function AgentPage(props: { deploymentID: string }) {
       {(agent) => (
         <box flexGrow={1} minHeight={0} paddingLeft={3} paddingRight={3} paddingTop={1}>
           <box flexDirection="row" flexShrink={0}>
+            <text fg={theme.textMuted} flexShrink={0} selectable={false} onMouseUp={back}>
+              {"← "}
+            </text>
             <text flexGrow={1} wrapMode="none">
-              <span style={{ fg: theme.textMuted }}>← </span>
               <span style={{ fg: spaceColor(theme, space()?.color) }}>◆ </span>
               <span style={{ fg: theme.textMuted }}>Agent: </span>
               <span style={{ fg: theme.text, bold: true }}>{agent().title} </span>
@@ -135,12 +135,7 @@ export function AgentPage(props: { deploymentID: string }) {
               </span>
             </text>
             <box flexDirection="row" gap={1} flexShrink={0}>
-              <Pill
-                label={agent().status === "paused" ? "▶ Resume" : "◼ Pause"}
-                onClick={() =>
-                  void work.update(agent().id, { status: agent().status === "paused" ? "active" : "paused" })
-                }
-              />
+              <Pill label={agent().status === "paused" ? "▶ Resume" : "◼ Pause"} onClick={togglePause} />
               <Pill label="▷ Run now" active onClick={() => void work.run(agent().id)} />
             </box>
           </box>
@@ -165,35 +160,53 @@ export function AgentPage(props: { deploymentID: string }) {
               <span style={{ fg: theme.text, bold: true }}>AGENT ACTIVITY</span>
               <span style={{ fg: theme.textMuted }}>{activity()}</span>
             </text>
-            <text wrapMode="none" flexShrink={0}>
-              <span style={{ fg: theme.textMuted }}>runs </span>
+            <box flexDirection="row" flexShrink={0}>
+              <text fg={theme.textMuted} wrapMode="none" flexShrink={0}>
+                runs{" "}
+              </text>
               <For each={strip()}>
                 {(item) => (
-                  <span
-                    style={{
-                      fg:
-                        item.status === "error"
-                          ? theme.error
-                          : item.status === "running"
-                            ? theme.warning
-                            : item.id === run()?.id
-                              ? theme.text
-                              : theme.textMuted,
-                      bg: item.id === run()?.id ? theme.backgroundElement : undefined,
-                    }}
+                  <text
+                    fg={
+                      item.status === "error"
+                        ? theme.error
+                        : item.status === "running"
+                          ? theme.warning
+                          : item.id === run()?.id
+                            ? theme.text
+                            : theme.textMuted
+                    }
+                    bg={item.id === run()?.id ? theme.backgroundElement : undefined}
+                    wrapMode="none"
+                    flexShrink={0}
+                    selectable={false}
+                    onMouseUp={() =>
+                      setIndex(
+                        Math.max(
+                          0,
+                          runs().findIndex((other) => other.id === item.id),
+                        ),
+                      )
+                    }
                   >
                     {` #${item.number} ${item.status === "error" ? "✗" : item.status === "running" ? "◐" : "✓"} `}
-                  </span>
+                  </text>
                 )}
               </For>
-              <span style={{ fg: theme.textMuted }}> ◀ ▶</span>
-            </text>
+              <text fg={theme.textMuted} wrapMode="none" flexShrink={0} selectable={false} onMouseUp={older}>
+                {" ◀"}
+              </text>
+              <text fg={theme.textMuted} wrapMode="none" flexShrink={0} selectable={false} onMouseUp={newer}>
+                {" ▶"}
+              </text>
+            </box>
           </box>
           <box height={1} flexShrink={0} />
           <scrollbox flexGrow={1} minHeight={0} verticalScrollbarOptions={{ visible: false }}>
             <For each={parts()}>
               {(part, position) => (
                 <Activity
+                  onClick={transcript}
                   part={part}
                   step={
                     parts()
@@ -234,13 +247,13 @@ export function AgentPage(props: { deploymentID: string }) {
           <box flexShrink={0}>
             <Hints
               items={[
-                ["r", "run now"],
-                ["p", agent().status === "paused" ? "resume" : "pause"],
+                ["r", "run now", () => void work.run(props.deploymentID)],
+                ["p", agent().status === "paused" ? "resume" : "pause", togglePause],
                 ["←→", "runs"],
-                ["o", "transcript"],
-                ["c", "ask"],
-                ["x", "remove"],
-                ["esc", "back"],
+                ["o", "transcript", transcript],
+                ["c", "ask", () => promptRef.current?.focus()],
+                ["x", "remove", () => void remove()],
+                ["esc", "back", back],
               ]}
             />
           </box>
@@ -250,8 +263,9 @@ export function AgentPage(props: { deploymentID: string }) {
   )
 }
 
-function Activity(props: { part: Part; step: number; steps: number }) {
+function Activity(props: { part: Part; step: number; steps: number; onClick: () => void }) {
   const { theme } = useTheme()
+  const pressed = usePressed()
   return (
     <Show
       when={props.part.type === "tool" ? props.part : undefined}
@@ -264,7 +278,7 @@ function Activity(props: { part: Part; step: number; steps: number }) {
       }
     >
       {(tool) => (
-        <box paddingBottom={1}>
+        <box paddingBottom={1} onMouseUp={() => pressed() && props.onClick()}>
           <text wrapMode="none">
             <span style={{ fg: theme.primary }}>⚙ </span>
             <span style={{ fg: theme.text, bold: true }}>{tool().tool}</span>
