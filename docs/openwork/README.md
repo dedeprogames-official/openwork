@@ -37,6 +37,10 @@ Inside the TUI:
 - `/deploy <what and when>` or `ctrl+x d` deploys an agent: description → folder → space → schedule → access.
   Pressing enter at every step deploys in seconds and runs it once right away.
 - `alt+1` … `alt+8` switch pages, `ctrl+x w` collapses the navigation, `ctrl+p` lists every command.
+- Everything also works with the mouse, as in opencode: click the navigation, buttons and the key hints at the
+  bottom of each page; in lists the first click selects a row and a click on the selected row opens it (like
+  enter); checkboxes toggle at once; the wheel scrolls lists and the agent calendar; the calendar's zoom and Live
+  controls are clickable. Dragging to select text still copies it instead of clicking.
 
 The scheduler runs inside the opencode server process (3 runs at a time, claims are atomic so several processes
 never run the same agent twice). Set `OPENCODE_DISABLE_WORK_SCHEDULER=1` to turn it off.
@@ -61,8 +65,11 @@ All screenshots are captures of the real TUI running against an offline model, r
 
 ```bash
 cd packages/opencode
-TZ=Pacific/Kiritimati bun script/openwork/screenshots.ts --out ../../docs/openwork/screenshots
+TZ=Europe/London bun script/openwork/screenshots.ts --out ../../docs/openwork/screenshots
 ```
+
+Pick a `TZ` where it is late afternoon when you run it: the demo's run history starts at 06:00 local time, so the
+day only looks full later on.
 
 |                                                            |                                                                          |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------ |
