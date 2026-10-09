@@ -61,15 +61,18 @@ never run the same agent twice). Set `OPENCODE_DISABLE_WORK_SCHEDULER=1` to turn
 
 ## Screenshots
 
-All screenshots are captures of the real TUI running against an offline model, regenerated with:
+All screenshots are photos of a real Linux window — xfce4-terminal under the xfwm4 window manager (Greybird theme) on
+a headless X server — showing the real TUI running against an offline model. They are regenerated with:
 
 ```bash
+sudo apt-get install tmux python3-pil xvfb dbus-x11 xfwm4 xfce4-terminal greybird-gtk-theme xdotool imagemagick fonts-dejavu-core
 cd packages/opencode
-TZ=Europe/London bun script/openwork/screenshots.ts --out ../../docs/openwork/screenshots
+TZ=Europe/London bun script/openwork/screenshots.ts --window linux --out ../../docs/openwork/screenshots
 ```
 
-Pick a `TZ` where it is late afternoon when you run it: the demo's run history starts at 06:00 local time, so the
-day only looks full later on.
+Without `--window linux` the script renders the terminal contents itself (`ansi2png.py`), which only needs tmux and
+Pillow. Pick a `TZ` where it is late afternoon when you run it: the demo's run history starts at 06:00 local time, so
+the day only looks full later on.
 
 |                                                            |                                                                          |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------ |
