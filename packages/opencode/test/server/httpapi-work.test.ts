@@ -51,6 +51,20 @@ describe("work HttpApi", () => {
     })
     expect((await paused.json()).status).toBe("paused")
 
+    // Agents move between spaces, and a null space takes them out of one.
+    const markets = (await (await request(WorkPaths.spaces, { method: "POST", body: { name: "Markets" } })).json()).id
+    const moved = await request(WorkPaths.deployment.replace(":deploymentID", deployment.id), {
+      method: "PATCH",
+      body: { spaceID: markets },
+    })
+    expect((await moved.json()).spaceID).toBe(markets)
+    const alone = await request(WorkPaths.deployment.replace(":deploymentID", deployment.id), {
+      method: "PATCH",
+      body: { spaceID: null },
+    })
+    expect(alone.status).toBe(200)
+    expect((await alone.json()).spaceID).toBeUndefined()
+
     const todo = await (await request(WorkPaths.todos, { method: "POST", body: { content: "Book a table" } })).json()
     await request(WorkPaths.todo.replace(":todoID", todo.id), { method: "PATCH", body: { done: true } })
     await request(WorkPaths.agendas, { method: "POST", body: { title: "Sunset", startsAt: Date.now() + 60_000 } })

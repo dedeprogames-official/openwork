@@ -61,6 +61,7 @@ Hâlâ bir terminal uygulamasıdır ve hâlâ opencode harness'i üzerinde çal�
 - **Gerçek dökümler** — her çalıştırma, araç çağrıları, token'ları ve maliyetiyle açabileceğin gerçek bir opencode oturumudur.
 - **Rapor veren ajanlar** — `inbox`, `user_todo`, `agenda`, `memory` ve `deploy` cowork araçları ajanların gelen kutuna yazmasını, yapılacak eklemesini, ajandanı okumasını ve seninle ilgili bilgileri hatırlamasını sağlar. Bir sohbet yeni ajanlar yerleştirebilir.
 - **Spaces** — ajanları bir hedef, bir etkinlik ya da bir müşteri etrafında grupla.
+- **Ajanları space'ler arasında taşı** — bir ajanın sayfasında `m`'ye bas, Spaces sayfasında **+ Move an agent here...** kullan ya da bir sohbette iste.
 - **Hafıza** — her sohbetin ve her ajanın aldığı, seninle ilgili bilgiler.
 - **Token istatistikleri** — yerel ve bulut token'ları ayrı sayılır, tüketim hızı, günlük tahmin ve yerel modellerin sana ne kadar kazandırdığı.
 - **Klavye ve fare** — sayfalar için `alt+1` … `alt+8`, tüm komutlar için `ctrl+p`; gezinmeye, düğmelere, satırlara, onay kutularına ve tuş ipuçlarına tıkla; listeleri ve takvimi tekerlekle kaydır.
@@ -107,9 +108,47 @@ Hâlâ bir terminal uygulamasıdır ve hâlâ opencode harness'i üzerinde çal�
 
 ### Başlarken
 
-**Gereksinimler:** [Bun](https://bun.sh) 1.3 veya üstü, git ve truecolor ile fare desteği olan bir terminal (xfce4-terminal, GNOME Terminal, Konsole, kitty, WezTerm, Ghostty, iTerm2, Windows Terminal…). Modeller için: opencode'un desteklediği herhangi bir sağlayıcı ya da Ollama, LM Studio, llama.cpp veya vLLM ile sunulan yerel bir model.
+#### Kurulum
+
+```bash
+# macOS ve Linux
+curl -fsSL https://github.com/dedeprogames-official/openwork/releases/latest/download/install | bash
+```
+
+```powershell
+# Windows (PowerShell)
+irm https://github.com/dedeprogames-official/openwork/releases/latest/download/install.ps1 | iex
+```
+
+```bash
+# Node.js 18+ olan her sistem: npx bir kez çalıştırır, npm install -g openwork komutunu kalıcı kurar
+npx https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+npm install -g https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+```
+
+Ardından bir klasör aç ve `openwork` çalıştır. `openwork upgrade` en son sürüme günceller, `openwork uninstall` kaldırır.
+
+#### İndirmeler
+
+| Platform                 | İndirme                                                                                                                                       |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Linux x64                | [`openwork-linux-x64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64.tar.gz)           |
+| Linux arm64              | [`openwork-linux-arm64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-arm64.tar.gz)       |
+| Linux x64 (musl, Alpine) | [`openwork-linux-x64-musl.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64-musl.tar.gz) |
+| macOS Apple Silicon      | [`openwork-darwin-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-arm64.zip)           |
+| macOS Intel              | [`openwork-darwin-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-x64.zip)               |
+| Windows x64              | [`openwork-windows-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-x64.zip)             |
+| Windows arm64            | [`openwork-windows-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-arm64.zip)         |
+
+Tüm sürümler [sürümler sayfasında](https://github.com/dedeprogames-official/openwork/releases). Her arşivde `openwork` ikili dosyası var; `-baseline` derlemeleri AVX2 olmayan x64 işlemciler, `-musl` derlemeleri Alpine içindir ve kurulum betikleri doğrusunu seçer. macOS ikilileri ad hoc imzalıdır, notarize edilmemiştir: bir zip'i tarayıcıyla indirdikten sonra bir kez `xattr -d com.apple.quarantine openwork` çalıştır.
+
+#### Windows
+
+PowerShell kurulumu `openwork.exe` dosyasını `%USERPROFILE%\.openwork\bin` içine koyar ve PATH'ine ekler: yeni bir terminal aç ve `openwork` çalıştır. En iyi sonucu Windows Terminal verir (truecolor ve fare). `openwork-windows-x64.zip` dosyasını istediğin yere açıp `openwork.exe` çalıştırabilir ya da yukarıdaki gibi `npx` kullanabilirsin.
 
 #### Kaynaktan çalıştırma
+
+**Gereksinimler:** [Bun](https://bun.sh) 1.3 veya üstü, git ve truecolor ile fare desteği olan bir terminal (xfce4-terminal, GNOME Terminal, Konsole, kitty, WezTerm, Ghostty, iTerm2, Windows Terminal…). Modeller için: opencode'un desteklediği herhangi bir sağlayıcı ya da Ollama, LM Studio, llama.cpp veya vLLM ile sunulan yerel bir model.
 
 ```bash
 git clone https://github.com/dedeprogames-official/openwork.git
@@ -174,14 +213,15 @@ Program adımı **on demand** seçeneğini de sunar: ajan yalnızca **Run now**'
 
 ### Klavye ve fare
 
-| Tuşlar            | İşlem                                  |
-| ----------------- | -------------------------------------- |
-| `alt+1` … `alt+8` | sayfa değiştir                         |
-| `ctrl+x d`        | ajan yerleştir                         |
-| `ctrl+x w`        | gezinmeyi daralt veya genişlet         |
-| `ctrl+p`          | komut paleti                           |
-| `c`               | sohbet alanına odaklan (`esc` ile çık) |
-| `esc`             | geri                                   |
+| Tuşlar            | İşlem                                                                                        |
+| ----------------- | -------------------------------------------------------------------------------------------- |
+| `alt+1` … `alt+8` | sayfa değiştir                                                                               |
+| `ctrl+x d`        | ajan yerleştir                                                                               |
+| `ctrl+x w`        | gezinmeyi daralt veya genişlet                                                               |
+| `m`               | ajanı başka bir space'e taşı (kendi sayfasında) ya da seçili space'e bir ajan getir (Spaces) |
+| `ctrl+p`          | komut paleti                                                                                 |
+| `c`               | sohbet alanına odaklan (`esc` ile çık)                                                       |
+| `esc`             | geri                                                                                         |
 
 Her sayfa kendi tuşlarını altta gösterir. Eğik çizgi komutları: `/day`, `/chats`, `/spaces`, `/agents`, `/skills`, `/memory`, `/models`, `/integrations`, `/deploy <metin>`, `/pause`, `/demo`, `/connect`.
 
@@ -191,7 +231,7 @@ Her şey fareyle de çalışır: gezinmeye, düğmelere ve tuş ipuçlarına tı
 
 ### Yerel modeller
 
-`localhost` üzerindeki OpenAI uyumlu her sunucu yerel sayılır; `ollama`, `lmstudio`, `llamacpp` ve `vllm` sağlayıcıları da öyle. Örneğin Ollama ile, `opencode.json` içinde (klasöründe ya da `~/.config/opencode/` içinde):
+`localhost` üzerindeki OpenAI uyumlu her sunucu yerel sayılır; `ollama`, `lmstudio`, `llamacpp` ve `vllm` sağlayıcıları da öyle. Örneğin Ollama ile, `opencode.json` içinde (klasöründe ya da `~/.config/openwork/` içinde):
 
 ```json
 {
@@ -213,6 +253,7 @@ Her şey fareyle de çalışır: gezinmeye, düğmelere ve tuş ipuçlarına tı
 - Zamanlayıcı OpenWork sunucu sürecinde yaşar. Her 5 saniyede bir zamanı gelen ajanları arar ve aynı anda en fazla 3 tane çalıştırır. Rezervasyonlar SQLite'ta atomiktir; böylece birden çok OpenWork penceresi aynı ajanı asla iki kez çalıştırmaz ve bir çökmeden geriye kalan çalıştırmalar kesildi olarak işaretlenir. `OPENCODE_DISABLE_WORK_SCHEDULER=1` onu kapatır.
 - Her çalıştırma, `work` ajanıyla bir opencode oturumudur — klasörlerin çalışma alanı, dosyaların teslimat olduğu bir bilgi işçisi kişiliği — sistem bağlamında hafızan ve ajanın son sonuçlarıyla, erişim düzeyine göre gözetimsiz izinlerle.
 - OpenWork opencode yapılandırmasını korur: `opencode.json`, `.opencode/`, `OPENCODE_*` değişkenleri, sağlayıcılar, MCP sunucuları ve skill'ler eskisi gibi çalışır.
+- OpenWork verilerini `~/.local/share/openwork`, genel yapılandırmasını `~/.config/openwork` içinde, herhangi bir opencode kurulumundan ayrı tutar ve yalnızca kendi GitHub sürümlerinden güncellenir.
 
 | Nerede                                                  | Ne                                                            |
 | ------------------------------------------------------- | ------------------------------------------------------------- |

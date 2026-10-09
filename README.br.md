@@ -61,6 +61,7 @@ Continua sendo um app de terminal e continua rodando sobre o harness do opencode
 - **Transcrições reais** — cada execução é uma sessão real do opencode que você pode abrir, com chamadas de ferramentas, tokens e custo.
 - **Agentes que dão retorno** — as ferramentas de cowork `inbox`, `user_todo`, `agenda`, `memory` e `deploy` deixam os agentes postar na sua inbox, adicionar todos, ler sua agenda e lembrar fatos sobre você. Um chat pode fazer deploy de novos agentes.
 - **Spaces** — agrupe agentes em torno de um objetivo, um evento ou um cliente.
+- **Mova agentes entre spaces** — aperte `m` na página do agente, use **+ Move an agent here...** na página Spaces ou peça num chat.
 - **Memória** — fatos sobre você que todo chat e todo agente recebem.
 - **Estatísticas de tokens** — tokens locais e de nuvem contados à parte, taxa de consumo, projeção diária e quanto os modelos locais economizam.
 - **Teclado e mouse** — `alt+1` … `alt+8` para as páginas e `ctrl+p` para todos os comandos; clique na navegação, botões, linhas, caixas de seleção e dicas de teclas; role listas e o calendário com a roda do mouse.
@@ -107,9 +108,47 @@ Continua sendo um app de terminal e continua rodando sobre o harness do opencode
 
 ### Primeiros passos
 
-**Requisitos:** [Bun](https://bun.sh) 1.3 ou mais recente, git e um terminal com truecolor e suporte a mouse (xfce4-terminal, GNOME Terminal, Konsole, kitty, WezTerm, Ghostty, iTerm2, Windows Terminal…). Para modelos: qualquer provedor que o opencode suporta, ou um modelo local servido por Ollama, LM Studio, llama.cpp ou vLLM.
+#### Instalação
+
+```bash
+# macOS e Linux
+curl -fsSL https://github.com/dedeprogames-official/openwork/releases/latest/download/install | bash
+```
+
+```powershell
+# Windows (PowerShell)
+irm https://github.com/dedeprogames-official/openwork/releases/latest/download/install.ps1 | iex
+```
+
+```bash
+# Qualquer sistema com Node.js 18+: o npx roda uma vez, o npm install -g deixa o comando openwork instalado
+npx https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+npm install -g https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+```
+
+Depois abra uma pasta e rode `openwork`. `openwork upgrade` atualiza para a versão mais recente e `openwork uninstall` remove.
+
+#### Downloads
+
+| Plataforma               | Download                                                                                                                                      |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Linux x64                | [`openwork-linux-x64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64.tar.gz)           |
+| Linux arm64              | [`openwork-linux-arm64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-arm64.tar.gz)       |
+| Linux x64 (musl, Alpine) | [`openwork-linux-x64-musl.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64-musl.tar.gz) |
+| macOS Apple Silicon      | [`openwork-darwin-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-arm64.zip)           |
+| macOS Intel              | [`openwork-darwin-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-x64.zip)               |
+| Windows x64              | [`openwork-windows-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-x64.zip)             |
+| Windows arm64            | [`openwork-windows-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-arm64.zip)         |
+
+Todas as versões estão na [página de releases](https://github.com/dedeprogames-official/openwork/releases). Cada arquivo traz o binário `openwork`; as builds `-baseline` são para CPUs x64 sem AVX2 e as `-musl` para Alpine, e os instaladores escolhem a certa para você. Os binários de macOS são assinados ad hoc, sem notarização: depois de baixar um zip pelo navegador, rode `xattr -d com.apple.quarantine openwork` uma vez.
+
+#### Windows
+
+O instalador de PowerShell coloca o `openwork.exe` em `%USERPROFILE%\.openwork\bin` e o adiciona ao seu PATH: abra um terminal novo e rode `openwork`. O Windows Terminal dá o melhor resultado (truecolor e mouse). Você também pode descompactar o `openwork-windows-x64.zip` em qualquer pasta e rodar `openwork.exe`, ou usar o `npx` como acima.
 
 #### Rodar a partir do código
+
+**Requisitos:** [Bun](https://bun.sh) 1.3 ou mais recente, git e um terminal com truecolor e suporte a mouse (xfce4-terminal, GNOME Terminal, Konsole, kitty, WezTerm, Ghostty, iTerm2, Windows Terminal…). Para modelos: qualquer provedor que o opencode suporta, ou um modelo local servido por Ollama, LM Studio, llama.cpp ou vLLM.
 
 ```bash
 git clone https://github.com/dedeprogames-official/openwork.git
@@ -174,14 +213,15 @@ As execuções não têm supervisão: perguntas e tudo que abriria um pedido de 
 
 ### Teclado e mouse
 
-| Teclas            | Ação                               |
-| ----------------- | ---------------------------------- |
-| `alt+1` … `alt+8` | trocar de página                   |
-| `ctrl+x d`        | fazer deploy de um agente          |
-| `ctrl+x w`        | recolher ou expandir a navegação   |
-| `ctrl+p`          | paleta de comandos                 |
-| `c`               | focar o prompt de chat (`esc` sai) |
-| `esc`             | voltar                             |
+| Teclas            | Ação                                                                                            |
+| ----------------- | ----------------------------------------------------------------------------------------------- |
+| `alt+1` … `alt+8` | trocar de página                                                                                |
+| `ctrl+x d`        | fazer deploy de um agente                                                                       |
+| `ctrl+x w`        | recolher ou expandir a navegação                                                                |
+| `m`               | mover o agente para outro space (na página dele) ou trazer um para o space selecionado (Spaces) |
+| `ctrl+p`          | paleta de comandos                                                                              |
+| `c`               | focar o prompt de chat (`esc` sai)                                                              |
+| `esc`             | voltar                                                                                          |
 
 Cada página mostra as próprias teclas no rodapé. Comandos de barra: `/day`, `/chats`, `/spaces`, `/agents`, `/skills`, `/memory`, `/models`, `/integrations`, `/deploy <texto>`, `/pause`, `/demo`, `/connect`.
 
@@ -191,7 +231,7 @@ Tudo também funciona com o mouse: clique na navegação, nos botões e nas dica
 
 ### Modelos locais
 
-Qualquer servidor compatível com OpenAI em `localhost` conta como local, assim como os provedores `ollama`, `lmstudio`, `llamacpp` e `vllm`. Por exemplo, com Ollama, no `opencode.json` (na sua pasta ou em `~/.config/opencode/`):
+Qualquer servidor compatível com OpenAI em `localhost` conta como local, assim como os provedores `ollama`, `lmstudio`, `llamacpp` e `vllm`. Por exemplo, com Ollama, no `opencode.json` (na sua pasta ou em `~/.config/openwork/`):
 
 ```json
 {
@@ -213,6 +253,7 @@ Qualquer servidor compatível com OpenAI em `localhost` conta como local, assim 
 - O agendador vive no processo do servidor do OpenWork. Ele procura agentes vencidos a cada 5 segundos e roda até 3 ao mesmo tempo. As reservas são atômicas no SQLite, então várias janelas do OpenWork nunca rodam o mesmo agente duas vezes, e execuções deixadas para trás por uma falha são marcadas como interrompidas. `OPENCODE_DISABLE_WORK_SCHEDULER=1` desliga o agendador.
 - Cada execução é uma sessão do opencode com o agente `work` — uma persona de trabalho do conhecimento em que pastas são espaços de trabalho e arquivos são entregáveis — com a sua memória e os resultados recentes do agente no contexto de sistema, e permissões sem supervisão para o nível de acesso dele.
 - O OpenWork mantém a configuração do opencode: `opencode.json`, `.opencode/`, variáveis `OPENCODE_*`, provedores, servidores MCP e skills funcionam como antes.
+- O OpenWork guarda os próprios dados em `~/.local/share/openwork` e a configuração global em `~/.config/openwork`, separados de qualquer instalação do opencode, e só se atualiza pelos releases dele no GitHub.
 
 | Onde                                                    | O quê                                                              |
 | ------------------------------------------------------- | ------------------------------------------------------------------ |

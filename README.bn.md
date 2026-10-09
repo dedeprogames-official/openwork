@@ -61,6 +61,7 @@ OpenWork opencode-এর টার্মিনাল ইন্টারফেস
 - **আসল ট্রান্সক্রিপ্ট** — প্রতিটি রান একটি আসল opencode সেশন যা আপনি খুলতে পারেন, এতে টুল কল, টোকেন ও খরচ থাকে।
 - **রিপোর্ট করা এজেন্ট** — cowork টুল `inbox`, `user_todo`, `agenda`, `memory` ও `deploy` দিয়ে এজেন্টরা আপনার ইনবক্সে পোস্ট করতে, টুডু যোগ করতে, এজেন্ডা পড়তে এবং আপনার সম্পর্কে তথ্য মনে রাখতে পারে। একটি চ্যাট থেকেও নতুন এজেন্ট ডিপ্লয় করা যায়।
 - **Spaces** — একটি লক্ষ্য, ইভেন্ট বা ক্লায়েন্ট ঘিরে এজেন্টদের দলবদ্ধ করুন।
+- **space-এর মধ্যে এজেন্ট সরান** — এজেন্টের পেজে `m` চাপুন, Spaces পেজে **+ Move an agent here...** ব্যবহার করুন, অথবা চ্যাটে বলুন।
 - **মেমরি** — আপনার সম্পর্কে তথ্য যা প্রতিটি চ্যাট ও প্রতিটি এজেন্ট পায়।
 - **টোকেন পরিসংখ্যান** — লোকাল ও ক্লাউড টোকেন আলাদাভাবে গোনা, খরচের হার, দৈনিক পূর্বাভাস এবং লোকাল মডেলে কত সাশ্রয় হলো।
 - **কীবোর্ড ও মাউস** — পেজের জন্য `alt+1` … `alt+8` এবং সব কমান্ডের জন্য `ctrl+p`; নেভিগেশন, বোতাম, সারি, চেকবক্স ও কী-সংকেতে ক্লিক করুন; চাকা দিয়ে তালিকা ও ক্যালেন্ডার স্ক্রল করুন।
@@ -107,9 +108,47 @@ OpenWork opencode-এর টার্মিনাল ইন্টারফেস
 
 ### শুরু করা
 
-**প্রয়োজনীয়তা:** [Bun](https://bun.sh) 1.3 বা নতুনতর, git এবং truecolor ও মাউস সমর্থিত একটি টার্মিনাল (xfce4-terminal, GNOME Terminal, Konsole, kitty, WezTerm, Ghostty, iTerm2, Windows Terminal…)। মডেলের জন্য: opencode সমর্থিত যেকোনো প্রোভাইডার, অথবা Ollama, LM Studio, llama.cpp বা vLLM দিয়ে চালানো একটি লোকাল মডেল।
+#### ইনস্টল
+
+```bash
+# macOS ও Linux
+curl -fsSL https://github.com/dedeprogames-official/openwork/releases/latest/download/install | bash
+```
+
+```powershell
+# Windows (PowerShell)
+irm https://github.com/dedeprogames-official/openwork/releases/latest/download/install.ps1 | iex
+```
+
+```bash
+# Node.js 18+ থাকা যেকোনো OS: npx একবার চালায়, npm install -g দিলে openwork কমান্ড থেকে যায়
+npx https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+npm install -g https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+```
+
+তারপর একটি ফোল্ডার খুলে `openwork` চালান। `openwork upgrade` সর্বশেষ রিলিজে আপডেট করে, আর `openwork uninstall` সরিয়ে দেয়।
+
+#### ডাউনলোড
+
+| প্ল্যাটফর্ম              | ডাউনলোড                                                                                                                                       |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Linux x64                | [`openwork-linux-x64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64.tar.gz)           |
+| Linux arm64              | [`openwork-linux-arm64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-arm64.tar.gz)       |
+| Linux x64 (musl, Alpine) | [`openwork-linux-x64-musl.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64-musl.tar.gz) |
+| macOS Apple Silicon      | [`openwork-darwin-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-arm64.zip)           |
+| macOS Intel              | [`openwork-darwin-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-x64.zip)               |
+| Windows x64              | [`openwork-windows-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-x64.zip)             |
+| Windows arm64            | [`openwork-windows-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-arm64.zip)         |
+
+সব ভার্সন আছে [রিলিজ পেজে](https://github.com/dedeprogames-official/openwork/releases)। প্রতিটি আর্কাইভে `openwork` বাইনারি থাকে; `-baseline` বিল্ড AVX2 ছাড়া x64 CPU-র জন্য আর `-musl` বিল্ড Alpine-এর জন্য, এবং ইনস্টলার নিজেই ঠিকটি বেছে নেয়। macOS বাইনারিগুলো ad hoc সাইন করা, notarize করা নয়: ব্রাউজারে zip ডাউনলোড করলে একবার `xattr -d com.apple.quarantine openwork` চালান।
+
+#### Windows
+
+PowerShell ইনস্টলার `openwork.exe`-কে `%USERPROFILE%\.openwork\bin`-এ রাখে এবং আপনার PATH-এ যোগ করে: একটি নতুন টার্মিনাল খুলে `openwork` চালান। Windows Terminal-এ সবচেয়ে ভালো চলে (truecolor ও মাউস)। চাইলে `openwork-windows-x64.zip` যেকোনো জায়গায় আনজিপ করে `openwork.exe` চালাতে পারেন, অথবা ওপরের মতো `npx` ব্যবহার করতে পারেন।
 
 #### সোর্স থেকে চালানো
+
+**প্রয়োজনীয়তা:** [Bun](https://bun.sh) 1.3 বা নতুনতর, git এবং truecolor ও মাউস সমর্থিত একটি টার্মিনাল (xfce4-terminal, GNOME Terminal, Konsole, kitty, WezTerm, Ghostty, iTerm2, Windows Terminal…)। মডেলের জন্য: opencode সমর্থিত যেকোনো প্রোভাইডার, অথবা Ollama, LM Studio, llama.cpp বা vLLM দিয়ে চালানো একটি লোকাল মডেল।
 
 ```bash
 git clone https://github.com/dedeprogames-official/openwork.git
@@ -174,14 +213,15 @@ bun dev ~/work        # যে ফোল্ডারে OpenWork খুলবে
 
 ### কীবোর্ড ও মাউস
 
-| কী                | কাজ                                       |
-| ----------------- | ----------------------------------------- |
-| `alt+1` … `alt+8` | পেজ বদলানো                                |
-| `ctrl+x d`        | একটি এজেন্ট ডিপ্লয়                       |
-| `ctrl+x w`        | নেভিগেশন গুটানো বা খোলা                   |
-| `ctrl+p`          | কমান্ড প্যালেট                            |
-| `c`               | চ্যাট প্রম্পটে ফোকাস (`esc` দিয়ে বের হন) |
-| `esc`             | পেছনে                                     |
+| কী                | কাজ                                                                                  |
+| ----------------- | ------------------------------------------------------------------------------------ |
+| `alt+1` … `alt+8` | পেজ বদলানো                                                                           |
+| `ctrl+x d`        | একটি এজেন্ট ডিপ্লয়                                                                  |
+| `ctrl+x w`        | নেভিগেশন গুটানো বা খোলা                                                              |
+| `m`               | এজেন্টকে অন্য space-এ সরানো (তার পেজে) বা নির্বাচিত space-এ একটি এজেন্ট আনা (Spaces) |
+| `ctrl+p`          | কমান্ড প্যালেট                                                                       |
+| `c`               | চ্যাট প্রম্পটে ফোকাস (`esc` দিয়ে বের হন)                                            |
+| `esc`             | পেছনে                                                                                |
 
 প্রতিটি পেজ নিচে নিজের কী দেখায়। স্ল্যাশ কমান্ড: `/day`, `/chats`, `/spaces`, `/agents`, `/skills`, `/memory`, `/models`, `/integrations`, `/deploy <টেক্সট>`, `/pause`, `/demo`, `/connect`।
 
@@ -191,7 +231,7 @@ bun dev ~/work        # যে ফোল্ডারে OpenWork খুলবে
 
 ### লোকাল মডেল
 
-`localhost`-এ চলা যেকোনো OpenAI-সামঞ্জস্যপূর্ণ সার্ভার লোকাল হিসেবে গণ্য হয়, `ollama`, `lmstudio`, `llamacpp` ও `vllm` প্রোভাইডারও তাই। যেমন Ollama দিয়ে, `opencode.json`-এ (আপনার ফোল্ডারে বা `~/.config/opencode/`-এ):
+`localhost`-এ চলা যেকোনো OpenAI-সামঞ্জস্যপূর্ণ সার্ভার লোকাল হিসেবে গণ্য হয়, `ollama`, `lmstudio`, `llamacpp` ও `vllm` প্রোভাইডারও তাই। যেমন Ollama দিয়ে, `opencode.json`-এ (আপনার ফোল্ডারে বা `~/.config/openwork/`-এ):
 
 ```json
 {
@@ -213,6 +253,7 @@ bun dev ~/work        # যে ফোল্ডারে OpenWork খুলবে
 - শিডিউলার OpenWork সার্ভার প্রসেসের ভেতরে থাকে। প্রতি 5 সেকেন্ডে এটি চালানোর সময় হওয়া এজেন্ট খোঁজে এবং একসঙ্গে সর্বোচ্চ 3টি চালায়। দাবি করা SQLite-এ অ্যাটমিক, তাই একাধিক OpenWork উইন্ডো কখনো একই এজেন্ট দুবার চালায় না, আর ক্র্যাশের পর পড়ে থাকা রান বাধাপ্রাপ্ত হিসেবে চিহ্নিত হয়। `OPENCODE_DISABLE_WORK_SCHEDULER=1` এটি বন্ধ করে।
 - প্রতিটি রান `work` এজেন্টসহ একটি opencode সেশন — জ্ঞানভিত্তিক কাজের একটি পারসোনা, যার কাছে ফোল্ডার মানে কর্মক্ষেত্র আর ফাইল মানে ডেলিভারেবল — সিস্টেম কনটেক্সটে আপনার মেমরি ও এজেন্টের সাম্প্রতিক ফলাফলসহ, এবং তার অ্যাক্সেস স্তর অনুযায়ী তত্ত্বাবধানহীন অনুমতিসহ।
 - OpenWork opencode-এর কনফিগারেশন রেখে দেয়: `opencode.json`, `.opencode/`, `OPENCODE_*` ভেরিয়েবল, প্রোভাইডার, MCP সার্ভার ও skills আগের মতোই কাজ করে।
+- OpenWork নিজের ডেটা রাখে `~/.local/share/openwork`-এ আর গ্লোবাল কনফিগ `~/.config/openwork`-এ, যেকোনো opencode ইনস্টল থেকে আলাদা, এবং শুধু নিজের GitHub রিলিজ থেকেই আপডেট হয়।
 
 | কোথায়                                                  | কী                                                      |
 | ------------------------------------------------------- | ------------------------------------------------------- |

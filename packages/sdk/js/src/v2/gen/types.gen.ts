@@ -4098,10 +4098,10 @@ export type WorkDeploymentPatch = {
   title?: string
   task?: string
   directory?: string
-  spaceID?: string
+  spaceID?: string | null
   agent?: string
-  model?: WorkModelRef
-  skill?: string
+  model?: WorkModelRef | null
+  skill?: string | null
   schedule?: WorkSchedule
   access?: WorkAccess
   status?: WorkDeploymentStatus

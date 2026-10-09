@@ -61,6 +61,7 @@ OpenWork는 opencode의 터미널 UI를 코드만이 아니라 일을 끝내는 
 - **실제 기록** — 모든 실행은 열어 볼 수 있는 실제 opencode 세션이며, 도구 호출, 토큰, 비용이 담겨 있습니다.
 - **보고하는 에이전트** — cowork 도구 `inbox`, `user_todo`, `agenda`, `memory`, `deploy`로 에이전트가 받은 편지함에 글을 남기고, 할 일을 추가하고, 일정을 읽고, 사용자에 대한 사실을 기억합니다. 채팅에서 새 에이전트를 배포할 수도 있습니다.
 - **Spaces** — 목표, 이벤트, 고객을 중심으로 에이전트를 묶습니다.
+- **space 간 에이전트 이동** — 에이전트 페이지에서 `m`을 누르거나, Spaces 페이지의 <b>+ Move an agent here...</b>를 쓰거나, 채팅으로 요청하세요.
 - **메모리** — 모든 채팅과 모든 에이전트가 받는 사용자에 대한 사실.
 - **토큰 통계** — 로컬과 클라우드 토큰을 따로 집계하고, 소비 속도, 하루 예상치, 로컬 모델로 아낀 금액을 보여 줍니다.
 - **키보드와 마우스** — 페이지는 `alt+1` … `alt+8`, 모든 명령은 `ctrl+p`. 내비게이션, 버튼, 행, 체크박스, 키 힌트를 클릭할 수 있고, 목록과 캘린더는 휠로 스크롤합니다.
@@ -107,9 +108,47 @@ OpenWork는 opencode의 터미널 UI를 코드만이 아니라 일을 끝내는 
 
 ### 시작하기
 
-**요구 사항:** [Bun](https://bun.sh) 1.3 이상, git, 트루컬러와 마우스를 지원하는 터미널(xfce4-terminal, GNOME Terminal, Konsole, kitty, WezTerm, Ghostty, iTerm2, Windows Terminal 등). 모델은 opencode가 지원하는 모든 제공자 또는 Ollama, LM Studio, llama.cpp, vLLM으로 띄운 로컬 모델.
+#### 설치
+
+```bash
+# macOS와 Linux
+curl -fsSL https://github.com/dedeprogames-official/openwork/releases/latest/download/install | bash
+```
+
+```powershell
+# Windows (PowerShell)
+irm https://github.com/dedeprogames-official/openwork/releases/latest/download/install.ps1 | iex
+```
+
+```bash
+# Node.js 18+가 있는 모든 OS: npx는 한 번 실행하고, npm install -g는 openwork 명령을 남깁니다
+npx https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+npm install -g https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+```
+
+그다음 폴더를 열고 `openwork`를 실행하세요. `openwork upgrade`는 최신 릴리스로 업데이트하고 `openwork uninstall`은 제거합니다.
+
+#### 다운로드
+
+| 플랫폼                   | 다운로드                                                                                                                                      |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Linux x64                | [`openwork-linux-x64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64.tar.gz)           |
+| Linux arm64              | [`openwork-linux-arm64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-arm64.tar.gz)       |
+| Linux x64 (musl, Alpine) | [`openwork-linux-x64-musl.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64-musl.tar.gz) |
+| macOS Apple Silicon      | [`openwork-darwin-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-arm64.zip)           |
+| macOS Intel              | [`openwork-darwin-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-x64.zip)               |
+| Windows x64              | [`openwork-windows-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-x64.zip)             |
+| Windows arm64            | [`openwork-windows-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-arm64.zip)         |
+
+모든 버전은 [릴리스 페이지](https://github.com/dedeprogames-official/openwork/releases)에 있습니다. 각 압축 파일에는 `openwork` 바이너리가 들어 있습니다. `-baseline` 빌드는 AVX2가 없는 x64 CPU용, `-musl` 빌드는 Alpine용이며 설치 스크립트가 알맞은 것을 고릅니다. macOS 바이너리는 ad hoc 서명이며 공증되지 않았습니다. 브라우저로 zip을 받았다면 `xattr -d com.apple.quarantine openwork`를 한 번 실행하세요.
+
+#### Windows
+
+PowerShell 설치 스크립트는 `openwork.exe`를 `%USERPROFILE%\.openwork\bin`에 두고 PATH에 추가합니다. 새 터미널을 열고 `openwork`를 실행하세요. Windows Terminal에서 가장 잘 동작합니다(트루컬러와 마우스). `openwork-windows-x64.zip`을 아무 곳에나 풀고 `openwork.exe`를 실행하거나, 위처럼 `npx`를 써도 됩니다.
 
 #### 소스에서 실행
+
+**요구 사항:** [Bun](https://bun.sh) 1.3 이상, git, 트루컬러와 마우스를 지원하는 터미널(xfce4-terminal, GNOME Terminal, Konsole, kitty, WezTerm, Ghostty, iTerm2, Windows Terminal 등). 모델은 opencode가 지원하는 모든 제공자 또는 Ollama, LM Studio, llama.cpp, vLLM으로 띄운 로컬 모델.
 
 ```bash
 git clone https://github.com/dedeprogames-official/openwork.git
@@ -174,14 +213,15 @@ bun dev ~/work        # OpenWork가 열릴 폴더
 
 ### 키보드와 마우스
 
-| 키                | 동작                                 |
-| ----------------- | ------------------------------------ |
-| `alt+1` … `alt+8` | 페이지 전환                          |
-| `ctrl+x d`        | 에이전트 배포                        |
-| `ctrl+x w`        | 내비게이션 접기·펼치기               |
-| `ctrl+p`          | 명령 팔레트                          |
-| `c`               | 채팅 입력창에 포커스(`esc`로 나가기) |
-| `esc`             | 뒤로                                 |
+| 키                | 동작                                                                                    |
+| ----------------- | --------------------------------------------------------------------------------------- |
+| `alt+1` … `alt+8` | 페이지 전환                                                                             |
+| `ctrl+x d`        | 에이전트 배포                                                                           |
+| `ctrl+x w`        | 내비게이션 접기·펼치기                                                                  |
+| `m`               | 에이전트를 다른 space로 이동(해당 페이지) 또는 선택한 space로 에이전트 가져오기(Spaces) |
+| `ctrl+p`          | 명령 팔레트                                                                             |
+| `c`               | 채팅 입력창에 포커스(`esc`로 나가기)                                                    |
+| `esc`             | 뒤로                                                                                    |
 
 각 페이지 하단에 그 페이지의 키가 표시됩니다. 슬래시 명령: `/day`, `/chats`, `/spaces`, `/agents`, `/skills`, `/memory`, `/models`, `/integrations`, `/deploy <텍스트>`, `/pause`, `/demo`, `/connect`.
 
@@ -191,7 +231,7 @@ bun dev ~/work        # OpenWork가 열릴 폴더
 
 ### 로컬 모델
 
-`localhost`에서 도는 OpenAI 호환 서버는 모두 로컬로 집계되며, `ollama`, `lmstudio`, `llamacpp`, `vllm` 제공자도 마찬가지입니다. 예를 들어 Ollama라면 `opencode.json`(작업 폴더나 `~/.config/opencode/`)에 다음처럼 씁니다:
+`localhost`에서 도는 OpenAI 호환 서버는 모두 로컬로 집계되며, `ollama`, `lmstudio`, `llamacpp`, `vllm` 제공자도 마찬가지입니다. 예를 들어 Ollama라면 `opencode.json`(작업 폴더나 `~/.config/openwork/`)에 다음처럼 씁니다:
 
 ```json
 {
@@ -213,6 +253,7 @@ bun dev ~/work        # OpenWork가 열릴 폴더
 - 스케줄러는 OpenWork 서버 프로세스 안에 있습니다. 5초마다 실행할 때가 된 에이전트를 찾아 동시에 최대 3개까지 실행합니다. 실행 확보는 SQLite에서 원자적으로 이루어지므로 여러 OpenWork 창이 같은 에이전트를 두 번 실행하는 일은 없고, 충돌로 남은 실행은 중단됨으로 표시됩니다. `OPENCODE_DISABLE_WORK_SCHEDULER=1`로 끌 수 있습니다.
 - 각 실행은 `work` 에이전트를 쓰는 opencode 세션입니다. `work`는 폴더를 작업 공간으로, 파일을 결과물로 보는 지식 노동용 페르소나이며, 시스템 컨텍스트에 사용자 메모리와 그 에이전트의 최근 결과가 들어가고, 접근 수준에 맞는 무인 권한으로 실행됩니다.
 - OpenWork는 opencode 설정을 그대로 유지합니다. `opencode.json`, `.opencode/`, `OPENCODE_*` 변수, 제공자, MCP 서버, skills가 모두 전과 같이 동작합니다.
+- OpenWork는 데이터를 `~/.local/share/openwork`, 전역 설정을 `~/.config/openwork`에 두어 opencode 설치와 분리하며, 자신의 GitHub 릴리스로만 업데이트합니다.
 
 | 위치                                                    | 내용                                                    |
 | ------------------------------------------------------- | ------------------------------------------------------- |

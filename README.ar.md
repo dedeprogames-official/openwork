@@ -61,6 +61,7 @@
 - **سجلات حقيقية** — كل تشغيل جلسة opencode حقيقية يمكنك فتحها، مع استدعاءات الأدوات والرموز والتكلفة.
 - **وكلاء يرفعون التقارير** — أدوات cowork وهي `inbox` و`user_todo` و`agenda` و`memory` و`deploy` تتيح للوكلاء النشر في صندوق الوارد وإضافة المهام وقراءة جدول أعمالك وتذكّر معلومات عنك. ويمكن لمحادثة أن تنشر وكلاء جددًا.
 - **Spaces** — اجمع الوكلاء حول هدف أو حدث أو عميل.
+- **نقل الوكلاء بين المساحات** — اضغط `m` في صفحة الوكيل، أو استخدم **+ Move an agent here...** في صفحة Spaces، أو اطلب ذلك في محادثة.
 - **الذاكرة** — معلومات عنك تصل إلى كل محادثة وكل وكيل.
 - **إحصاءات الرموز** — الرموز المحلية والسحابية تُحسب كلٌّ على حدة، مع معدل الاستهلاك وتوقّع يومي وما توفره لك النماذج المحلية.
 - **لوحة المفاتيح والفأرة** — `alt+1` … `alt+8` للصفحات و`ctrl+p` لكل الأوامر؛ انقر على التنقل والأزرار والصفوف ومربعات الاختيار وتلميحات المفاتيح؛ ومرّر القوائم والتقويم بعجلة الفأرة.
@@ -107,9 +108,47 @@
 
 ### البدء
 
-**المتطلبات:** [Bun](https://bun.sh) الإصدار 1.3 أو أحدث، وgit، وطرفية تدعم الألوان الكاملة والفأرة (xfce4-terminal وGNOME Terminal وKonsole وkitty وWezTerm وGhostty وiTerm2 وWindows Terminal…). للنماذج: أي مزوّد يدعمه opencode، أو نموذج محلي عبر Ollama أو LM Studio أو llama.cpp أو vLLM.
+#### التثبيت
+
+```bash
+# macOS وLinux
+curl -fsSL https://github.com/dedeprogames-official/openwork/releases/latest/download/install | bash
+```
+
+```powershell
+# Windows (PowerShell)
+irm https://github.com/dedeprogames-official/openwork/releases/latest/download/install.ps1 | iex
+```
+
+```bash
+# أي نظام فيه Node.js 18+: يشغّله npx مرة واحدة، ويُبقي npm install -g الأمر openwork
+npx https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+npm install -g https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+```
+
+ثم افتح مجلدًا وشغّل `openwork`. يحدّثه `openwork upgrade` إلى أحدث إصدار، ويزيله `openwork uninstall`.
+
+#### التنزيلات
+
+| المنصة                   | التنزيل                                                                                                                                       |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Linux x64                | [`openwork-linux-x64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64.tar.gz)           |
+| Linux arm64              | [`openwork-linux-arm64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-arm64.tar.gz)       |
+| Linux x64 (musl, Alpine) | [`openwork-linux-x64-musl.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64-musl.tar.gz) |
+| macOS Apple Silicon      | [`openwork-darwin-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-arm64.zip)           |
+| macOS Intel              | [`openwork-darwin-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-x64.zip)               |
+| Windows x64              | [`openwork-windows-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-x64.zip)             |
+| Windows arm64            | [`openwork-windows-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-arm64.zip)         |
+
+كل الإصدارات موجودة في [صفحة الإصدارات](https://github.com/dedeprogames-official/openwork/releases). يحتوي كل أرشيف على الملف التنفيذي `openwork`؛ إصدارات `-baseline` لمعالجات x64 بلا AVX2 وإصدارات `-musl` لـ Alpine، ويختار المثبّت الإصدار المناسب. الملفات التنفيذية لـ macOS موقّعة توقيعًا مؤقتًا (ad hoc) وغير موثّقة: بعد تنزيل ملف zip من المتصفح شغّل `xattr -d com.apple.quarantine openwork` مرة واحدة.
+
+#### Windows
+
+يضع مثبّت PowerShell الملف `openwork.exe` في `%USERPROFILE%\.openwork\bin` ويضيفه إلى PATH: افتح طرفية جديدة وشغّل `openwork`. أفضل النتائج مع Windows Terminal (ألوان كاملة وفأرة). يمكنك أيضًا فك ضغط `openwork-windows-x64.zip` في أي مكان وتشغيل `openwork.exe`، أو استخدام `npx` كما سبق.
 
 #### التشغيل من الشيفرة المصدرية
+
+**المتطلبات:** [Bun](https://bun.sh) الإصدار 1.3 أو أحدث، وgit، وطرفية تدعم الألوان الكاملة والفأرة (xfce4-terminal وGNOME Terminal وKonsole وkitty وWezTerm وGhostty وiTerm2 وWindows Terminal…). للنماذج: أي مزوّد يدعمه opencode، أو نموذج محلي عبر Ollama أو LM Studio أو llama.cpp أو vLLM.
 
 ```bash
 git clone https://github.com/dedeprogames-official/openwork.git
@@ -174,14 +213,15 @@ bun dev ~/work        # المجلد الذي يفتح فيه OpenWork
 
 ### لوحة المفاتيح والفأرة
 
-| المفاتيح          | الإجراء                                 |
-| ----------------- | --------------------------------------- |
-| `alt+1` … `alt+8` | التنقل بين الصفحات                      |
-| `ctrl+x d`        | نشر وكيل                                |
-| `ctrl+x w`        | طي التنقل أو توسيعه                     |
-| `ctrl+p`          | لوحة الأوامر                            |
-| `c`               | التركيز على حقل المحادثة (`esc` للخروج) |
-| `esc`             | رجوع                                    |
+| المفاتيح          | الإجراء                                                                       |
+| ----------------- | ----------------------------------------------------------------------------- |
+| `alt+1` … `alt+8` | التنقل بين الصفحات                                                            |
+| `ctrl+x d`        | نشر وكيل                                                                      |
+| `ctrl+x w`        | طي التنقل أو توسيعه                                                           |
+| `m`               | نقل الوكيل إلى مساحة أخرى (في صفحته) أو نقل وكيل إلى المساحة المحددة (Spaces) |
+| `ctrl+p`          | لوحة الأوامر                                                                  |
+| `c`               | التركيز على حقل المحادثة (`esc` للخروج)                                       |
+| `esc`             | رجوع                                                                          |
 
 تعرض كل صفحة مفاتيحها في الأسفل. أوامر الشرطة المائلة: `/day` و`/chats` و`/spaces` و`/agents` و`/skills` و`/memory` و`/models` و`/integrations` و`/deploy <نص>` و`/pause` و`/demo` و`/connect`.
 
@@ -191,7 +231,7 @@ bun dev ~/work        # المجلد الذي يفتح فيه OpenWork
 
 ### النماذج المحلية
 
-يُعدّ أي خادم متوافق مع OpenAI على `localhost` محليًا، وكذلك المزوّدون `ollama` و`lmstudio` و`llamacpp` و`vllm`. مثلًا مع Ollama، في `opencode.json` (في مجلدك أو في `~/.config/opencode/`):
+يُعدّ أي خادم متوافق مع OpenAI على `localhost` محليًا، وكذلك المزوّدون `ollama` و`lmstudio` و`llamacpp` و`vllm`. مثلًا مع Ollama، في `opencode.json` (في مجلدك أو في `~/.config/openwork/`):
 
 ```json
 {
@@ -213,6 +253,7 @@ bun dev ~/work        # المجلد الذي يفتح فيه OpenWork
 - يعيش المجدول داخل عملية خادم OpenWork. يبحث كل 5 ثوانٍ عن الوكلاء الذين حان وقتهم ويشغّل حتى 3 في الوقت نفسه. الحجز ذرّي في SQLite، فلا تشغّل نوافذ OpenWork المتعددة الوكيل نفسه مرتين أبدًا، والتشغيلات التي يتركها تعطل مفاجئ تُعلَّم بأنها مقطوعة. `OPENCODE_DISABLE_WORK_SCHEDULER=1` يوقفه.
 - كل تشغيل جلسة opencode مع الوكيل `work` — شخصية لعمل المعرفة ترى المجلدات مساحات عمل والملفات مخرجات — مع ذاكرتك وأحدث نتائج الوكيل في سياق النظام، وأذونات دون إشراف وفق مستوى وصوله.
 - يحتفظ OpenWork بإعدادات opencode: `opencode.json` و`.opencode/` ومتغيرات `OPENCODE_*` والمزوّدون وخوادم MCP وskills تعمل كما كانت.
+- يحفظ OpenWork بياناته في `~/.local/share/openwork` وإعداداته العامة في `~/.config/openwork`، بعيدًا عن أي تثبيت لـ opencode، ولا يحدّث نفسه إلا من إصداراته على GitHub.
 
 | أين                                                     | ماذا                                                          |
 | ------------------------------------------------------- | ------------------------------------------------------------- |

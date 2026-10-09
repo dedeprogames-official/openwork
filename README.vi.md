@@ -61,6 +61,7 @@ Nó vẫn là ứng dụng terminal và vẫn chạy trên harness của opencod
 - **Bản ghi thật** — mỗi lượt chạy là một phiên opencode thật mà bạn có thể mở, với các lệnh gọi công cụ, token và chi phí.
 - **Agent biết báo cáo** — các công cụ cowork `inbox`, `user_todo`, `agenda`, `memory` và `deploy` cho phép agent gửi vào hộp thư, thêm việc cần làm, đọc lịch trình và ghi nhớ thông tin về bạn. Một cuộc trò chuyện có thể triển khai agent mới.
 - **Spaces** — nhóm agent quanh một mục tiêu, một sự kiện hoặc một khách hàng.
+- **Di chuyển agent giữa các space** — nhấn `m` trên trang của agent, dùng **+ Move an agent here...** trên trang Spaces, hoặc nhờ trong cuộc trò chuyện.
 - **Bộ nhớ** — những điều về bạn mà mọi cuộc trò chuyện và mọi agent đều nhận được.
 - **Thống kê token** — token cục bộ và đám mây được tính riêng, tốc độ tiêu thụ, dự báo theo ngày và số tiền mô hình cục bộ giúp bạn tiết kiệm.
 - **Bàn phím và chuột** — `alt+1` … `alt+8` cho các trang và `ctrl+p` cho mọi lệnh; nhấp vào điều hướng, nút, hàng, ô đánh dấu và gợi ý phím; cuộn danh sách và lịch bằng con lăn.
@@ -107,9 +108,47 @@ Nó vẫn là ứng dụng terminal và vẫn chạy trên harness của opencod
 
 ### Bắt đầu
 
-**Yêu cầu:** [Bun](https://bun.sh) 1.3 trở lên, git và một terminal hỗ trợ truecolor và chuột (xfce4-terminal, GNOME Terminal, Konsole, kitty, WezTerm, Ghostty, iTerm2, Windows Terminal…). Về mô hình: bất kỳ nhà cung cấp nào opencode hỗ trợ, hoặc mô hình cục bộ chạy bằng Ollama, LM Studio, llama.cpp hay vLLM.
+#### Cài đặt
+
+```bash
+# macOS và Linux
+curl -fsSL https://github.com/dedeprogames-official/openwork/releases/latest/download/install | bash
+```
+
+```powershell
+# Windows (PowerShell)
+irm https://github.com/dedeprogames-official/openwork/releases/latest/download/install.ps1 | iex
+```
+
+```bash
+# Mọi hệ điều hành có Node.js 18+: npx chạy một lần, npm install -g giữ lại lệnh openwork
+npx https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+npm install -g https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+```
+
+Sau đó mở một thư mục và chạy `openwork`. `openwork upgrade` cập nhật lên bản mới nhất và `openwork uninstall` gỡ bỏ nó.
+
+#### Tải về
+
+| Nền tảng                 | Tải về                                                                                                                                        |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Linux x64                | [`openwork-linux-x64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64.tar.gz)           |
+| Linux arm64              | [`openwork-linux-arm64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-arm64.tar.gz)       |
+| Linux x64 (musl, Alpine) | [`openwork-linux-x64-musl.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64-musl.tar.gz) |
+| macOS Apple Silicon      | [`openwork-darwin-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-arm64.zip)           |
+| macOS Intel              | [`openwork-darwin-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-x64.zip)               |
+| Windows x64              | [`openwork-windows-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-x64.zip)             |
+| Windows arm64            | [`openwork-windows-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-arm64.zip)         |
+
+Mọi phiên bản đều có trên [trang phát hành](https://github.com/dedeprogames-official/openwork/releases). Mỗi gói chứa tệp thực thi `openwork`; bản `-baseline` dành cho CPU x64 không có AVX2 và bản `-musl` dành cho Alpine, trình cài đặt tự chọn bản phù hợp. Tệp thực thi macOS được ký ad hoc, chưa notarize: sau khi tải zip bằng trình duyệt, hãy chạy `xattr -d com.apple.quarantine openwork` một lần.
+
+#### Windows
+
+Trình cài đặt PowerShell đặt `openwork.exe` vào `%USERPROFILE%\.openwork\bin` và thêm vào PATH: mở một terminal mới và chạy `openwork`. Windows Terminal cho kết quả tốt nhất (truecolor và chuột). Bạn cũng có thể giải nén `openwork-windows-x64.zip` ở bất kỳ đâu rồi chạy `openwork.exe`, hoặc dùng `npx` như trên.
 
 #### Chạy từ mã nguồn
+
+**Yêu cầu:** [Bun](https://bun.sh) 1.3 trở lên, git và một terminal hỗ trợ truecolor và chuột (xfce4-terminal, GNOME Terminal, Konsole, kitty, WezTerm, Ghostty, iTerm2, Windows Terminal…). Về mô hình: bất kỳ nhà cung cấp nào opencode hỗ trợ, hoặc mô hình cục bộ chạy bằng Ollama, LM Studio, llama.cpp hay vLLM.
 
 ```bash
 git clone https://github.com/dedeprogames-official/openwork.git
@@ -174,14 +213,15 @@ Lượt chạy không có giám sát: câu hỏi và mọi thứ sẽ hiện yê
 
 ### Bàn phím và chuột
 
-| Phím              | Thao tác                               |
-| ----------------- | -------------------------------------- |
-| `alt+1` … `alt+8` | chuyển trang                           |
-| `ctrl+x d`        | triển khai agent                       |
-| `ctrl+x w`        | thu gọn hoặc mở rộng điều hướng        |
-| `ctrl+p`          | bảng lệnh                              |
-| `c`               | chuyển tới ô trò chuyện (`esc` để rời) |
-| `esc`             | quay lại                               |
+| Phím              | Thao tác                                                                                         |
+| ----------------- | ------------------------------------------------------------------------------------------------ |
+| `alt+1` … `alt+8` | chuyển trang                                                                                     |
+| `ctrl+x d`        | triển khai agent                                                                                 |
+| `ctrl+x w`        | thu gọn hoặc mở rộng điều hướng                                                                  |
+| `m`               | chuyển agent sang space khác (trên trang của nó) hoặc đưa một agent vào space đang chọn (Spaces) |
+| `ctrl+p`          | bảng lệnh                                                                                        |
+| `c`               | chuyển tới ô trò chuyện (`esc` để rời)                                                           |
+| `esc`             | quay lại                                                                                         |
 
 Mỗi trang hiển thị phím riêng ở dưới cùng. Lệnh gạch chéo: `/day`, `/chats`, `/spaces`, `/agents`, `/skills`, `/memory`, `/models`, `/integrations`, `/deploy <văn bản>`, `/pause`, `/demo`, `/connect`.
 
@@ -191,7 +231,7 @@ Mọi thứ cũng dùng được bằng chuột: nhấp vào điều hướng, n
 
 ### Mô hình cục bộ
 
-Mọi máy chủ tương thích OpenAI trên `localhost` đều được tính là cục bộ, cũng như các nhà cung cấp `ollama`, `lmstudio`, `llamacpp` và `vllm`. Ví dụ với Ollama, trong `opencode.json` (trong thư mục của bạn hoặc trong `~/.config/opencode/`):
+Mọi máy chủ tương thích OpenAI trên `localhost` đều được tính là cục bộ, cũng như các nhà cung cấp `ollama`, `lmstudio`, `llamacpp` và `vllm`. Ví dụ với Ollama, trong `opencode.json` (trong thư mục của bạn hoặc trong `~/.config/openwork/`):
 
 ```json
 {
@@ -213,6 +253,7 @@ Mọi máy chủ tương thích OpenAI trên `localhost` đều được tính l
 - Bộ lập lịch nằm trong tiến trình máy chủ OpenWork. Cứ 5 giây nó tìm các agent đến hạn và chạy tối đa 3 agent cùng lúc. Việc giành lượt chạy là nguyên tử trong SQLite, nên nhiều cửa sổ OpenWork không bao giờ chạy cùng một agent hai lần, và các lượt chạy bị bỏ lại sau sự cố được đánh dấu là bị gián đoạn. `OPENCODE_DISABLE_WORK_SCHEDULER=1` tắt nó.
 - Mỗi lượt chạy là một phiên opencode với agent `work` — một persona làm việc tri thức coi thư mục là không gian làm việc và tệp là sản phẩm — với bộ nhớ của bạn và các kết quả gần đây của agent trong ngữ cảnh hệ thống, cùng quyền không giám sát theo mức truy cập của nó.
 - OpenWork giữ nguyên cấu hình của opencode: `opencode.json`, `.opencode/`, các biến `OPENCODE_*`, nhà cung cấp, máy chủ MCP và skills vẫn hoạt động như trước.
+- OpenWork giữ dữ liệu riêng trong `~/.local/share/openwork` và cấu hình chung trong `~/.config/openwork`, tách biệt với mọi bản cài opencode, và chỉ tự cập nhật từ các bản phát hành GitHub của chính nó.
 
 | Ở đâu                                                   | Là gì                                                            |
 | ------------------------------------------------------- | ---------------------------------------------------------------- |

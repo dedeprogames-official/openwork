@@ -1,0 +1,147 @@
+name: openwork-release
+run-name: "OpenWork ${{ inputs.version || github.ref_name }}"
+
+# Publishes an OpenWork release with a binary for every OS. Push a tag such as v0.1.0, or run it by hand with a
+# version (the release is then tagged v<version> at the selected commit).
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, for example 0.1.0"
+        required: true
+        type: string
+
+concurrency: openwork-release-${{ inputs.version || github.ref_name }}
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - id: version
+        env:
+          INPUT: ${{ inputs.version || github.ref_name }}
+        run: |
+          version="${INPUT#v}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$INPUT' is not a version such as 0.1.0"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  # Cross-compiles every target on Linux; build.ts smoke-tests the linux-x64 binary.
+  build:
+    needs: version
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+
+      - uses: ./.github/actions/setup-bun
+
+      - name: Build
+        run: ./packages/opencode/script/build.ts
+        env:
+          OPENCODE_VERSION: ${{ needs.version.outputs.version }}
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: openwork-builds
+          path: packages/opencode/dist/opencode-*/bin/
+          if-no-files-found: error
+
+  # Embedding the bundle invalidates the linker's signature and macOS kills binaries with invalid pages, so the darwin
+  # builds are re-signed ad hoc on a Mac before they ship.
+  macos:
+    needs: [version, build]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: openwork-builds
+          path: dist
+
+      - name: Sign macOS binaries
+        run: |
+          for file in dist/opencode-darwin-*/bin/opencode; do
+            chmod +x "$file"
+            codesign --force --sign - "$file"
+            codesign --verify --strict --verbose=2 "$file"
+          done
+
+      - name: Smoke test
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: test "$(./dist/opencode-darwin-arm64/bin/opencode --version)" = "$VERSION"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: openwork-builds-macos
+          path: dist/opencode-darwin-*/bin/
+          if-no-files-found: error
+
+  windows:
+    needs: [version, build]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: openwork-builds
+          path: dist
+
+      - name: Smoke test
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          $version = & .\dist\opencode-windows-x64\bin\opencode.exe --version
+          if ("$version".Trim() -ne $env:VERSION) { throw "expected $env:VERSION, got $version" }
+
+  release:
+    needs: [version, build, macos, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+
+      - uses: ./.github/actions/setup-bun
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: openwork-builds
+          path: packages/opencode/dist
+
+      # The signed darwin binaries replace the unsigned ones.
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: openwork-builds-macos
+          path: packages/opencode/dist
+
+      - name: Package
+        working-directory: packages/opencode
+        run: bun script/openwork/release.ts
+        env:
+          OPENCODE_VERSION: ${{ needs.version.outputs.version }}
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: v${{ needs.version.outputs.version }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" packages/opencode/dist/release/* --clobber
+          else
+            gh release create "$TAG" packages/opencode/dist/release/* \
+              --title "OpenWork $TAG" \
+              --notes-file packages/opencode/dist/release-notes.md \
+              --target "$GITHUB_SHA"
+          fi

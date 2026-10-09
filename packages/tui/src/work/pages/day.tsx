@@ -238,7 +238,9 @@ export function DayPage() {
             )}
           </For>
           <Show when={agenda().length === 0}>
-            <text fg={theme.textMuted}>Nothing on the agenda today.</text>
+            <text fg={theme.textMuted} flexShrink={0}>
+              Nothing on the agenda today.
+            </text>
           </Show>
           <text fg={theme.textMuted} flexShrink={0} selectable={false} onMouseUp={() => void addEvent()}>
             + Add an event...

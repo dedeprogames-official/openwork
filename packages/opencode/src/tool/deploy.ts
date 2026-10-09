@@ -9,7 +9,7 @@ import * as Tool from "./tool"
 import DESCRIPTION from "./deploy.txt"
 
 export const Parameters = Schema.Struct({
-  action: Schema.Literals(["create", "list", "pause", "resume", "run", "remove"]),
+  action: Schema.Literals(["create", "list", "pause", "resume", "run", "remove", "move"]),
   request: Schema.optional(Schema.String).annotate({
     description: "What the agent should do and when, in plain language, for create",
   }),
@@ -21,10 +21,13 @@ export const Parameters = Schema.Struct({
   directory: Schema.optional(Schema.String).annotate({
     description: "Folder the agent works in; defaults to the current one",
   }),
-  space: Schema.optional(Schema.String).annotate({ description: "Space name to group the agent under" }),
+  space: Schema.optional(Schema.String).annotate({
+    description:
+      "Space name to group the agent under, for create and move; leave it out on move to take the agent out of its space",
+  }),
   skill: Schema.optional(Schema.String),
   access: Schema.optional(Schema.Literals(["read", "write", "full"])),
-  id: Schema.optional(Schema.String).annotate({ description: "Agent id for pause, resume, run and remove" }),
+  id: Schema.optional(Schema.String).annotate({ description: "Agent id for pause, resume, run, remove and move" }),
 })
 
 type Metadata = {
@@ -37,6 +40,13 @@ export const DeployTool = Tool.define<typeof Parameters, Metadata, Work.Service 
     const work = yield* Work.Service
     const sessions = yield* Session.Service
     const fs = yield* FSUtil.Service
+    // Spaces are matched by name, ignoring case, and created on first use.
+    const spaceNamed = Effect.fnUntraced(function* (name: string) {
+      const spaces = yield* work.space.list()
+      return (
+        spaces.find((item) => item.name.toLowerCase() === name.toLowerCase()) ?? (yield* work.space.create({ name }))
+      )
+    })
 
     return {
       description: DESCRIPTION,
@@ -62,14 +72,25 @@ export const DeployTool = Tool.define<typeof Parameters, Metadata, Work.Service 
             if (!params.id) return { title: "Missing id", output: "Provide the agent `id`.", metadata: {} }
             yield* ctx.ask({ permission: "deploy", patterns: [params.action], always: [], metadata: {} })
             const id = Work.DeploymentID.make(params.id)
+            const space = params.action === "move" && params.space ? yield* spaceNamed(params.space) : undefined
             const action =
               params.action === "remove"
                 ? work.deployment.remove(id).pipe(Effect.as(`Removed agent ${id}.`))
                 : params.action === "run"
                   ? work.deployment.requestRun(id).pipe(Effect.as(`Agent ${id} will run in a few seconds.`))
-                  : work.deployment
-                      .update(id, { status: params.action === "pause" ? "paused" : "active" })
-                      .pipe(Effect.map((item) => `${item.title} is now ${item.status}.`))
+                  : params.action === "move"
+                    ? work.deployment
+                        .update(id, { spaceID: space?.id ?? null })
+                        .pipe(
+                          Effect.map((item) =>
+                            space
+                              ? `Moved ${item.title} to ${space.name}.`
+                              : `${item.title} no longer belongs to a space.`,
+                          ),
+                        )
+                    : work.deployment
+                        .update(id, { status: params.action === "pause" ? "paused" : "active" })
+                        .pipe(Effect.map((item) => `${item.title} is now ${item.status}.`))
             const output = yield* action.pipe(
               Effect.catchTag("Work.NotFoundError", () => Effect.succeed(`No agent with id ${id}.`)),
             )
@@ -86,11 +107,7 @@ export const DeployTool = Tool.define<typeof Parameters, Metadata, Work.Service 
             return { title: "Folder not found", output: `The folder ${directory} does not exist.`, metadata: {} }
           yield* ctx.ask({ permission: "deploy", patterns: [directory], always: [], metadata: { directory } })
 
-          const spaces = yield* work.space.list()
-          const space = params.space
-            ? (spaces.find((item) => item.name.toLowerCase() === params.space?.toLowerCase()) ??
-              (yield* work.space.create({ name: params.space })))
-            : undefined
+          const space = params.space ? yield* spaceNamed(params.space) : undefined
           const session = yield* sessions.get(ctx.sessionID).pipe(Effect.orElseSucceed(() => undefined))
           const deployment = yield* work.deployment.create({
             title: params.title ?? parsed.title,

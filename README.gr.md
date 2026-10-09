@@ -61,6 +61,7 @@
 - **Πραγματικά απομαγνητοφωνημένα** — κάθε εκτέλεση είναι πραγματική συνεδρία του opencode που μπορείτε να ανοίξετε, με κλήσεις εργαλείων, tokens και κόστος.
 - **Πράκτορες που αναφέρουν** — τα εργαλεία cowork `inbox`, `user_todo`, `agenda`, `memory` και `deploy` επιτρέπουν στους πράκτορες να γράφουν στα εισερχόμενά σας, να προσθέτουν εκκρεμότητες, να διαβάζουν την ατζέντα σας και να θυμούνται πράγματα για εσάς. Μια συνομιλία μπορεί να αναπτύξει νέους πράκτορες.
 - **Spaces** — ομαδοποιήστε πράκτορες γύρω από έναν στόχο, ένα γεγονός ή έναν πελάτη.
+- **Μετακίνηση πρακτόρων ανάμεσα σε spaces** — πατήστε `m` στη σελίδα ενός πράκτορα, χρησιμοποιήστε το **+ Move an agent here...** στη σελίδα Spaces ή ζητήστε το σε μια συνομιλία.
 - **Μνήμη** — στοιχεία για εσάς που λαμβάνει κάθε συνομιλία και κάθε πράκτορας.
 - **Στατιστικά tokens** — τοπικά και cloud tokens μετρημένα χωριστά, ρυθμός κατανάλωσης, ημερήσια πρόβλεψη και πόσα εξοικονομούν τα τοπικά μοντέλα.
 - **Πληκτρολόγιο και ποντίκι** — `alt+1` … `alt+8` για τις σελίδες και `ctrl+p` για όλες τις εντολές· κλικ στην πλοήγηση, στα κουμπιά, στις γραμμές, στα πλαίσια επιλογής και στις υποδείξεις πλήκτρων· κύλιση λιστών και ημερολογίου με τη ροδέλα.
@@ -107,9 +108,47 @@
 
 ### Ξεκινώντας
 
-**Απαιτήσεις:** [Bun](https://bun.sh) 1.3 ή νεότερο, git και ένα τερματικό με truecolor και υποστήριξη ποντικιού (xfce4-terminal, GNOME Terminal, Konsole, kitty, WezTerm, Ghostty, iTerm2, Windows Terminal…). Για μοντέλα: οποιοσδήποτε πάροχος υποστηρίζει το opencode ή ένα τοπικό μοντέλο μέσω Ollama, LM Studio, llama.cpp ή vLLM.
+#### Εγκατάσταση
+
+```bash
+# macOS και Linux
+curl -fsSL https://github.com/dedeprogames-official/openwork/releases/latest/download/install | bash
+```
+
+```powershell
+# Windows (PowerShell)
+irm https://github.com/dedeprogames-official/openwork/releases/latest/download/install.ps1 | iex
+```
+
+```bash
+# Οποιοδήποτε σύστημα με Node.js 18+: το npx το τρέχει μία φορά, το npm install -g κρατά την εντολή openwork
+npx https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+npm install -g https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+```
+
+Μετά ανοίξτε έναν φάκελο και τρέξτε `openwork`. Το `openwork upgrade` το ενημερώνει στην τελευταία έκδοση και το `openwork uninstall` το αφαιρεί.
+
+#### Λήψεις
+
+| Πλατφόρμα                | Λήψη                                                                                                                                          |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Linux x64                | [`openwork-linux-x64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64.tar.gz)           |
+| Linux arm64              | [`openwork-linux-arm64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-arm64.tar.gz)       |
+| Linux x64 (musl, Alpine) | [`openwork-linux-x64-musl.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64-musl.tar.gz) |
+| macOS Apple Silicon      | [`openwork-darwin-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-arm64.zip)           |
+| macOS Intel              | [`openwork-darwin-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-x64.zip)               |
+| Windows x64              | [`openwork-windows-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-x64.zip)             |
+| Windows arm64            | [`openwork-windows-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-arm64.zip)         |
+
+Όλες οι εκδόσεις βρίσκονται στη [σελίδα εκδόσεων](https://github.com/dedeprogames-official/openwork/releases). Κάθε αρχείο περιέχει το εκτελέσιμο `openwork`· οι εκδόσεις `-baseline` είναι για επεξεργαστές x64 χωρίς AVX2 και οι `-musl` για Alpine, και οι εγκαταστάτες διαλέγουν τη σωστή. Τα εκτελέσιμα για macOS έχουν υπογραφή ad hoc, χωρίς notarization: αφού κατεβάσετε ένα zip από τον browser, τρέξτε μία φορά `xattr -d com.apple.quarantine openwork`.
+
+#### Windows
+
+Ο εγκαταστάτης PowerShell βάζει το `openwork.exe` στο `%USERPROFILE%\.openwork\bin` και το προσθέτει στο PATH σας: ανοίξτε νέο τερματικό και τρέξτε `openwork`. Το Windows Terminal δίνει το καλύτερο αποτέλεσμα (truecolor και ποντίκι). Μπορείτε επίσης να αποσυμπιέσετε το `openwork-windows-x64.zip` όπου θέλετε και να τρέξετε `openwork.exe`, ή να χρησιμοποιήσετε το `npx` όπως παραπάνω.
 
 #### Εκτέλεση από τον πηγαίο κώδικα
+
+**Απαιτήσεις:** [Bun](https://bun.sh) 1.3 ή νεότερο, git και ένα τερματικό με truecolor και υποστήριξη ποντικιού (xfce4-terminal, GNOME Terminal, Konsole, kitty, WezTerm, Ghostty, iTerm2, Windows Terminal…). Για μοντέλα: οποιοσδήποτε πάροχος υποστηρίζει το opencode ή ένα τοπικό μοντέλο μέσω Ollama, LM Studio, llama.cpp ή vLLM.
 
 ```bash
 git clone https://github.com/dedeprogames-official/openwork.git
@@ -174,14 +213,15 @@ bun dev ~/work        # ο φάκελος όπου ανοίγει το OpenWork
 
 ### Πληκτρολόγιο και ποντίκι
 
-| Πλήκτρα           | Ενέργεια                                       |
-| ----------------- | ---------------------------------------------- |
-| `alt+1` … `alt+8` | αλλαγή σελίδας                                 |
-| `ctrl+x d`        | ανάπτυξη πράκτορα                              |
-| `ctrl+x w`        | σύμπτυξη ή ανάπτυξη της πλοήγησης              |
-| `ctrl+p`          | παλέτα εντολών                                 |
-| `c`               | εστίαση στο πεδίο συνομιλίας (`esc` για έξοδο) |
-| `esc`             | πίσω                                           |
+| Πλήκτρα           | Ενέργεια                                                                                             |
+| ----------------- | ---------------------------------------------------------------------------------------------------- |
+| `alt+1` … `alt+8` | αλλαγή σελίδας                                                                                       |
+| `ctrl+x d`        | ανάπτυξη πράκτορα                                                                                    |
+| `ctrl+x w`        | σύμπτυξη ή ανάπτυξη της πλοήγησης                                                                    |
+| `m`               | μετακίνηση του πράκτορα σε άλλο space (στη σελίδα του) ή ενός πράκτορα στο επιλεγμένο space (Spaces) |
+| `ctrl+p`          | παλέτα εντολών                                                                                       |
+| `c`               | εστίαση στο πεδίο συνομιλίας (`esc` για έξοδο)                                                       |
+| `esc`             | πίσω                                                                                                 |
 
 Κάθε σελίδα δείχνει τα δικά της πλήκτρα στο κάτω μέρος. Εντολές με κάθετο: `/day`, `/chats`, `/spaces`, `/agents`, `/skills`, `/memory`, `/models`, `/integrations`, `/deploy <κείμενο>`, `/pause`, `/demo`, `/connect`.
 
@@ -191,7 +231,7 @@ bun dev ~/work        # ο φάκελος όπου ανοίγει το OpenWork
 
 ### Τοπικά μοντέλα
 
-Κάθε διακομιστής συμβατός με OpenAI στο `localhost` θεωρείται τοπικός, όπως και οι πάροχοι `ollama`, `lmstudio`, `llamacpp` και `vllm`. Για παράδειγμα, με Ollama, στο `opencode.json` (στον φάκελό σας ή στο `~/.config/opencode/`):
+Κάθε διακομιστής συμβατός με OpenAI στο `localhost` θεωρείται τοπικός, όπως και οι πάροχοι `ollama`, `lmstudio`, `llamacpp` και `vllm`. Για παράδειγμα, με Ollama, στο `opencode.json` (στον φάκελό σας ή στο `~/.config/openwork/`):
 
 ```json
 {
@@ -213,6 +253,7 @@ bun dev ~/work        # ο φάκελος όπου ανοίγει το OpenWork
 - Ο χρονοπρογραμματιστής ζει στη διεργασία διακομιστή του OpenWork. Κάθε 5 δευτερόλεπτα ψάχνει πράκτορες που πρέπει να τρέξουν και εκτελεί έως 3 ταυτόχρονα. Οι κρατήσεις είναι ατομικές στο SQLite, οπότε πολλά παράθυρα του OpenWork δεν τρέχουν ποτέ τον ίδιο πράκτορα δύο φορές, και οι εκτελέσεις που άφησε πίσω μια κατάρρευση σημειώνονται ως διακοπείσες. Το `OPENCODE_DISABLE_WORK_SCHEDULER=1` τον απενεργοποιεί.
 - Κάθε εκτέλεση είναι μια συνεδρία του opencode με τον πράκτορα `work` — μια περσόνα πνευματικής εργασίας για την οποία οι φάκελοι είναι χώροι εργασίας και τα αρχεία παραδοτέα — με τη μνήμη σας και τα πρόσφατα αποτελέσματα του πράκτορα στο πλαίσιο συστήματος, και άδειες χωρίς επίβλεψη για το επίπεδο πρόσβασής του.
 - Το OpenWork κρατά τη ρύθμιση του opencode: τα `opencode.json`, `.opencode/`, οι μεταβλητές `OPENCODE_*`, οι πάροχοι, οι διακομιστές MCP και τα skills λειτουργούν όπως πριν.
+- Το OpenWork κρατά τα δεδομένα του στο `~/.local/share/openwork` και τη γενική ρύθμιση στο `~/.config/openwork`, χωριστά από κάθε εγκατάσταση του opencode, και ενημερώνεται μόνο από τις δικές του εκδόσεις στο GitHub.
 
 | Πού                                                     | Τι                                                                        |
 | ------------------------------------------------------- | ------------------------------------------------------------------------- |

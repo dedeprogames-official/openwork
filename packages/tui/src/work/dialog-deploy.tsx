@@ -11,6 +11,7 @@ import { useDialog, type DialogContext } from "../ui/dialog"
 import { useToast } from "../ui/toast"
 import { abbreviateHome } from "../runtime"
 import { useWork } from "./context"
+import { chooseSpace } from "./dialog-space"
 import { ACCESS, schedule as label } from "./format"
 
 /**
@@ -56,18 +57,9 @@ export function useDeploy() {
         )
     if (!directory) return dialog.clear()
 
-    const space = await choose<string>(dialog, "Space", [
-      { title: "No space", value: "", description: "keep it on its own" },
-      ...work.state.spaces.map((item) => ({ title: item.name, value: item.id, description: item.goal })),
-      { title: "New space…", value: "new", description: "group agents around a goal" },
-    ])
-    if (space === undefined) return
-    const spaceID =
-      space === "new"
-        ? await DialogPrompt.show(dialog, "New space", { placeholder: "Beach date - Half Moon Bay" }).then((name) =>
-            name?.trim() ? work.space.create({ name: name.trim() }).then((created) => created?.id) : undefined,
-          )
-        : space || undefined
+    const space = await chooseSpace(dialog, work, "Space")
+    if (space === undefined) return dialog.clear()
+    const spaceID = space?.id
 
     const when = await choose<WorkDeployment["schedule"]>(dialog, `When should "${parsed.title}" run?`, [
       { title: label(parsed.schedule), value: parsed.schedule, description: "from your description" },

@@ -61,6 +61,7 @@ OpenWork は opencode のターミナル UI を、コードだけでなく仕事
 - **本物のトランスクリプト** — 各実行は開いて確認できる本物の opencode セッションで、ツール呼び出し、トークン、コストが記録されます。
 - **報告するエージェント** — cowork ツールの `inbox`、`user_todo`、`agenda`、`memory`、`deploy` により、エージェントは受信箱への投稿、ToDo の追加、予定の確認、あなたに関する事実の記憶ができます。チャットから新しいエージェントをデプロイすることもできます。
 - **Spaces** — 目標、イベント、顧客ごとにエージェントをまとめます。
+- **エージェントを space 間で移動** — エージェントのページで `m`、Spaces ページの **+ Move an agent here...**、またはチャットで頼むだけです。
 - **メモリー** — すべてのチャットとエージェントに渡される、あなたについての事実。
 - **トークン統計** — ローカルとクラウドのトークンを別々に集計し、消費ペース、1 日の予測、ローカルモデルによる節約額を表示。
 - **キーボードとマウス** — ページは `alt+1` … `alt+8`、すべてのコマンドは `ctrl+p`。ナビゲーション、ボタン、行、チェックボックス、キーのヒントはクリックでき、リストとカレンダーはホイールでスクロールできます。
@@ -107,9 +108,47 @@ OpenWork は opencode のターミナル UI を、コードだけでなく仕事
 
 ### はじめに
 
-**必要なもの：** [Bun](https://bun.sh) 1.3 以降、git、トゥルーカラーとマウスに対応したターミナル（xfce4-terminal、GNOME Terminal、Konsole、kitty、WezTerm、Ghostty、iTerm2、Windows Terminal など）。モデルは opencode が対応する任意のプロバイダー、または Ollama、LM Studio、llama.cpp、vLLM で動かすローカルモデル。
+#### インストール
+
+```bash
+# macOS と Linux
+curl -fsSL https://github.com/dedeprogames-official/openwork/releases/latest/download/install | bash
+```
+
+```powershell
+# Windows（PowerShell）
+irm https://github.com/dedeprogames-official/openwork/releases/latest/download/install.ps1 | iex
+```
+
+```bash
+# Node.js 18+ が入った任意の OS：npx は一度だけ実行、npm install -g なら openwork コマンドが残ります
+npx https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+npm install -g https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+```
+
+あとはフォルダを開いて `openwork` を実行します。`openwork upgrade` で最新リリースに更新、`openwork uninstall` で削除できます。
+
+#### ダウンロード
+
+| プラットフォーム         | ダウンロード                                                                                                                                  |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Linux x64                | [`openwork-linux-x64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64.tar.gz)           |
+| Linux arm64              | [`openwork-linux-arm64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-arm64.tar.gz)       |
+| Linux x64 (musl, Alpine) | [`openwork-linux-x64-musl.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64-musl.tar.gz) |
+| macOS Apple Silicon      | [`openwork-darwin-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-arm64.zip)           |
+| macOS Intel              | [`openwork-darwin-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-x64.zip)               |
+| Windows x64              | [`openwork-windows-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-x64.zip)             |
+| Windows arm64            | [`openwork-windows-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-arm64.zip)         |
+
+すべてのバージョンは[リリースページ](https://github.com/dedeprogames-official/openwork/releases)にあります。各アーカイブには `openwork` バイナリが入っています。`-baseline` は AVX2 のない x64 CPU 向け、`-musl` は Alpine 向けで、インストーラーが適切なものを選びます。macOS のバイナリは ad hoc 署名で公証されていません。ブラウザで zip をダウンロードした場合は一度 `xattr -d com.apple.quarantine openwork` を実行してください。
+
+#### Windows
+
+PowerShell インストーラーは `openwork.exe` を `%USERPROFILE%\.openwork\bin` に置き、PATH に追加します。新しいターミナルを開いて `openwork` を実行してください。Windows Terminal が最適です（トゥルーカラーとマウス）。`openwork-windows-x64.zip` を好きな場所に展開して `openwork.exe` を実行するか、上のように `npx` を使うこともできます。
 
 #### ソースから実行
+
+**必要なもの：** [Bun](https://bun.sh) 1.3 以降、git、トゥルーカラーとマウスに対応したターミナル（xfce4-terminal、GNOME Terminal、Konsole、kitty、WezTerm、Ghostty、iTerm2、Windows Terminal など）。モデルは opencode が対応する任意のプロバイダー、または Ollama、LM Studio、llama.cpp、vLLM で動かすローカルモデル。
 
 ```bash
 git clone https://github.com/dedeprogames-official/openwork.git
@@ -174,14 +213,15 @@ bun dev ~/work        # OpenWork が開くフォルダ
 
 ### キーボードとマウス
 
-| キー              | 操作                                         |
-| ----------------- | -------------------------------------------- |
-| `alt+1` … `alt+8` | ページ切り替え                               |
-| `ctrl+x d`        | エージェントをデプロイ                       |
-| `ctrl+x w`        | ナビゲーションの折りたたみ・展開             |
-| `ctrl+p`          | コマンドパレット                             |
-| `c`               | チャット入力欄にフォーカス（`esc` で離れる） |
-| `esc`             | 戻る                                         |
+| キー              | 操作                                                                                   |
+| ----------------- | -------------------------------------------------------------------------------------- |
+| `alt+1` … `alt+8` | ページ切り替え                                                                         |
+| `ctrl+x d`        | エージェントをデプロイ                                                                 |
+| `ctrl+x w`        | ナビゲーションの折りたたみ・展開                                                       |
+| `m`               | エージェントを別の space へ移動（そのページで）、または選択中の space へ移動（Spaces） |
+| `ctrl+p`          | コマンドパレット                                                                       |
+| `c`               | チャット入力欄にフォーカス（`esc` で離れる）                                           |
+| `esc`             | 戻る                                                                                   |
 
 各ページの下部にそのページのキーが表示されます。スラッシュコマンド：`/day`、`/chats`、`/spaces`、`/agents`、`/skills`、`/memory`、`/models`、`/integrations`、`/deploy <テキスト>`、`/pause`、`/demo`、`/connect`。
 
@@ -191,7 +231,7 @@ bun dev ~/work        # OpenWork が開くフォルダ
 
 ### ローカルモデル
 
-`localhost` 上の OpenAI 互換サーバーはすべてローカルとして扱われます。`ollama`、`lmstudio`、`llamacpp`、`vllm` プロバイダーも同様です。たとえば Ollama なら、`opencode.json`（作業フォルダか `~/.config/opencode/`）に次のように書きます：
+`localhost` 上の OpenAI 互換サーバーはすべてローカルとして扱われます。`ollama`、`lmstudio`、`llamacpp`、`vllm` プロバイダーも同様です。たとえば Ollama なら、`opencode.json`（作業フォルダか `~/.config/openwork/`）に次のように書きます：
 
 ```json
 {
@@ -213,6 +253,7 @@ bun dev ~/work        # OpenWork が開くフォルダ
 - スケジューラーは OpenWork のサーバープロセスの中にあります。5 秒ごとに実行時刻が来たエージェントを探し、同時に最大 3 つ実行します。実行の確保は SQLite でアトミックに行われるため、複数の OpenWork ウィンドウが同じエージェントを二重に動かすことはなく、クラッシュで残った実行は中断済みとして記録されます。`OPENCODE_DISABLE_WORK_SCHEDULER=1` で無効にできます。
 - 各実行は `work` エージェントによる opencode セッションです。`work` はフォルダを作業場所、ファイルを成果物として扱うナレッジワーク向けのペルソナで、システムコンテキストにはあなたのメモリーとそのエージェントの最近の結果が入り、アクセスレベルに応じた無人用の権限で動きます。
 - OpenWork は opencode の設定をそのまま使います。`opencode.json`、`.opencode/`、`OPENCODE_*` 環境変数、プロバイダー、MCP サーバー、skills はこれまでどおり動きます。
+- OpenWork はデータを `~/.local/share/openwork`、グローバル設定を `~/.config/openwork` に置き、opencode のインストールとは分けて管理します。更新は自身の GitHub リリースからのみ行います。
 
 | 場所                                                    | 内容                                                      |
 | ------------------------------------------------------- | --------------------------------------------------------- |
