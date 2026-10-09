@@ -80,6 +80,7 @@ export function DayPage() {
 
   const addTodo = async () => {
     const content = await DialogPrompt.show(dialog, "New todo", { placeholder: "Book a table for Friday" })
+    dialog.clear()
     if (content?.trim()) await work.todo.add(content.trim())
   }
 
@@ -88,6 +89,7 @@ export function DayPage() {
       placeholder: "14:30 Call with Ana",
       description: () => <text>Start time (HH:MM, today) followed by a title.</text>,
     })
+    dialog.clear()
     const match = value ? /^(\d{1,2})[:h](\d{2})\s+(.+)$/.exec(value.trim()) : undefined
     if (!match) return
     const at = new Date(work.now())

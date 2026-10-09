@@ -28,7 +28,9 @@ export function Dialog(
   return (
     <box
       onMouseDown={() => {
-        dismiss = !!renderer.getSelection()
+        // A press that clears a text selection should not also close the dialog. A plain click on selectable text
+        // leaves an empty selection behind, which must not block closing.
+        dismiss = !!renderer.getSelection()?.getSelectedText()
       }}
       onMouseUp={() => {
         if (dismiss) {

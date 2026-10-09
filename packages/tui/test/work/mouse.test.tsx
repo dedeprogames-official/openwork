@@ -130,6 +130,14 @@ test("OpenWork pages respond to the mouse", async () => {
     await until(() => sent.includes('PATCH /work/todo/wtd_post {"done":true}'))
     const toggles = () => sent.filter((item) => item.startsWith("PATCH /work/todo/wtd_post")).length
 
+    // "+ Add a todo..." opens a form; submitting it saves the todo and closes the form.
+    await mouse.click("+ Add a todo...")
+    await setup.waitForFrame((frame) => frame.includes("New todo"))
+    await setup.mockInput.typeText("Buy flowers")
+    setup.mockInput.pressEnter()
+    await until(() => sent.includes('POST /work/todo {"content":"Buy flowers"}'))
+    await setup.waitForFrame((frame) => !frame.includes("New todo"))
+
     // The inbox checkbox only marks the message done; the row's own click must not run too.
     await mouse.click("☐")
     await until(() => sent.includes('PATCH /work/message/wms_sunny {"done":true}'))
@@ -199,6 +207,15 @@ test("OpenWork pages respond to the mouse", async () => {
     await mouse.click("✕ forget")
     await until(() => sent.some((item) => item.startsWith("DELETE /work/memory/wmm_brief")))
 
+    // Models: a provider row opens its models. Clicking the row's text leaves an empty text selection behind,
+    // which must not stop the dialog from closing on the first backdrop click.
+    await mouse.click("M-7")
+    await setup.waitForFrame((frame) => frame.includes("Default model"))
+    await mouse.click("Local", 1)
+    await setup.waitForFrame((frame) => frame.includes("Search"))
+    await setup.mockMouse.click(2, 44)
+    await setup.waitForFrame((frame) => !frame.includes("Search"))
+
     // Spaces: deploy from a space, then dismiss the dialog by clicking its backdrop.
     await mouse.click("M-3")
     await setup.waitForFrame((frame) => frame.includes("make tonight easy"))
@@ -217,15 +234,16 @@ test("OpenWork pages respond to the mouse", async () => {
 
 /** Clicks and scrolls on the first on-screen occurrence of some text. */
 function pointer(setup: TestRendererSetup) {
-  const locate = (text: string) => {
+  const locate = (text: string, nth = 0) => {
     const lines = setup.captureCharFrame().split("\n")
-    const y = lines.findIndex((line) => line.includes(text))
-    if (y === -1) throw new Error(`"${text}" is not on screen:\n${lines.join("\n")}`)
-    return { x: lines[y].indexOf(text) + Math.floor(text.trim().length / 2), y }
+    const hits = lines.flatMap((line, y) => (line.includes(text) ? [{ x: line.indexOf(text), y }] : []))
+    const hit = hits[nth]
+    if (!hit) throw new Error(`"${text}" is not on screen:\n${lines.join("\n")}`)
+    return { x: hit.x + Math.floor(text.trim().length / 2), y: hit.y }
   }
   return {
-    async click(text: string) {
-      const at = locate(text)
+    async click(text: string, nth = 0) {
+      const at = locate(text, nth)
       await setup.mockMouse.click(at.x, at.y)
       await setup.flush()
     },

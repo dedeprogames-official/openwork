@@ -38,7 +38,7 @@ export function SpacesPage(props: { spaceID?: string }) {
 
   const create = async () => {
     const name = await DialogPrompt.show(dialog, "New space", { placeholder: "Launch prep" })
-    if (!name?.trim()) return
+    if (!name?.trim()) return dialog.clear()
     const goal = await DialogPrompt.show(dialog, "Goal", { placeholder: "ship the launch without surprises" })
     await work.space.create({ name: name.trim(), ...(goal?.trim() ? { goal: goal.trim() } : {}) })
     dialog.clear()
