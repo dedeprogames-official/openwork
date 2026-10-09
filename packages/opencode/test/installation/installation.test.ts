@@ -68,13 +68,18 @@ function testLayer(
 
 describe("installation", () => {
   describe("latest", () => {
-    testEffect(testLayer(() => jsonResponse({ tag_name: "v1.2.3" }))).effect(
-      "reads release version from GitHub releases",
-      () =>
-        Effect.gen(function* () {
-          const result = yield* Installation.use.latest("unknown")
-          expect(result).toBe("1.2.3")
-        }),
+    const releaseCalls: string[] = []
+    testEffect(
+      testLayer((request) => {
+        releaseCalls.push(request.url)
+        return jsonResponse({ tag_name: "v1.2.3" })
+      }),
+    ).effect("reads release version from OpenWork's GitHub releases", () =>
+      Effect.gen(function* () {
+        const result = yield* Installation.use.latest("unknown")
+        expect(result).toBe("1.2.3")
+        expect(releaseCalls).toEqual(["https://api.github.com/repos/dedeprogames-official/openwork/releases/latest"])
+      }),
     )
 
     testEffect(testLayer(() => jsonResponse({ tag_name: "v4.0.0-beta.1" }))).effect(
@@ -181,7 +186,37 @@ describe("installation", () => {
     )
   })
 
+  describe("method", () => {
+    // An opencode install from a package manager must never make OpenWork upgrade itself into opencode.
+    testEffect(
+      testLayer(
+        () => jsonResponse({}),
+        () => "opencode-ai@1.2.3 opencode",
+      ),
+    ).effect("ignores package managers that carry opencode", () =>
+      Effect.gen(function* () {
+        expect(yield* Installation.use.method()).toBe("unknown")
+      }),
+    )
+  })
+
   describe("upgrade", () => {
+    const scriptCalls: string[] = []
+    testEffect(
+      testLayer(
+        (request) => {
+          scriptCalls.push(request.url)
+          return new Response("install script", { status: 200 })
+        },
+        (cmd, args) => (cmd === "bash" && args[0] === "--version" ? "GNU bash" : "ok"),
+      ),
+    ).effect("runs OpenWork's install script from its latest release", () =>
+      Effect.gen(function* () {
+        yield* Installation.use.upgrade("curl", "9.9.9")
+        expect(scriptCalls).toEqual([`${Installation.RELEASES}/latest/download/install`])
+      }),
+    )
+
     testEffect(
       testLayer(
         () => jsonResponse({}),

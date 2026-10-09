@@ -7,7 +7,8 @@ import { Flock } from "./util/flock"
 import { Flag } from "./flag/flag"
 import { makeGlobalNode } from "./effect/app-node"
 
-const app = "opencode"
+// OpenWork keeps its own data, config, cache and state, so it never shares a database or credentials with opencode.
+const app = "openwork"
 const data = path.join(xdgData!, app)
 const cache = path.join(xdgCache!, app)
 const config = path.join(xdgConfig!, app)

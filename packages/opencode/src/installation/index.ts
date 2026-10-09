@@ -17,6 +17,13 @@ import { InstallationEvent } from "@opencode-ai/schema/installation-event"
 
 export type Method = "curl" | "npm" | "yarn" | "pnpm" | "bun" | "brew" | "scoop" | "choco" | "unknown"
 
+// OpenWork ships through its own GitHub releases and install script. Package managers carry opencode, so OpenWork
+// never detects or upgrades through them.
+export const RELEASES = "https://github.com/dedeprogames-official/openwork/releases"
+const LATEST_RELEASE = "https://api.github.com/repos/dedeprogames-official/openwork/releases/latest"
+const INSTALL_SCRIPT = `${RELEASES}/latest/download/install`
+const INSTALL_SCRIPT_WINDOWS = `${RELEASES}/latest/download/install.ps1`
+
 export type ReleaseType = "patch" | "minor" | "major"
 
 export const Event = InstallationEvent
@@ -144,17 +151,29 @@ const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Serv
 
     const upgradeCurl = Effect.fnUntraced(
       function* (target: string) {
-        const response = yield* httpOk.execute(HttpClientRequest.get("https://opencode.ai/install"))
+        // Windows has no bash, so it runs the PowerShell installer, passed whole as an encoded command.
+        const windows = process.platform === "win32"
+        const response = yield* httpOk.execute(HttpClientRequest.get(windows ? INSTALL_SCRIPT_WINDOWS : INSTALL_SCRIPT))
         const body = yield* response.text
-        const bodyBytes = new TextEncoder().encode(body)
-        const shell = yield* upgradeScriptShell()
-        const result = yield* appProcess.run(
-          ChildProcess.make(shell, [], {
-            stdin: Stream.make(bodyBytes),
-            env: { VERSION: target },
-            extendEnv: true,
-          }),
-        )
+        const env = { VERSION: target, OPENWORK_VERSION: target }
+        const command = windows
+          ? ChildProcess.make(
+              "powershell.exe",
+              [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-EncodedCommand",
+                Buffer.from(body, "utf16le").toString("base64"),
+              ],
+              { env, extendEnv: true },
+            )
+          : ChildProcess.make(yield* upgradeScriptShell(), [], {
+              stdin: Stream.make(new TextEncoder().encode(body)),
+              env,
+              extendEnv: true,
+            })
+        const result = yield* appProcess.run(command)
         return {
           code: result.exitCode,
           stdout: result.stdout.toString("utf8"),
@@ -172,37 +191,7 @@ const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Serv
         }
       }),
       method: Effect.fn("Installation.method")(function* () {
-        if (process.execPath.includes(path.join(".opencode", "bin"))) return "curl" as Method
-        if (process.execPath.includes(path.join(".local", "bin"))) return "curl" as Method
-        const exec = process.execPath.toLowerCase()
-
-        const checks: Array<{ name: Method; command: () => Effect.Effect<string> }> = [
-          { name: "npm", command: () => text(["npm", "list", "-g", "--depth=0"]) },
-          { name: "yarn", command: () => text(["yarn", "global", "list"]) },
-          { name: "pnpm", command: () => text(["pnpm", "list", "-g", "--depth=0"]) },
-          { name: "bun", command: () => text(["bun", "pm", "ls", "-g"]) },
-          { name: "brew", command: () => text(["brew", "list", "--formula", "opencode"]) },
-          { name: "scoop", command: () => text(["scoop", "list", "opencode"]) },
-          { name: "choco", command: () => text(["choco", "list", "--limit-output", "opencode"]) },
-        ]
-
-        checks.sort((a, b) => {
-          const aMatches = exec.includes(a.name)
-          const bMatches = exec.includes(b.name)
-          if (aMatches && !bMatches) return -1
-          if (!aMatches && bMatches) return 1
-          return 0
-        })
-
-        for (const check of checks) {
-          const output = yield* check.command()
-          const installedName =
-            check.name === "brew" || check.name === "choco" || check.name === "scoop" ? "opencode" : "opencode-ai"
-          if (output.includes(installedName)) {
-            return check.name
-          }
-        }
-
+        if (process.execPath.includes(path.join(".openwork", "bin"))) return "curl" as Method
         return "unknown" as Method
       }),
       latest: Effect.fn("Installation.latest")(function* (installMethod?: Method) {
@@ -254,11 +243,7 @@ const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Serv
           return data.version
         }
 
-        const response = yield* httpOk.execute(
-          HttpClientRequest.get("https://api.github.com/repos/anomalyco/opencode/releases/latest").pipe(
-            HttpClientRequest.acceptJson,
-          ),
-        )
+        const response = yield* httpOk.execute(HttpClientRequest.get(LATEST_RELEASE).pipe(HttpClientRequest.acceptJson))
         const data = yield* HttpClientResponse.schemaBodyJson(GitHubRelease)(response)
         return data.tag_name.replace(/^v/, "")
       }, Effect.orDie),
