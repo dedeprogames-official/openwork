@@ -59,7 +59,10 @@ const layer = Layer.effect(
           Effect.gen(function* () {
             const agent = (yield* agents.get(deployment.agent)) ?? (yield* agents.get("work"))
             const model = deployment.model
-              ? { providerID: ProviderV2.ID.make(deployment.model.providerID), modelID: ModelV2.ID.make(deployment.model.modelID) }
+              ? {
+                  providerID: ProviderV2.ID.make(deployment.model.providerID),
+                  modelID: ModelV2.ID.make(deployment.model.modelID),
+                }
               : (agent.model ?? (yield* provider.defaultModel()))
             const session = yield* sessions.create({
               // An explicit title skips the extra title-generation request.
@@ -157,15 +160,7 @@ const layer = Layer.effect(
 export const node = LayerNode.make({
   service: Service,
   layer,
-  deps: [
-    Work.node,
-    InstanceStore.node,
-    Session.node,
-    SessionPrompt.node,
-    Agent.node,
-    Provider.node,
-    RuntimeFlags.node,
-  ],
+  deps: [Work.node, InstanceStore.node, Session.node, SessionPrompt.node, Agent.node, Provider.node, RuntimeFlags.node],
 })
 
 function alive(pid: number) {

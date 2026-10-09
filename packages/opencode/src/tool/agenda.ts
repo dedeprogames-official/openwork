@@ -7,7 +7,9 @@ import DESCRIPTION from "./agenda.txt"
 export const Parameters = Schema.Struct({
   action: Schema.Literals(["list", "add", "remove"]),
   title: Schema.optional(Schema.String).annotate({ description: "Event title, for add" }),
-  starts_at: Schema.optional(Schema.String).annotate({ description: "\"HH:MM\" today, or a full date and time, for add" }),
+  starts_at: Schema.optional(Schema.String).annotate({
+    description: '"HH:MM" today, or a full date and time, for add',
+  }),
   ends_at: Schema.optional(Schema.String).annotate({ description: "Optional end, same formats as starts_at" }),
   note: Schema.optional(Schema.String),
   space: Schema.optional(Schema.String).annotate({ description: "Name of the space this event belongs to" }),
@@ -32,7 +34,9 @@ export const AgendaTool = Tool.define(
             return {
               title: `${events.length} events`,
               output: events.length
-                ? events.map((event) => `${event.id} ${new Date(event.startsAt).toLocaleString()} ${event.title}`).join("\n")
+                ? events
+                    .map((event) => `${event.id} ${new Date(event.startsAt).toLocaleString()} ${event.title}`)
+                    .join("\n")
                 : "Nothing on the agenda.",
               metadata: {},
             }

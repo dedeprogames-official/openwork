@@ -57,7 +57,7 @@ const SPACES: ReadonlyArray<SpaceSeed> = [
   },
   {
     name: "Focus: quarterly rebalance",
-    goal: "protect Focus: quarterly rebalance - get the trades right",
+    goal: "protect the focus block and get the rebalance trades right",
     color: "purple",
     agenda: { title: "Focus: quarterly rebalance", hour: 13, minute: 0 },
     agents: [
@@ -195,13 +195,52 @@ const SPACES: ReadonlyArray<SpaceSeed> = [
 ]
 
 const TODOS = [
-  { content: "Confirm the Harrington trust's bond ladder still matches the new duration target", source: "from meeting notes" },
-  { content: "Rebalance the Okafor portfolio out of long-duration Treasuries and log the trade rationale", source: "from meeting notes" },
+  {
+    content: "Confirm the Harrington trust's bond ladder still matches the new duration target",
+    source: "from meeting notes",
+  },
+  {
+    content: "Rebalance the Okafor portfolio out of long-duration Treasuries and log the trade rationale",
+    source: "from meeting notes",
+  },
   { content: "Read the morning brief", done: true },
   { content: "Book the client dinner for the Okafor review" },
   { content: "Log the trade rationale for the Okafor rebalance" },
   { content: "Leave by 5:15 for the beach date" },
   { content: "Submit last week's expense report", done: true },
+]
+
+const SKILLS: ReadonlyArray<{ name: string; description: string; body: string }> = [
+  {
+    name: "position-check",
+    description: "Which of the client's positions moved more than 2% since the last check.",
+    body: "1. Read positions.csv in the folder.\n2. Compare each holding with today's price.\n3. List only the positions that moved more than 2%, biggest move first.\n4. If any moved more than 4%, post it to the inbox.",
+  },
+  {
+    name: "next-steps",
+    description: "What are my open next steps and promises from meeting notes.",
+    body: "1. Read the newest notes in notes/.\n2. Extract every promise and next step with its owner.\n3. Add the ones I own to my todos with source 'from meeting notes'.\n4. Report what is still open.",
+  },
+  {
+    name: "movers",
+    description: "Which of the core positions in trades.csv are moving before the trade.",
+    body: "1. Read trades.csv.\n2. Check each ticker's move today.\n3. Flag anything over 2% and say whether the planned trade still makes sense.",
+  },
+  {
+    name: "rates",
+    description: "What is the current US 10-year yield and is it inside the band.",
+    body: "1. Look up the current US 10-year Treasury yield.\n2. Compare it with the band in the task.\n3. Post to the inbox only if it leaves the band.",
+  },
+  {
+    name: "headline",
+    description: "What is the top financial headline that could change the pitch.",
+    body: "1. Search for the top financial headlines since the last run.\n2. Keep only the ones about rates, the Fed or the client's sectors.\n3. Summarize in one line and say whether the proposals need to change.",
+  },
+  {
+    name: "beach-cam",
+    description: "Read a live beach cam and say if the conditions are good tonight.",
+    body: "1. Open the cam image linked in the task.\n2. Describe sky, fog and crowd in one sentence.\n3. Say clearly whether it is worth going and when to leave.",
+  },
 ]
 
 const MEMORIES = [
@@ -212,15 +251,34 @@ const MEMORIES = [
 ]
 
 /** Seeds a realistic OpenWork workspace: spaces, agents with a day of run history, inbox, todos, agenda and memory. */
-export const seed = Effect.fn("WorkDemo.seed")(function* (input: { readonly directory: string; readonly now?: number }) {
+export const seed = Effect.fn("WorkDemo.seed")(function* (input: {
+  readonly directory: string
+  readonly now?: number
+}) {
   const work = yield* Work.Service
   const fs = yield* FSUtil.Service
   const now = input.now ?? Date.now()
-  const start = Math.max(WorkSchedule.startOfDay(now) + 6 * 60 * MINUTE, now - 8 * 60 * MINUTE)
+  // A working day of history: from 06:00 (or 10h back early in the morning) up to an hour ago.
+  const start = Math.min(
+    now - 60 * MINUTE,
+    Math.max(WorkSchedule.startOfDay(now) + 6 * 60 * MINUTE, now - 10 * 60 * MINUTE),
+  )
   const random = generator(42)
   const root = path.join(input.directory, "openwork-demo")
   // Leave the agents paused so the demo never spends tokens until the user resumes them.
   yield* work.setPaused(true)
+  // Skills the demo agents use; project skills under .opencode/skills are picked up by chats and agents alike.
+  yield* Effect.forEach(
+    SKILLS,
+    (skill) =>
+      fs
+        .writeWithDirs(
+          path.join(input.directory, ".opencode", "skills", skill.name, "SKILL.md"),
+          `---\nname: ${skill.name}\ndescription: ${skill.description}\n---\n\n# ${skill.name}\n\n${skill.body}\n`,
+        )
+        .pipe(Effect.orDie),
+    { discard: true },
+  )
 
   const created = yield* Effect.forEach(SPACES, (item) =>
     Effect.gen(function* () {
@@ -245,10 +303,8 @@ export const seed = Effect.fn("WorkDemo.seed")(function* (input: { readonly dire
             ...(agent.skill ? { skill: agent.skill } : {}),
           })
           const offset = Math.floor(random() * agent.every)
-          const times = Array.from(
-            { length: Math.max(0, Math.floor((now - start - offset) / agent.every)) },
-            (_, index) => start + offset + index * agent.every,
-          )
+          const slots = Math.max(0, Math.floor((now - start - offset) / agent.every) + 1)
+          const times = Array.from({ length: slots }, (_, index) => start + offset + index * agent.every)
           yield* Effect.forEach(
             times,
             (started, index) =>
@@ -271,8 +327,8 @@ export const seed = Effect.fn("WorkDemo.seed")(function* (input: { readonly dire
               }),
             { discard: true },
           )
-          const last = times.at(-1) ?? now
-          yield* work.deployment.reschedule(deployment.id, Math.max(now + MINUTE, last + agent.every))
+          // The next slot of the same rhythm, so agents stay staggered instead of all firing at once.
+          yield* work.deployment.reschedule(deployment.id, start + offset + slots * agent.every)
           return deployment
         }),
       )

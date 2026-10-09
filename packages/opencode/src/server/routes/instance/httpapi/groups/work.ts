@@ -63,16 +63,18 @@ export const WorkApi = HttpApi.make("work").add(
         success: described(Work.Deployment, "Deployed agent"),
         error: [InvalidRequestError, WorkNotFoundError, ConflictError],
       }).annotateMerge(
-        annotate("work.deployment.create", "Deploy agent", "Deploy an agent that runs a task in a folder on a schedule."),
+        annotate(
+          "work.deployment.create",
+          "Deploy agent",
+          "Deploy an agent that runs a task in a folder on a schedule.",
+        ),
       ),
       HttpApiEndpoint.patch("deploymentUpdate", WorkPaths.deployment, {
         params: { deploymentID: Work.DeploymentID },
         payload: Work.DeploymentPatch,
         success: described(Work.Deployment, "Updated agent"),
         error: [InvalidRequestError, WorkNotFoundError],
-      }).annotateMerge(
-        annotate("work.deployment.update", "Update agent", "Edit, pause or resume a deployed agent."),
-      ),
+      }).annotateMerge(annotate("work.deployment.update", "Update agent", "Edit, pause or resume a deployed agent.")),
       HttpApiEndpoint.delete("deploymentRemove", WorkPaths.deployment, {
         params: { deploymentID: Work.DeploymentID },
         success: described(Schema.Boolean, "Agent removed"),
@@ -87,7 +89,9 @@ export const WorkApi = HttpApi.make("work").add(
         params: { deploymentID: Work.DeploymentID },
         success: described(Schema.Array(Work.Run), "Recent runs, newest first"),
         error: WorkNotFoundError,
-      }).annotateMerge(annotate("work.deployment.runs", "List agent runs", "List the 50 most recent runs of an agent.")),
+      }).annotateMerge(
+        annotate("work.deployment.runs", "List agent runs", "List the 50 most recent runs of an agent."),
+      ),
       HttpApiEndpoint.post("deploymentChat", WorkPaths.deploymentChat, {
         params: { deploymentID: Work.DeploymentID },
         success: described(Work.ChatResult, "Chat session for the agent"),

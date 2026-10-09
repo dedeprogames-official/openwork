@@ -362,13 +362,17 @@ const layer = Layer.effect(
       }),
       space: {
         list: Effect.fn("Work.space.list")(function* () {
-          return (yield* db.select().from(WorkSpaceTable).orderBy(asc(WorkSpaceTable.time_created)).all().pipe(Effect.orDie)).map(
-            fromSpace,
-          )
+          return (yield* db
+            .select()
+            .from(WorkSpaceTable)
+            .orderBy(asc(WorkSpaceTable.time_created))
+            .all()
+            .pipe(Effect.orDie)).map(fromSpace)
         }),
         get: getSpace,
         create: Effect.fn("Work.space.create")(function* (input: Work.SpaceCreate) {
-          const count = (yield* db.select({ id: WorkSpaceTable.id }).from(WorkSpaceTable).all().pipe(Effect.orDie)).length
+          const count = (yield* db.select({ id: WorkSpaceTable.id }).from(WorkSpaceTable).all().pipe(Effect.orDie))
+            .length
           const id = SpaceID.create()
           yield* db
             .insert(WorkSpaceTable)
@@ -452,7 +456,12 @@ const layer = Layer.effect(
               schedule: patch.schedule,
               access: patch.access,
               status: patch.status,
-              ...(rescheduled ? { next_run_at: WorkSchedule.next(schedule, Date.now()) ?? WorkSchedule.first(schedule, Date.now()) ?? null } : {}),
+              ...(rescheduled
+                ? {
+                    next_run_at:
+                      WorkSchedule.next(schedule, Date.now()) ?? WorkSchedule.first(schedule, Date.now()) ?? null,
+                  }
+                : {}),
             })
             .where(eq(WorkDeploymentTable.id, id))
             .run()
@@ -484,7 +493,10 @@ const layer = Layer.effect(
             .pipe(Effect.orDie)
           yield* changed("deployment", id)
         }),
-        reschedule: Effect.fn("Work.deployment.reschedule")(function* (id: DeploymentID, nextRunAt: number | undefined) {
+        reschedule: Effect.fn("Work.deployment.reschedule")(function* (
+          id: DeploymentID,
+          nextRunAt: number | undefined,
+        ) {
           yield* db
             .update(WorkDeploymentTable)
             .set({ next_run_at: nextRunAt ?? null })
@@ -528,9 +540,7 @@ const layer = Layer.effect(
           const scheduled =
             current.status === "active" && current.next_run_at !== null && current.next_run_at <= input.now
           if (input.trigger === "schedule" && !requested && !scheduled) return
-          const nextRunAt = scheduled
-            ? (WorkSchedule.next(current.schedule, input.now) ?? null)
-            : current.next_run_at
+          const nextRunAt = scheduled ? (WorkSchedule.next(current.schedule, input.now) ?? null) : current.next_run_at
           const finished = scheduled && current.schedule.type === "once"
           const id = RunID.create()
           const claimed = yield* db
@@ -552,7 +562,9 @@ const layer = Layer.effect(
                     run_requested_at: null,
                     ...(finished ? { status: "done" as const } : {}),
                   })
-                  .where(and(eq(WorkDeploymentTable.id, current.id), eq(WorkDeploymentTable.run_count, current.run_count)))
+                  .where(
+                    and(eq(WorkDeploymentTable.id, current.id), eq(WorkDeploymentTable.run_count, current.run_count)),
+                  )
                   .returning({ id: WorkDeploymentTable.id })
                   .get()
                 if (!updated) return false
@@ -585,7 +597,10 @@ const layer = Layer.effect(
               Effect.gen(function* () {
                 yield* tx
                   .update(WorkDeploymentTable)
-                  .set({ run_count: current.runCount + 1, last_run_at: Math.max(current.lastRunAt ?? 0, input.started) })
+                  .set({
+                    run_count: current.runCount + 1,
+                    last_run_at: Math.max(current.lastRunAt ?? 0, input.started),
+                  })
                   .where(eq(WorkDeploymentTable.id, current.id))
                   .run()
                 yield* tx
@@ -617,7 +632,12 @@ const layer = Layer.effect(
           return (yield* getRun(id))!
         }),
         attach: Effect.fn("Work.run.attach")(function* (id: RunID, sessionID: string) {
-          yield* db.update(WorkRunTable).set({ session_id: sessionID }).where(eq(WorkRunTable.id, id)).run().pipe(Effect.orDie)
+          yield* db
+            .update(WorkRunTable)
+            .set({ session_id: sessionID })
+            .where(eq(WorkRunTable.id, id))
+            .run()
+            .pipe(Effect.orDie)
           yield* changed("run", id)
         }),
         finish: Effect.fn("Work.run.finish")(function* (id: RunID, outcome: RunOutcome) {
@@ -664,7 +684,11 @@ const layer = Layer.effect(
           if (dead.length === 0) return
           yield* db
             .update(WorkRunTable)
-            .set({ status: "error", error: "Interrupted: the process running this agent stopped", time_finished: Date.now() })
+            .set({
+              status: "error",
+              error: "Interrupted: the process running this agent stopped",
+              time_finished: Date.now(),
+            })
             .where(and(inArray(WorkRunTable.id, dead), eq(WorkRunTable.status, "running")))
             .run()
             .pipe(Effect.orDie)
@@ -723,9 +747,12 @@ const layer = Layer.effect(
       },
       todo: {
         list: Effect.fn("Work.todo.list")(function* () {
-          return (yield* db.select().from(WorkTodoTable).orderBy(asc(WorkTodoTable.position)).all().pipe(Effect.orDie)).map(
-            fromTodo,
-          )
+          return (yield* db
+            .select()
+            .from(WorkTodoTable)
+            .orderBy(asc(WorkTodoTable.position))
+            .all()
+            .pipe(Effect.orDie)).map(fromTodo)
         }),
         add: Effect.fn("Work.todo.add")(function* (input: Work.TodoCreate) {
           const last = yield* db

@@ -151,7 +151,9 @@ const layer = Layer.effect(
         const memories = Permission.disabled(["memory"], ruleset).has("memory") ? [] : yield* work.memory.list()
         const owner = WorkSession.meta(input.metadata)
         const deployment = owner ? yield* work.deployment.get(owner.deploymentID) : undefined
-        const runs = deployment ? (yield* work.run.list(deployment.id, 4)).filter((run) => run.id !== owner?.runID).slice(0, 3) : []
+        const runs = deployment
+          ? (yield* work.run.list(deployment.id, 4)).filter((run) => run.id !== owner?.runID).slice(0, 3)
+          : []
         const space = deployment?.spaceID ? yield* work.space.get(deployment.spaceID) : undefined
         return WorkPrompt.context({ memories, deployment, runs, space })
       }),

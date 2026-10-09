@@ -1,7 +1,8 @@
 import path from "path"
-import { Effect } from "effect"
+import { Effect, Option, RcMap } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { FSUtil } from "@opencode-ai/core/fs-util"
+import { LocationServiceMap } from "@opencode-ai/core/location-services"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { Work } from "@opencode-ai/core/work"
@@ -21,6 +22,8 @@ export const workHandlers = HttpApiBuilder.group(RootHttpApi, "work", (handlers)
     const instances = yield* InstanceStore.Service
     const sessions = yield* Session.Service
     const fs = yield* FSUtil.Service
+    // Optional so minimal API layers (tests) can mount these routes without v2 location services.
+    const locations = yield* Effect.serviceOption(LocationServiceMap.Service)
 
     const notFound = (error: Work.NotFoundError) =>
       Effect.fail(
@@ -119,11 +122,21 @@ export const workHandlers = HttpApiBuilder.group(RootHttpApi, "work", (handlers)
       .handle("demo", (ctx) =>
         Effect.gen(function* () {
           const directory = yield* folder(ctx.payload.directory ?? process.cwd())
-          return yield* WorkDemo.seed({ directory }).pipe(
+          const result = yield* WorkDemo.seed({ directory }).pipe(
             Effect.provideService(Work.Service, work),
             Effect.provideService(FSUtil.Service, fs),
             Effect.orDie,
           )
+          // The demo writes project skills; config is read once per open folder, so reopen it to discover them.
+          yield* instances.disposeDirectory(directory)
+          if (Option.isSome(locations)) {
+            // Match live keys by directory: refs built from requests carry an explicit `workspaceID: undefined`.
+            const refs = Array.from(yield* RcMap.keys(locations.value.rcMap)).filter(
+              (ref) => ref.directory === directory,
+            )
+            yield* Effect.forEach(refs, (ref) => locations.value.invalidate(ref), { discard: true })
+          }
+          return result
         }),
       )
       .handle("deploymentCreate", deploymentCreate)

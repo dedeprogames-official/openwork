@@ -1769,7 +1769,8 @@ function workScenarios(): Scenario[] {
     http.protected
       .post("/work/demo", "work.demo")
       .mutating()
-      .at((ctx) => ({ path: "/work/demo", body: { directory: ctx.directory } }))
+      // The demo writes project skills into its folder, so never let it fall back to the process cwd.
+      .at((ctx) => ({ path: "/work/demo", body: { directory: ctx.directory ?? exerciseDataDirectory } }))
       .json(200, (body) => {
         object(body)
         check(body.agents === 17, "demo should deploy 17 agents")

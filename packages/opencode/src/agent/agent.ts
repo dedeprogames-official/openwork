@@ -154,23 +154,6 @@ const layer = Layer.effect(
             mode: "primary",
             native: true,
           },
-          work: {
-            name: "work",
-            description:
-              "OpenWork mode for knowledge work: files as deliverables, your todos, agenda, inbox and memory, and deploying background agents.",
-            options: {},
-            permission: Permission.merge(
-              defaults,
-              Permission.fromConfig({
-                question: "allow",
-              }),
-              user,
-            ),
-            prompt: PROMPT_WORK,
-            color: "#b49cff",
-            mode: "primary",
-            native: true,
-          },
           plan: {
             name: "plan",
             description: "Plan mode. Disallows all edit tools.",
@@ -194,6 +177,23 @@ const layer = Layer.effect(
               }),
               user,
             ),
+            mode: "primary",
+            native: true,
+          },
+          work: {
+            name: "work",
+            description:
+              "OpenWork mode for knowledge work: files as deliverables, your todos, agenda, inbox and memory, and deploying background agents.",
+            options: {},
+            permission: Permission.merge(
+              defaults,
+              Permission.fromConfig({
+                question: "allow",
+              }),
+              user,
+            ),
+            prompt: PROMPT_WORK,
+            color: "#b49cff",
             mode: "primary",
             native: true,
           },

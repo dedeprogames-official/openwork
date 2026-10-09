@@ -31,7 +31,8 @@ export const MemoryTool = Tool.define(
           }
           yield* ctx.ask({ permission: "memory", patterns: [params.action], always: ["*"], metadata: {} })
           if (params.action === "save") {
-            if (!params.content) return { title: "Missing content", output: "Provide `content` to remember.", metadata: {} }
+            if (!params.content)
+              return { title: "Missing content", output: "Provide `content` to remember.", metadata: {} }
             const memory = yield* work.memory.save({ content: params.content, source: ctx.agent })
             return { title: `Remembered: ${memory.content}`, output: `Saved ${memory.id}.`, metadata: {} }
           }

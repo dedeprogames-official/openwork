@@ -55,7 +55,8 @@ export function context(input: {
           ? [
               "Recent runs:",
               ...input.runs.map(
-                (item) => `- #${item.number} ${item.status}${item.summary ? `: ${item.summary}` : ""}${item.error ? `: ${item.error}` : ""}`,
+                (item) =>
+                  `- #${item.number} ${item.status}${item.summary ? `: ${item.summary}` : ""}${item.error ? `: ${item.error}` : ""}`,
               ),
             ]
           : []),

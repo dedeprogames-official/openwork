@@ -15,8 +15,12 @@ export const Parameters = Schema.Struct({
   }),
   title: Schema.optional(Schema.String),
   task: Schema.optional(Schema.String),
-  schedule: Schema.optional(Schema.String).annotate({ description: "e.g. \"every 10m\", \"hourly\", \"daily at 9am\", \"now\"" }),
-  directory: Schema.optional(Schema.String).annotate({ description: "Folder the agent works in; defaults to the current one" }),
+  schedule: Schema.optional(Schema.String).annotate({
+    description: 'e.g. "every 10m", "hourly", "daily at 9am", "now"',
+  }),
+  directory: Schema.optional(Schema.String).annotate({
+    description: "Folder the agent works in; defaults to the current one",
+  }),
   space: Schema.optional(Schema.String).annotate({ description: "Space name to group the agent under" }),
   skill: Schema.optional(Schema.String),
   access: Schema.optional(Schema.Literals(["read", "write", "full"])),
@@ -45,7 +49,10 @@ export const DeployTool = Tool.define<typeof Parameters, Metadata, Work.Service 
               title: `${deployments.length} agents`,
               output: deployments.length
                 ? deployments
-                    .map((item) => `${item.id} [${item.status}] ${item.title} - ${WorkSchedule.label(item.schedule)} in ${item.directory}`)
+                    .map(
+                      (item) =>
+                        `${item.id} [${item.status}] ${item.title} - ${WorkSchedule.label(item.schedule)} in ${item.directory}`,
+                    )
                     .join("\n")
                 : "No agents deployed yet.",
               metadata: {},
@@ -70,7 +77,8 @@ export const DeployTool = Tool.define<typeof Parameters, Metadata, Work.Service 
           }
 
           const description = [params.request ?? params.task ?? "", params.schedule ?? ""].join(" ").trim()
-          if (!description) return { title: "Missing request", output: "Describe what the agent should do in `request`.", metadata: {} }
+          if (!description)
+            return { title: "Missing request", output: "Describe what the agent should do in `request`.", metadata: {} }
           const parsed = WorkSchedule.parse(description, Date.now())
           const instance = yield* InstanceState.context
           const directory = path.resolve(instance.directory, params.directory ?? ".")

@@ -6,7 +6,7 @@ import * as Tool from "./tool"
 import DESCRIPTION from "./inbox.txt"
 
 export const Parameters = Schema.Struct({
-  title: Schema.String.annotate({ description: "A few words naming what this is about, e.g. \"Tonight's conditions\"" }),
+  title: Schema.String.annotate({ description: 'A few words naming what this is about, e.g. "Tonight\'s conditions"' }),
   message: Schema.String.annotate({ description: "One or two sentences the user can act on" }),
   priority: Schema.optional(Schema.Literals(["normal", "high"])).annotate({
     description: "Use high only when the user must act soon",
