@@ -1,5 +1,5 @@
 import { TextAttributes } from "@opentui/core"
-import { createMemo, For, Show } from "solid-js"
+import { createMemo, createSignal, For, Show } from "solid-js"
 import { useRoute, type WorkPage } from "../context/route"
 import { useSync } from "../context/sync"
 import { useTheme } from "../context/theme"
@@ -27,6 +27,8 @@ export function WorkNav(props: { collapsed: boolean; onToggle: () => void }) {
   const sync = useSync()
   const work = useWork()
   const keymap = useOpencodeKeymap()
+  // The row under the mouse pointer, highlighted so clickable rows are discoverable.
+  const [hover, setHover] = createSignal<string>()
   const current = createMemo(() => {
     if (route.data.type === "work") return route.data.page === "agent" ? "agents" : route.data.page
     if (route.data.type === "session") return "chats"
@@ -77,7 +79,9 @@ export function WorkNav(props: { collapsed: boolean; onToggle: () => void }) {
           <box
             flexDirection="row"
             flexShrink={0}
-            backgroundColor={current() === item.page ? theme.backgroundElement : undefined}
+            backgroundColor={current() === item.page || hover() === item.page ? theme.backgroundElement : undefined}
+            onMouseOver={() => setHover(item.page)}
+            onMouseOut={() => setHover(undefined)}
             onMouseUp={() => route.navigate({ type: "work", page: item.page })}
           >
             <text
@@ -105,10 +109,17 @@ export function WorkNav(props: { collapsed: boolean; onToggle: () => void }) {
         <For each={recent()}>
           {(session) => (
             <text
-              fg={route.data.type === "session" && route.data.sessionID === session.id ? theme.text : theme.textMuted}
+              fg={
+                (route.data.type === "session" && route.data.sessionID === session.id) || hover() === session.id
+                  ? theme.text
+                  : theme.textMuted
+              }
+              bg={hover() === session.id ? theme.backgroundElement : undefined}
               wrapMode="none"
               flexShrink={0}
               selectable={false}
+              onMouseOver={() => setHover(session.id)}
+              onMouseOut={() => setHover(undefined)}
               onMouseUp={() => route.navigate({ type: "session", sessionID: session.id })}
             >
               {"  " + truncate(session.title, NAV_WIDTH - 4)}

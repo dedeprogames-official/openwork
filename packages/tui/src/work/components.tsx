@@ -1,5 +1,5 @@
 import { TextAttributes, type RGBA } from "@opentui/core"
-import { For, Show, type JSX, type ParentProps } from "solid-js"
+import { createSignal, For, Show, type JSX, type ParentProps } from "solid-js"
 import { useTheme } from "../context/theme"
 
 export function PageHeader(props: { title: string; subtitle?: string; right?: JSX.Element }) {
@@ -38,14 +38,18 @@ export function SectionTitle(props: { title: string; meta?: string; right?: JSX.
 
 export function Pill(props: { label: string; fg?: RGBA; active?: boolean; onClick?: () => void }) {
   const { theme } = useTheme()
+  const [hover, setHover] = createSignal(false)
   return (
     <box
       flexShrink={0}
       border
       borderStyle="rounded"
-      borderColor={props.active ? theme.primary : theme.borderSubtle}
+      borderColor={props.active || (hover() && props.onClick) ? theme.primary : theme.borderSubtle}
+      backgroundColor={hover() && props.onClick ? theme.backgroundElement : undefined}
       paddingLeft={1}
       paddingRight={1}
+      onMouseOver={() => setHover(true)}
+      onMouseOut={() => setHover(false)}
       onMouseUp={props.onClick}
     >
       <text fg={props.fg ?? theme.text} selectable={false}>
@@ -78,18 +82,45 @@ export function Card(
   )
 }
 
-export function Hints(props: { items: ReadonlyArray<readonly [string, string]> }) {
+/** A key hint: `[key, label]`, or `[key, label, run]` to make it clickable. */
+export type Hint = readonly [string, string] | readonly [string, string, () => void]
+
+export function Hints(props: { items: ReadonlyArray<Hint> }) {
   const { theme } = useTheme()
   return (
-    <text fg={theme.textMuted} flexShrink={0} wrapMode="none">
+    <box flexDirection="row" flexShrink={0} overflow="hidden">
       <For each={props.items}>
         {(item, index) => (
           <>
-            <span style={{ fg: theme.text }}>{item[0]}</span> {item[1]}
-            {index() < props.items.length - 1 ? "  ·  " : ""}
+            <Show when={index() > 0}>
+              <text fg={theme.textMuted} flexShrink={0} wrapMode="none" selectable={false}>
+                {"  ·  "}
+              </text>
+            </Show>
+            <HintItem item={item} />
           </>
         )}
       </For>
+    </box>
+  )
+}
+
+function HintItem(props: { item: Hint }) {
+  const { theme } = useTheme()
+  const [hover, setHover] = createSignal(false)
+  const run = () => props.item[2]
+  return (
+    <text
+      fg={theme.textMuted}
+      bg={hover() && run() ? theme.backgroundElement : undefined}
+      flexShrink={0}
+      wrapMode="none"
+      selectable={false}
+      onMouseOver={() => setHover(true)}
+      onMouseOut={() => setHover(false)}
+      onMouseUp={() => run()?.()}
+    >
+      <span style={{ fg: theme.text }}>{props.item[0]}</span> {props.item[1]}
     </text>
   )
 }

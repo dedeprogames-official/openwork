@@ -9,7 +9,7 @@ import { useWork } from "../context"
 import { Empty, Hints, PageHeader, Pill, SectionTitle } from "../components"
 import { useDeploy } from "../dialog-deploy"
 import { ago, clock, schedule, truncate, until } from "../format"
-import { step, usePageKeys } from "../keys"
+import { step, useFollowSelection, usePageKeys, usePressed, useRowClick } from "../keys"
 import { spaceColor } from "../palette"
 
 export function SpacesPage(props: { spaceID?: string }) {
@@ -28,6 +28,13 @@ export function SpacesPage(props: { spaceID?: string }) {
   const agents = createMemo(() => work.state.deployments.filter((item) => item.spaceID === space()?.id))
   const events = createMemo(() => work.state.agenda.filter((item) => item.spaceID === space()?.id))
   const latest = (id: string) => work.state.latest.find((run) => run.deploymentID === id)
+  const click = useRowClick()
+  const pressed = usePressed()
+  const follow = useFollowSelection("space", selected)
+  const openFirst = () => {
+    const agent = agents()[0]
+    if (agent) route.navigate({ type: "work", page: "agent", id: agent.id })
+  }
 
   const create = async () => {
     const name = await DialogPrompt.show(dialog, "New space", { placeholder: "Launch prep" })
@@ -50,14 +57,7 @@ export function SpacesPage(props: { spaceID?: string }) {
     { key: "n", desc: "New space", run: () => void create() },
     { key: "d", desc: "Deploy an agent", run: () => void deploy() },
     { key: "x", desc: "Remove space", run: () => void remove() },
-    {
-      key: "return",
-      desc: "Open first agent",
-      run: () => {
-        const agent = agents()[0]
-        if (agent) route.navigate({ type: "work", page: "agent", id: agent.id })
-      },
-    },
+    { key: "return", desc: "Open first agent", run: openFirst },
   ])
 
   return (
@@ -68,14 +68,15 @@ export function SpacesPage(props: { spaceID?: string }) {
         right={<Pill label="+ New space" active onClick={() => void create()} />}
       />
       <box flexDirection="row" flexGrow={1} minHeight={0} gap={3}>
-        <box width={44} flexShrink={0}>
+        <scrollbox ref={follow} width={44} flexShrink={0} verticalScrollbarOptions={{ visible: false }}>
           <For each={spaces()}>
             {(item, index) => (
               <box
+                id={`space-${index()}`}
                 flexShrink={0}
                 paddingBottom={1}
                 backgroundColor={index() === selected() ? theme.backgroundElement : undefined}
-                onMouseUp={() => setSelected(index())}
+                onMouseUp={() => click(index() === selected(), () => setSelected(index()), openFirst)}
               >
                 <box flexDirection="row">
                   <text flexGrow={1} wrapMode="none">
@@ -97,7 +98,7 @@ export function SpacesPage(props: { spaceID?: string }) {
           <Show when={spaces().length === 0}>
             <Empty>No spaces yet. Press n to create one, or /demo to load an example workspace.</Empty>
           </Show>
-        </box>
+        </scrollbox>
         <box flexGrow={1} minHeight={0}>
           <Show when={space()}>
             {(current) => (
@@ -112,7 +113,10 @@ export function SpacesPage(props: { spaceID?: string }) {
                 <SectionTitle title="Agents" meta={`${agents().length}`} />
                 <For each={agents()}>
                   {(agent) => (
-                    <box paddingTop={1} onMouseUp={() => route.navigate({ type: "work", page: "agent", id: agent.id })}>
+                    <box
+                      paddingTop={1}
+                      onMouseUp={() => pressed() && route.navigate({ type: "work", page: "agent", id: agent.id })}
+                    >
                       <box flexDirection="row">
                         <text flexGrow={1} wrapMode="none">
                           <span style={{ fg: latest(agent.id)?.status === "running" ? theme.warning : theme.success }}>
@@ -132,8 +136,11 @@ export function SpacesPage(props: { spaceID?: string }) {
                   )}
                 </For>
                 <Show when={agents().length === 0}>
-                  <Empty>No agents in this space. Press d to deploy one.</Empty>
+                  <Empty>No agents in this space yet.</Empty>
                 </Show>
+                <text fg={theme.textMuted} paddingTop={1} selectable={false} onMouseUp={() => void deploy()}>
+                  + Deploy an agent...
+                </text>
                 <box height={1} />
                 <SectionTitle title="On the agenda" />
                 <For each={events()}>
@@ -156,10 +163,10 @@ export function SpacesPage(props: { spaceID?: string }) {
         <Hints
           items={[
             ["↑↓", "select"],
-            ["enter", "open agent"],
-            ["n", "new space"],
-            ["d", "deploy"],
-            ["x", "remove"],
+            ["enter", "open agent", openFirst],
+            ["n", "new space", () => void create()],
+            ["d", "deploy", () => void deploy()],
+            ["x", "remove", () => void remove()],
           ]}
         />
       </box>

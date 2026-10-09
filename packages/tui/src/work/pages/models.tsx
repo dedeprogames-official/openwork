@@ -8,7 +8,7 @@ import { useDialog } from "../../ui/dialog"
 import { useWork } from "../context"
 import { Empty, Hints, PageHeader, Pill, SectionTitle } from "../components"
 import { tokens, truncate } from "../format"
-import { step, usePageKeys } from "../keys"
+import { step, useFollowSelection, usePageKeys, usePressed } from "../keys"
 import { isLocal } from "../stats"
 
 export function ModelsPage() {
@@ -28,16 +28,16 @@ export function ModelsPage() {
   const current = () => local.model.current()
   const usedToday = (providerID: string) =>
     work.state.usage.providers.find((item) => item.providerID === providerID)?.tokens ?? 0
+  const pressed = usePressed()
+  const follow = useFollowSelection("provider", selected)
+  const choose = () => dialog.replace(() => <DialogModel providerID={providers()[selected()]?.id} />)
+  const connect = () => dialog.replace(() => <DialogProvider />)
 
   usePageKeys(() => [
     { key: "up,k", desc: "Previous provider", run: () => setSelected((index) => step(index, -1, providers().length)) },
     { key: "down,j", desc: "Next provider", run: () => setSelected((index) => step(index, 1, providers().length)) },
-    {
-      key: "return",
-      desc: "Choose model",
-      run: () => dialog.replace(() => <DialogModel providerID={providers()[selected()]?.id} />),
-    },
-    { key: "c", desc: "Connect provider", run: () => dialog.replace(() => <DialogProvider />) },
+    { key: "return", desc: "Choose model", run: choose },
+    { key: "c", desc: "Connect provider", run: connect },
   ])
 
   return (
@@ -45,22 +45,24 @@ export function ModelsPage() {
       <PageHeader
         title="Models"
         subtitle="Local models keep agents private and free to run; cloud models handle the hard tasks."
-        right={<Pill label="+ Connect provider" active onClick={() => dialog.replace(() => <DialogProvider />)} />}
+        right={<Pill label="+ Connect provider" active onClick={connect} />}
       />
       <text fg={theme.textMuted} flexShrink={0}>
         <span style={{ fg: theme.text }}>Default model </span>
         {current() ? `${current()?.providerID}/${current()?.modelID}` : "none — connect a provider"}
       </text>
       <box height={1} flexShrink={0} />
-      <scrollbox flexGrow={1} minHeight={0} verticalScrollbarOptions={{ visible: false }}>
+      <scrollbox ref={follow} flexGrow={1} minHeight={0} verticalScrollbarOptions={{ visible: false }}>
         <For each={providers()}>
           {(provider, index) => (
             <box
+              id={`provider-${index()}`}
               paddingBottom={1}
               backgroundColor={index() === selected() ? theme.backgroundElement : undefined}
               onMouseUp={() => {
+                if (!pressed()) return
                 setSelected(index())
-                dialog.replace(() => <DialogModel providerID={provider.id} />)
+                choose()
               }}
             >
               <box flexDirection="row">
@@ -99,8 +101,8 @@ export function ModelsPage() {
         <Hints
           items={[
             ["↑↓", "select"],
-            ["enter", "choose model"],
-            ["c", "connect provider"],
+            ["enter", "choose model", choose],
+            ["c", "connect provider", connect],
           ]}
         />
       </box>

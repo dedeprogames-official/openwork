@@ -6,7 +6,8 @@ import { useTheme } from "../../context/theme"
 import { useDialog } from "../../ui/dialog"
 import { Empty, Hints, PageHeader, Pill, SectionTitle } from "../components"
 import { truncate } from "../format"
-import { step, usePageKeys } from "../keys"
+import { step, usePageKeys, usePressed } from "../keys"
+import { COMMAND_PALETTE_COMMAND, useOpencodeKeymap } from "../../keymap"
 
 export function IntegrationsPage() {
   const sync = useSync()
@@ -30,10 +31,14 @@ export function IntegrationsPage() {
     return theme.warning
   }
 
+  const keymap = useOpencodeKeymap()
+  const pressed = usePressed()
+  const manage = () => dialog.replace(() => <DialogMcp />)
+
   usePageKeys(() => [
     { key: "up,k", desc: "Previous", run: () => setSelected((index) => step(index, -1, servers().length)) },
     { key: "down,j", desc: "Next", run: () => setSelected((index) => step(index, 1, servers().length)) },
-    { key: "return", desc: "Manage MCP servers", run: () => dialog.replace(() => <DialogMcp />) },
+    { key: "return", desc: "Manage MCP servers", run: manage },
   ])
 
   return (
@@ -41,7 +46,7 @@ export function IntegrationsPage() {
       <PageHeader
         title="Integrations"
         subtitle="Connectors give chats and agents access to your tools: mail, calendars, drives, CRMs and more (MCP)."
-        right={<Pill label="Manage" active onClick={() => dialog.replace(() => <DialogMcp />)} />}
+        right={<Pill label="Manage" active onClick={manage} />}
       />
       <SectionTitle title="MCP servers" meta={`${servers().length}`} />
       <box height={1} flexShrink={0} />
@@ -51,7 +56,11 @@ export function IntegrationsPage() {
             flexDirection="row"
             paddingBottom={1}
             backgroundColor={index() === selected() ? theme.backgroundElement : undefined}
-            onMouseUp={() => dialog.replace(() => <DialogMcp />)}
+            onMouseUp={() => {
+              if (!pressed()) return
+              setSelected(index())
+              manage()
+            }}
           >
             <text flexGrow={1} wrapMode="none">
               <span style={{ fg: color(entry[1].status) }}>● </span>
@@ -89,13 +98,22 @@ export function IntegrationsPage() {
         {connected().length === 0 ? "No accounts connected yet. " : ""}
         {`Run /connect to add one of ${integrations().length} providers and services: ${available()}…`}
       </text>
+      <text
+        fg={theme.textMuted}
+        flexShrink={0}
+        paddingTop={1}
+        selectable={false}
+        onMouseUp={() => keymap.dispatchCommand("provider.connect")}
+      >
+        + Connect an account...
+      </text>
       <box flexGrow={1} />
       <box flexShrink={0} paddingTop={1}>
         <Hints
           items={[
             ["↑↓", "select"],
-            ["enter", "manage servers"],
-            ["ctrl+p", "commands"],
+            ["enter", "manage servers", manage],
+            ["ctrl+p", "commands", () => keymap.dispatchCommand(COMMAND_PALETTE_COMMAND)],
           ]}
         />
       </box>
