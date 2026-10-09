@@ -3,10 +3,12 @@ import type { Part, ToolPart, WorkRun } from "@opencode-ai/sdk/v2"
 import { createEffect, createMemo, createSignal, For, on, Show } from "solid-js"
 import { Prompt } from "../../component/prompt"
 import { usePromptRef } from "../../context/prompt"
+import { useTuiPaths } from "../../context/runtime"
 import { useRoute } from "../../context/route"
 import { useSDK } from "../../context/sdk"
 import { useSync } from "../../context/sync"
 import { useTheme } from "../../context/theme"
+import { abbreviateHome } from "../../runtime"
 import { DialogConfirm } from "../../ui/dialog-confirm"
 import { useDialog } from "../../ui/dialog"
 import { useWork } from "../context"
@@ -23,6 +25,7 @@ export function AgentPage(props: { deploymentID: string }) {
   const route = useRoute()
   const dialog = useDialog()
   const promptRef = usePromptRef()
+  const paths = useTuiPaths()
   const { theme } = useTheme()
   const [runs, setRuns] = createSignal<WorkRun[]>([])
   const [index, setIndex] = createSignal(0)
@@ -152,7 +155,7 @@ export function AgentPage(props: { deploymentID: string }) {
             ].join(" · ")}
           </text>
           <text fg={theme.borderActive} wrapMode="none" flexShrink={0}>
-            {truncate(agent().directory, 120)}
+            {truncate(abbreviateHome(agent().directory, paths.home), 120)}
           </text>
           <box height={1} flexShrink={0} />
           <box flexDirection="row" flexShrink={0} gap={2}>

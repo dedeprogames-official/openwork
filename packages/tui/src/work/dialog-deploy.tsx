@@ -9,6 +9,7 @@ import { DialogPrompt } from "../ui/dialog-prompt"
 import { DialogSelect, type DialogSelectOption } from "../ui/dialog-select"
 import { useDialog, type DialogContext } from "../ui/dialog"
 import { useToast } from "../ui/toast"
+import { abbreviateHome } from "../runtime"
 import { useWork } from "./context"
 import { ACCESS, schedule as label } from "./format"
 
@@ -41,7 +42,7 @@ export function useDeploy() {
     const folders = Array.from(new Set([cwd, ...work.state.deployments.map((item) => item.directory)])).slice(0, 8)
     const folder = await choose<string>(dialog, "Where should it work?", [
       ...folders.map((item, index) => ({
-        title: item,
+        title: abbreviateHome(item, paths.home),
         value: item,
         description: index === 0 ? "current folder" : "used by other agents",
       })),

@@ -1,17 +1,17 @@
 <p align="center">
-  <a href="https://opencode.ai">
-    <picture>
-      <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
-      <img src="packages/console/app/src/asset/logo-ornate-light.svg" alt="OpenCode logo">
-    </picture>
-  </a>
+  <picture>
+    <source srcset="docs/openwork/logo-dark.svg" media="(prefers-color-scheme: dark)">
+    <source srcset="docs/openwork/logo-light.svg" media="(prefers-color-scheme: light)">
+    <img src="docs/openwork/logo-light.svg" alt="Логотип OpenWork" width="480">
+  </picture>
 </p>
-<p align="center">AI-агент для програмування з відкритим кодом.</p>
+<p align="center"><strong>Розгортайте агентів у своїх теках. Вони працюють за розкладом. Результати ви читаєте в Your Day.</strong></p>
+<p align="center">Робочий режим для термінала, побудований на harness opencode.</p>
 <p align="center">
-  <a href="https://opencode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
-  <a href="https://www.npmjs.com/package/opencode-ai"><img alt="npm" src="https://img.shields.io/npm/v/opencode-ai?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/opencode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/anomalyco/opencode/publish.yml?style=flat-square&branch=dev" /></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-b49cff?style=flat-square" /></a>
+  <img alt="Terminal UI" src="https://img.shields.io/badge/UI-terminal-0b0b0d?style=flat-square" />
+  <img alt="Bun 1.3+" src="https://img.shields.io/badge/bun-1.3%2B-f2cf6b?style=flat-square" />
+  <a href="https://github.com/anomalyco/opencode"><img alt="Built on opencode" src="https://img.shields.io/badge/built%20on-opencode-7aa7ff?style=flat-square" /></a>
 </p>
 
 <p align="center">
@@ -39,92 +39,213 @@
   <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
-[![OpenCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://opencode.ai)
+[![OpenWork — Your Day у вікні термінала в Linux](docs/openwork/screenshots/01-your-day.png)](docs/openwork/README.md)
+
+<p align="center"><sub>Усі знімки екрана тут — справжній TUI OpenWork у xfce4-terminal у Linux (Xfce, тема Greybird) з демо-простором і офлайн-моделлю.</sub></p>
 
 ---
 
-### Встановлення
+### Що таке OpenWork?
 
-```bash
-# YOLO
-curl -fsSL https://opencode.ai/install | bash
+OpenWork перетворює термінальний інтерфейс opencode на місце для роботи — не лише для коду. Опишіть завдання одним реченням, наприклад _«check the Half Moon Bay cam every 10m and tell me if it's sunny»_, і OpenWork розгорне агента у вибраній вами локальній теці. Агент працює за своїм розкладом у фоні, без нагляду, і все, що він знаходить, потрапляє в одне місце: **Your Day**, поруч із вашим порядком денним, завданнями та **Agent Inbox**.
 
-# Менеджери пакетів
-npm i -g opencode-ai@latest        # або bun/pnpm/yarn
-scoop install opencode             # Windows
-choco install opencode             # Windows
-brew install anomalyco/tap/opencode # macOS і Linux (рекомендовано, завжди актуально)
-brew install opencode              # macOS і Linux (офіційна формула Homebrew, оновлюється рідше)
-sudo pacman -S opencode            # Arch Linux (Stable)
-paru -S opencode-bin               # Arch Linux (Latest from AUR)
-mise use -g opencode               # Будь-яка ОС
-nix run nixpkgs#opencode           # або github:anomalyco/opencode для найновішої dev-гілки
-```
+Це й далі термінальний застосунок, що працює на harness opencode: ті самі сесії, інструменти, дозволи, провайдери, локальні моделі, skills і MCP-сервери. Агенти, запуски, вхідні, завдання, порядок денний і пам'ять зберігаються локально в SQLite.
 
-> [!TIP]
-> Перед встановленням видаліть версії старші за 0.1.x.
+### Головне
 
-### Десктопний застосунок (BETA)
+- **Миттєве розгортання** — одне речення → тека → space → розклад → доступ. Натискайте enter на кожному кроці, і агент розгорнутий і працює за секунди.
+- **Розклад звичайними словами** — англійською або португальською: `every 10m`, `hourly`, `every morning at 8`, `daily at 7:30`, `at 5pm`, `now`, `a cada 15 minutos`, `todo dia às 8h`.
+- **Your Day** — порядок денний, завдання, Agent Inbox і всі агенти, згруповані за space, з останнім результатом і наступним запуском.
+- **Agent Calendar** — усі запуски дня по порядку, розфарбовані за space, з масштабом від кількох хвилин до цілого дня; запуск, що працює просто зараз, обведено рамкою.
+- **Без нагляду й безпечно** — запуски ніколи не зупиняються, щоб спитати: усе, що викликало б запит дозволу, відхиляється. Кожен агент має рівень доступу: `read + network`, `read + write + network` або `full`.
+- **Справжні транскрипти** — кожен запуск — це справжня сесія opencode, яку можна відкрити, з викликами інструментів, токенами й вартістю.
+- **Агенти, що звітують** — cowork-інструменти `inbox`, `user_todo`, `agenda`, `memory` і `deploy` дають агентам змогу писати у вхідні, додавати завдання, читати порядок денний і запам'ятовувати факти про вас. Чат може розгортати нових агентів.
+- **Spaces** — групуйте агентів довкола мети, події чи клієнта.
+- **Пам'ять** — факти про вас, які отримує кожен чат і кожен агент.
+- **Статистика токенів** — локальні й хмарні токени рахуються окремо, швидкість витрат, денний прогноз і скільки заощаджують локальні моделі.
+- **Клавіатура й миша** — `alt+1` … `alt+8` для сторінок і `ctrl+p` для всіх команд; клацайте навігацію, кнопки, рядки, прапорці й підказки клавіш; прокручуйте списки й календар коліщатком.
+- **ASCII від початку до кінця** — логотип, індикатори й кільцеві діаграми намальовано блоковими символами термінала.
 
-OpenCode також доступний як десктопний застосунок. Завантажуйте напряму зі [сторінки релізів](https://github.com/anomalyco/opencode/releases) або [opencode.ai/download](https://opencode.ai/download).
+### Знімки екрана
 
-| Платформа             | Завантаження                       |
-| --------------------- | ---------------------------------- |
-| macOS (Apple Silicon) | `opencode-desktop-mac-arm64.dmg`   |
-| macOS (Intel)         | `opencode-desktop-mac-x64.dmg`     |
-| Windows               | `opencode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`, `.rpm` або AppImage        |
-
-```bash
-# macOS (Homebrew)
-brew install --cask opencode-desktop
-# Windows (Scoop)
-scoop bucket add extras; scoop install extras/opencode-desktop
-```
-
-#### Каталог встановлення
-
-Скрипт встановлення дотримується такого порядку пріоритету для шляху встановлення:
-
-1. `$OPENCODE_INSTALL_DIR` - Користувацький каталог встановлення
-2. `$XDG_BIN_DIR` - Шлях, сумісний зі специфікацією XDG Base Directory
-3. `$HOME/bin` - Стандартний каталог користувацьких бінарників (якщо існує або його можна створити)
-4. `$HOME/.opencode/bin` - Резервний варіант за замовчуванням
-
-```bash
-# Приклади
-OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://opencode.ai/install | bash
-```
-
-### Агенти
-
-OpenCode містить два вбудовані агенти, між якими можна перемикатися клавішею `Tab`.
-
-- **build** - Агент за замовчуванням із повним доступом для завдань розробки
-- **plan** - Агент лише для читання для аналізу та дослідження коду
-  - За замовчуванням забороняє редагування файлів
-  - Запитує дозвіл перед запуском bash-команд
-  - Ідеально підходить для дослідження незнайомих кодових баз або планування змін
-
-Також доступний допоміжний агент **general** для складного пошуку та багатокрокових завдань.
-Він використовується всередині системи й може бути викликаний у повідомленнях через `@general`.
-
-Дізнайтеся більше про [agents](https://opencode.ai/docs/agents).
-
-### Документація
-
-Щоб дізнатися більше про налаштування OpenCode, [**перейдіть до нашої документації**](https://opencode.ai/docs).
-
-### Внесок
-
-Якщо ви хочете зробити внесок в OpenCode, будь ласка, прочитайте нашу [документацію для контриб'юторів](./CONTRIBUTING.md) перед надсиланням pull request.
-
-### Проєкти на базі OpenCode
-
-Якщо ви працюєте над проєктом, пов'язаним з OpenCode, і використовуєте "opencode" у назві, наприклад "opencode-dashboard" або "opencode-mobile", додайте примітку до свого README.
-Уточніть, що цей проєкт не створений командою OpenCode і жодним чином не афілійований із нами.
+<table>
+  <tr>
+    <td width="50%" align="center"><img src="docs/openwork/screenshots/03-agents.png" alt="Agents"><br><b>Agents</b> — індикатор токенів, швидкість витрат, заощадження й живий Agent Calendar</td>
+    <td width="50%" align="center"><img src="docs/openwork/screenshots/04-agents-whole-day.png" alt="Agent Calendar, увесь день"><br><b>Agent Calendar</b> у масштабі всього дня</td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><img src="docs/openwork/screenshots/05-agent-detail.png" alt="Агент"><br><b>Агент</b> — виклики інструментів і результат останнього запуску</td>
+    <td width="50%" align="center"><img src="docs/openwork/screenshots/06-agent-running.png" alt="Агент працює"><br>Агент, який <b>працює</b> просто зараз</td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><img src="docs/openwork/screenshots/14-deploy.png" alt="Розгорнути агента"><br><b>Розгорніть</b> агента одним реченням</td>
+    <td width="50%" align="center"><img src="docs/openwork/screenshots/15-deploy-folder.png" alt="Розгортання: вибір теки"><br>…потім виберіть <b>теку</b>, де він працює</td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><img src="docs/openwork/screenshots/07-spaces.png" alt="Spaces"><br><b>Spaces</b> — агенти, згруповані довкола мети</td>
+    <td width="50%" align="center"><img src="docs/openwork/screenshots/08-chat.png" alt="Чат"><br><b>Чат</b> з агентом <code>work</code> усередині оболонки</td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><img src="docs/openwork/screenshots/10-skills.png" alt="Skills"><br><b>Skills</b> — інструкції для повторного використання</td>
+    <td width="50%" align="center"><img src="docs/openwork/screenshots/11-memory.png" alt="Пам'ять"><br><b>Memory</b> — що кожен чат і агент знає про вас</td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><img src="docs/openwork/screenshots/12-models.png" alt="Моделі"><br><b>Models</b> — локальні й хмарні</td>
+    <td width="50%" align="center"><img src="docs/openwork/screenshots/13-integrations.png" alt="Інтеграції"><br><b>Integrations</b> — MCP-сервери й облікові записи</td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><img src="docs/openwork/screenshots/02-your-day-focus.png" alt="Your Day без колонки агентів"><br><b>Your Day</b> із прихованою колонкою агентів</td>
+    <td width="50%" align="center"><img src="docs/openwork/screenshots/16-command-palette.png" alt="Команди"><br>Усі <b>команди</b> в палітрі (<code>ctrl+p</code>)</td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><img src="docs/openwork/screenshots/17-new-chat.png" alt="Новий чат"><br><b>New chat</b></td>
+    <td width="50%" align="center"><img src="docs/openwork/screenshots/18-nav-collapsed.png" alt="Згорнута навігація"><br>Згорнута <b>навігація</b> (<code>ctrl+x w</code>)</td>
+  </tr>
+</table>
 
 ---
 
-**Приєднуйтеся до нашої спільноти** [Discord](https://discord.gg/opencode) | [X.com](https://x.com/opencode)
+### Початок роботи
+
+**Вимоги:** [Bun](https://bun.sh) 1.3 або новіший, git і термінал з truecolor та підтримкою миші (xfce4-terminal, GNOME Terminal, Konsole, kitty, WezTerm, Ghostty, iTerm2, Windows Terminal…). Моделі: будь-який провайдер, якого підтримує opencode, або локальна модель через Ollama, LM Studio, llama.cpp чи vLLM.
+
+#### Запуск із вихідного коду
+
+```bash
+git clone https://github.com/dedeprogames-official/openwork.git
+cd openwork
+bun install
+bun dev ~/work        # тека, у якій відкриється OpenWork
+```
+
+`bun dev .` відкриває поточну теку; просто `bun dev` відкриває `packages/opencode`.
+
+#### Збирання автономного бінарника
+
+```bash
+./packages/opencode/script/build.ts --single
+./packages/opencode/dist/opencode-linux-x64/bin/opencode    # або opencode-darwin-arm64, …
+```
+
+Пакет встановлює той самий бінарник під іменами `opencode` і `openwork`.
+
+#### Перші п'ять хвилин
+
+1. **Підключіть модель** — `/connect` або відкрийте **Models** (`alt+7`) і натисніть `c`. Про локальні моделі — у розділі [Локальні моделі](#local-models).
+2. **Завантажте демо** — `/demo` створює 6 spaces, 17 агентів, день історії запусків, skills, повідомлення у вхідних, завдання й порядок денний. Агенти стартують на паузі, щоб не витрачати токени; `/pause` дозволяє їм працювати.
+3. **Розгорніть свого** — `ctrl+x d` або введіть `/deploy check the weather in Lisbon every morning at 7 and tell me if I need an umbrella` (розклад — англійською чи португальською, завдання — будь-якою мовою).
+4. **Читайте Your Day** — `alt+1`. Результати надходять в Agent Inbox; відкрийте агента, щоб побачити його запуски або обговорити його роботу в чаті.
+
+### Розгортання агентів
+
+Агент — це завдання, тека для роботи, розклад і рівень доступу, а за бажанням ще й skill. Він працює на моделі, вибраній у момент розгортання. Розгортайте через `ctrl+x d`, `/deploy <що і коли>`, кнопку **+ Create Agent** на сторінці Agents, зі space або попросивши про це в чаті.
+
+| Ви пишете                                                               | Розклад                                                  |
+| ----------------------------------------------------------------------- | -------------------------------------------------------- |
+| `every 10m`, `every 2 hours`, `a cada 15 minutos`                       | кожні N хвилин, годин або днів (щонайменше 1 хвилина)    |
+| `hourly`, `every hour`, `every minute`                                  | щогодини або щохвилини                                   |
+| `daily at 9am`, `every morning at 8`, `every evening`, `todo dia às 8h` | щодня в цей час (ранок 08:00, вечір 18:00, інакше 09:00) |
+| `at 5pm`, `às 17h`                                                      | один раз, найближчої 17:00                               |
+| `now`, `once` — або без слів про час                                    | один раз, одразу                                         |
+
+Крок розкладу пропонує й **on demand**: агент запускається, лише коли ви натискаєте **Run now**.
+
+| Доступ                   | Агент може                                                               |
+| ------------------------ | ------------------------------------------------------------------------ |
+| `read + network`         | читати файли, користуватися інтернетом, писати у вхідні                  |
+| `read + write + network` | також створювати й редагувати файли у своїй теці                         |
+| `full`                   | використовувати всі дозволені вами інструменти, зокрема команди оболонки |
+
+Запуски йдуть без нагляду: запитання й усе, що викликало б запит дозволу, відхиляються, а запуск зупиняється через 15 хвилин. Кожен запуск — це сесія з назвою `<агент> · run #N`; натисніть `o` на сторінці агента, щоб відкрити транскрипт.
+
+### Сторінки
+
+| Сторінка     | Клавіша | Показує                                                                                                                  |
+| ------------ | ------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Your Day     | `alt+1` | Порядок денний, завдання, Agent Inbox, поле чату й усіх агентів, згрупованих за space, з останнім і наступним запуском.  |
+| Chats        | `alt+2` | Ваші чати; запуски агентів до списку не потрапляють.                                                                     |
+| Spaces       | `alt+3` | Spaces з їхніми агентами й пунктами порядку денного.                                                                     |
+| Agents       | `alt+4` | Індикатор токенів, швидкість витрат, заощадження, куди йдуть токени, і Agent Calendar.                                   |
+| Agent        | `enter` | Одного агента: завдання, розклад, доступ, виклики інструментів і результат кожного запуску, історію та його власний чат. |
+| Skills       | `alt+5` | Skills з `.opencode/skills` і `~/.agents/skills`.                                                                        |
+| Memory       | `alt+6` | Що чати й агенти знають про вас.                                                                                         |
+| Models       | `alt+7` | Локальні й хмарні моделі; локальні токени рахуються окремо в картці Usage.                                               |
+| Integrations | `alt+8` | MCP-сервери й підключені облікові записи.                                                                                |
+
+### Клавіатура й миша
+
+| Клавіші           | Дія                                |
+| ----------------- | ---------------------------------- |
+| `alt+1` … `alt+8` | перемикання сторінок               |
+| `ctrl+x d`        | розгорнути агента                  |
+| `ctrl+x w`        | згорнути або розгорнути навігацію  |
+| `ctrl+p`          | палітра команд                     |
+| `c`               | фокус на полі чату (`esc` — вихід) |
+| `esc`             | назад                              |
+
+Кожна сторінка показує свої клавіші внизу. Слеш-команди: `/day`, `/chats`, `/spaces`, `/agents`, `/skills`, `/memory`, `/models`, `/integrations`, `/deploy <текст>`, `/pause`, `/demo`, `/connect`.
+
+Усе працює й мишею: клацайте навігацію, кнопки й підказки клавіш; у списках перше клацання вибирає рядок, друге відкриває його; прапорці перемикаються одразу; коліщатко прокручує списки й Agent Calendar. Перетягування, як і раніше, виділяє й копіює текст.
+
+<a id="local-models"></a>
+
+### Локальні моделі
+
+Будь-який OpenAI-сумісний сервер на `localhost` вважається локальним, як і провайдери `ollama`, `lmstudio`, `llamacpp` і `vllm`. Наприклад, з Ollama, в `opencode.json` (у вашій теці або в `~/.config/opencode/`):
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama",
+      "options": { "baseURL": "http://localhost:11434/v1" },
+      "models": { "qwen3:8b": { "name": "Qwen3 8B" } }
+    }
+  },
+  "model": "ollama/qwen3:8b"
+}
+```
+
+### Як це працює
+
+- Планувальник живе в серверному процесі OpenWork. Кожні 5 секунд він шукає агентів, яким час запускатися, і виконує до 3 одночасно. Захоплення запуску атомарне в SQLite, тому кілька вікон OpenWork ніколи не запустять одного агента двічі, а запуски, що лишилися після збою, позначаються як перервані. `OPENCODE_DISABLE_WORK_SCHEDULER=1` вимикає його.
+- Кожен запуск — це сесія opencode з агентом `work` — персоною для інтелектуальної роботи, для якої теки — це робочі простори, а файли — результати, — з вашою пам'яттю й нещодавніми результатами агента в системному контексті та дозволами без нагляду для його рівня доступу.
+- OpenWork зберігає конфігурацію opencode: `opencode.json`, `.opencode/`, змінні `OPENCODE_*`, провайдери, MCP-сервери й skills працюють як раніше.
+
+| Де                                                      | Що                                                              |
+| ------------------------------------------------------- | --------------------------------------------------------------- |
+| `packages/schema/src/work.ts`                           | записи, вхідні дані й подія `work.updated`                      |
+| `packages/core/src/work.ts`, `packages/core/src/work/`  | таблиці SQLite, сховище `Work` і розбір розкладів               |
+| `packages/opencode/src/work/`                           | планувальник, дозволи без нагляду, контекст запусків, демо      |
+| `packages/opencode/src/tool/`                           | інструменти `inbox`, `user_todo`, `agenda`, `memory` і `deploy` |
+| `packages/opencode/src/server/routes/instance/httpapi/` | HTTP API `/work/*`                                              |
+| `packages/tui/src/work/`                                | оболонка, навігація, сторінки й діалог розгортання              |
+
+Повний посібник — у [docs/openwork](docs/openwork/README.md).
+
+### Розробка
+
+```bash
+bun install
+bun dev ~/work
+
+# перевірки запускаються з теки пакета, ніколи з кореня репозиторію
+(cd packages/tui && bun typecheck && bun test)
+(cd packages/opencode && bun typecheck && bun test test/work)
+```
+
+Знімки екрана генеруються зі справжнього TUI з офлайн-моделлю. З `--window linux` кожен — це фото справжнього вікна X11 (Xvfb, віконний менеджер xfwm4 і xfce4-terminal):
+
+```bash
+sudo apt-get install tmux python3-pil xvfb dbus-x11 xfwm4 xfce4-terminal greybird-gtk-theme xdotool imagemagick fonts-dejavu-core
+cd packages/opencode
+TZ=Europe/London bun script/openwork/screenshots.ts --window linux --out ../../docs/openwork/screenshots
+```
+
+Виберіть `TZ`, де зараз кінець дня: історія запусків демо починається о 06:00 за місцевим часом.
+
+### Подяки й ліцензія
+
+OpenWork побудовано на [opencode](https://github.com/anomalyco/opencode), і він зберігає його [ліцензію MIT](LICENSE). Його не розробляє команда opencode, і він з нею не пов'язаний. Внески вітаються — див. [CONTRIBUTING.md](CONTRIBUTING.md).

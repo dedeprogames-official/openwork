@@ -9,11 +9,15 @@
  *   TZ=Europe/London bun script/openwork/screenshots.ts --out ../../docs/openwork/screenshots
  *
  * Pick a TZ where it is late afternoon: the demo's run history starts at 06:00 local time.
+ *
+ * With `--window linux` the captures are photos of a real Linux window instead (xfce4-terminal under xfwm4 on Xvfb,
+ * see linux-window.ts for the packages it needs).
  */
 import { $ } from "bun"
 import fs from "fs/promises"
 import os from "os"
 import path from "path"
+import { startLinuxWindow } from "./linux-window"
 
 const arg = (name: string, fallback: string) => {
   const index = process.argv.indexOf(`--${name}`)
@@ -23,6 +27,7 @@ const out = path.resolve(arg("out", "../../docs/openwork/screenshots"))
 const cols = Number(arg("cols", "160"))
 const rows = Number(arg("rows", "45"))
 const only = arg("only", "")
+const mode = arg("window", "ansi")
 const here = import.meta.dir
 const root = await fs.mkdtemp(path.join(os.tmpdir(), "openwork-shots-"))
 const work = path.join(root, "work", "acme")
@@ -35,10 +40,12 @@ await fs.mkdir(out, { recursive: true })
 // Only pass through what the tools need: credentials in the caller's environment would show up as connected accounts.
 const env: Record<string, string> = {
   ...Object.fromEntries(
-    ["PATH", "HOME", "USER", "SHELL", "LANG", "LC_ALL", "TZ", "TMPDIR", "BUN_INSTALL"].flatMap((name) =>
+    ["PATH", "USER", "SHELL", "LANG", "LC_ALL", "TZ", "TMPDIR", "BUN_INSTALL"].flatMap((name) =>
       process.env[name] === undefined ? [] : [[name, process.env[name]]],
     ),
   ),
+  // A throwaway home: pages show the demo folder as ~/work/acme, and nothing from the caller's ~/.agents is picked up.
+  HOME: root,
   XDG_DATA_HOME: path.join(root, "data"),
   XDG_CONFIG_HOME: path.join(root, "config"),
   XDG_STATE_HOME: path.join(root, "state"),
@@ -98,9 +105,15 @@ const until = async (marker: string | RegExp, timeout = 20_000) => {
   console.warn(`timed out waiting for ${marker}`)
   return false
 }
+let linux: Awaited<ReturnType<typeof startLinuxWindow>> | undefined
 const shot = async (name: string, title: string) => {
   if (only && !only.split(",").includes(name)) return
   await Bun.sleep(900)
+  if (linux) {
+    await linux.capture(path.join(out, `${name}.png`))
+    console.log(`saved ${name}.png`)
+    return
+  }
   const capture = (await tmux("capture-pane", "-p", "-e", "-N", "-t", session)).stdout.toString()
   const file = path.join(root, `${name}.ans`)
   await Bun.write(file, capture)
@@ -131,6 +144,20 @@ try {
     session,
     `cd ${path.join(here, "../..")} && exec bun run src/index.ts ${work} --port ${serverPort} 2>${path.join(root, "tui.log")}`,
   )
+  if (mode === "linux") {
+    // The window shows this same tmux session: no status line, and the app's title goes to the window's title bar.
+    await tmux("set", "-g", "status", "off")
+    await tmux("set", "-g", "set-titles", "on")
+    await tmux("set", "-g", "set-titles-string", "#{pane_title}")
+    linux = await startLinuxWindow({
+      root,
+      attach: `tmux -u -f /dev/null -L ${session} attach -t ${session}`,
+      title: "OpenWork",
+      cols,
+      rows,
+      font: arg("font", "DejaVu Sans Mono 12"),
+    })
+  }
   const ready = Date.now()
   while (Date.now() - ready < 60_000) {
     // Requests that land while the server is still starting can hang, so give each probe its own deadline.
@@ -246,6 +273,7 @@ try {
   await shot("18-nav-collapsed", "OpenWork — Your Day (navigation collapsed)")
   await keys("C-x", "w")
 } finally {
+  await linux?.stop()
   await tmux("kill-server")
   llm.kill()
   await fs.rm(root, { recursive: true, force: true }).catch(() => undefined)
