@@ -127,6 +127,16 @@ function matchLegacyOpenApi(input: Record<string, unknown>) {
           if (properties?.branch) properties.branch = { anyOf: [properties.branch, { type: "null" }] }
           if (properties?.extra) properties.extra = { anyOf: [properties.extra, { type: "null" }] }
         }
+        if (path === "/work/deployment/{deploymentID}" && method === "patch") {
+          // Patching an OpenWork agent's space, model or skill to null clears it (the agent leaves its space).
+          const ref = operation.requestBody.content?.["application/json"]?.schema?.$ref?.replace(
+            "#/components/schemas/",
+            "",
+          )
+          const properties = ref ? spec.components?.schemas?.[ref]?.properties : undefined
+          for (const key of ["spaceID", "model", "skill"])
+            if (properties?.[key]) properties[key] = { anyOf: [properties[key], { type: "null" }] }
+        }
         if (path === "/experimental/workspace/warp" && method === "post") {
           const ref = operation.requestBody.content?.["application/json"]?.schema?.$ref?.replace(
             "#/components/schemas/",

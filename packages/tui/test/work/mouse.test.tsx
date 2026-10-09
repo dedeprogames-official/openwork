@@ -224,6 +224,15 @@ test("OpenWork pages respond to the mouse", async () => {
     await setup.mockMouse.click(2, 44)
     await setup.waitForFrame((frame) => !frame.includes("Say what it should do"))
 
+    // An agent opened from its space can move: the Move button offers every space, "No space" takes it out.
+    await mouse.click("Beach watcher")
+    await setup.waitForFrame((frame) => frame.includes("AGENT ACTIVITY"))
+    await mouse.click("◆ Move")
+    await setup.waitForFrame((frame) => frame.includes('Move "Beach watcher" to') && frame.includes("No space"))
+    await mouse.click("keep it on its own")
+    await until(() => sent.includes(`PATCH /work/deployment/${agent.id} {"spaceID":null}`))
+    await setup.waitForFrame((frame) => !frame.includes('Move "Beach watcher" to'))
+
     process.emit("SIGHUP")
     await task
   } finally {

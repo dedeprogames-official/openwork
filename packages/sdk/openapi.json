@@ -29152,17 +29152,38 @@
             "type": "string"
           },
           "spaceID": {
-            "type": "string",
-            "pattern": "^wsp_"
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^wsp_"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "agent": {
             "type": "string"
           },
           "model": {
-            "$ref": "#/components/schemas/WorkModelRef"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkModelRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "skill": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "schedule": {
             "$ref": "#/components/schemas/WorkSchedule"

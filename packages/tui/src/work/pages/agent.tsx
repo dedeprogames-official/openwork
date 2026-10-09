@@ -12,6 +12,7 @@ import { abbreviateHome } from "../../runtime"
 import { DialogConfirm } from "../../ui/dialog-confirm"
 import { useDialog } from "../../ui/dialog"
 import { useWork } from "../context"
+import { useMoveToSpace } from "../dialog-space"
 import { Hints, Pill } from "../components"
 import { ACCESS, ago, clock, kind, money, schedule, tokens, truncate, until } from "../format"
 import { usePageKeys, usePressed } from "../keys"
@@ -25,6 +26,7 @@ export function AgentPage(props: { deploymentID: string }) {
   const route = useRoute()
   const dialog = useDialog()
   const promptRef = usePromptRef()
+  const move = useMoveToSpace()
   const paths = useTuiPaths()
   const { theme } = useTheme()
   const [runs, setRuns] = createSignal<WorkRun[]>([])
@@ -106,6 +108,7 @@ export function AgentPage(props: { deploymentID: string }) {
   usePageKeys(() => [
     { key: "r", desc: "Run now", run: () => void work.run(props.deploymentID) },
     { key: "p", desc: "Pause or resume", run: togglePause },
+    { key: "m", desc: "Move to a space", run: () => void move(props.deploymentID) },
     { key: "x", desc: "Remove agent", run: () => void remove() },
     { key: "o", desc: "Open run transcript", run: transcript },
     { key: "left,h", desc: "Older run", run: older },
@@ -138,6 +141,7 @@ export function AgentPage(props: { deploymentID: string }) {
               </span>
             </text>
             <box flexDirection="row" gap={1} flexShrink={0}>
+              <Pill label="◆ Move" onClick={() => void move(agent().id)} />
               <Pill label={agent().status === "paused" ? "▶ Resume" : "◼ Pause"} onClick={togglePause} />
               <Pill label="▷ Run now" active onClick={() => void work.run(agent().id)} />
             </box>
@@ -255,6 +259,7 @@ export function AgentPage(props: { deploymentID: string }) {
                 ["←→", "runs"],
                 ["o", "transcript", transcript],
                 ["c", "ask", () => promptRef.current?.focus()],
+                ["m", "move", () => void move(props.deploymentID)],
                 ["x", "remove", () => void remove()],
                 ["esc", "back", back],
               ]}

@@ -8,6 +8,7 @@ import { useDialog } from "../../ui/dialog"
 import { useWork } from "../context"
 import { Empty, Hints, PageHeader, Pill, SectionTitle } from "../components"
 import { useDeploy } from "../dialog-deploy"
+import { useMoveIntoSpace } from "../dialog-space"
 import { ago, clock, schedule, truncate, until } from "../format"
 import { step, useFollowSelection, usePageKeys, usePressed, useRowClick } from "../keys"
 import { spaceColor } from "../palette"
@@ -17,6 +18,7 @@ export function SpacesPage(props: { spaceID?: string }) {
   const route = useRoute()
   const dialog = useDialog()
   const deploy = useDeploy()
+  const moveInto = useMoveIntoSpace()
   const { theme } = useTheme()
   const spaces = createMemo(() => work.state.spaces)
   const initial = Math.max(
@@ -44,6 +46,11 @@ export function SpacesPage(props: { spaceID?: string }) {
     dialog.clear()
   }
 
+  const moveHere = () => {
+    const current = space()
+    if (current) void moveInto(current.id)
+  }
+
   const remove = async () => {
     const current = space()
     if (!current) return
@@ -56,6 +63,7 @@ export function SpacesPage(props: { spaceID?: string }) {
     { key: "down,j", desc: "Next space", run: () => setSelected((index) => step(index, 1, spaces().length)) },
     { key: "n", desc: "New space", run: () => void create() },
     { key: "d", desc: "Deploy an agent", run: () => void deploy() },
+    { key: "m", desc: "Move an agent here", run: moveHere },
     { key: "x", desc: "Remove space", run: () => void remove() },
     { key: "return", desc: "Open first agent", run: openFirst },
   ])
@@ -141,6 +149,11 @@ export function SpacesPage(props: { spaceID?: string }) {
                 <text fg={theme.textMuted} paddingTop={1} selectable={false} onMouseUp={() => void deploy()}>
                   + Deploy an agent...
                 </text>
+                <Show when={work.state.deployments.some((item) => item.spaceID !== current().id)}>
+                  <text fg={theme.textMuted} selectable={false} onMouseUp={moveHere}>
+                    + Move an agent here...
+                  </text>
+                </Show>
                 <box height={1} />
                 <SectionTitle title="On the agenda" />
                 <For each={events()}>
@@ -166,6 +179,7 @@ export function SpacesPage(props: { spaceID?: string }) {
             ["enter", "open agent", openFirst],
             ["n", "new space", () => void create()],
             ["d", "deploy", () => void deploy()],
+            ["m", "move here", moveHere],
             ["x", "remove", () => void remove()],
           ]}
         />
