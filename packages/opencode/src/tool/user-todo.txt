@@ -1,0 +1,9 @@
+Read and update the user's own todo list in OpenWork ("Your Todos").
+
+This is the user's personal list, not your working plan. Use it to:
+- list: see what the user still has to do
+- add: add a follow-up the user must do themselves (e.g. "Book a table at Sam's for 7pm")
+- complete / reopen: mark an item done or not done when the user asks or when you finished it for them
+- remove: delete an item the user no longer wants
+
+Use `source` to say where the item came from (e.g. "from meeting notes"). Never add items for your own internal steps; use the todowrite tool for that.

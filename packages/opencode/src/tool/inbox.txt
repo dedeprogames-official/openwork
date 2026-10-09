@@ -1,0 +1,5 @@
+Post a message to the user's Agent Inbox in OpenWork.
+
+The Agent Inbox is where the user reads what their agents found. Use it when the user needs to know something or act on it: a result they asked for, a change worth their attention, a decision only they can make, or a problem you could not solve.
+
+Do not post routine "nothing changed" updates. Keep the title short (a few words, like "Tonight's conditions") and the message to one or two sentences the user can act on.

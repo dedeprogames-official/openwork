@@ -28,6 +28,7 @@ import { SessionTodo } from "./session-todo"
 import { SessionV1 } from "./session-v1"
 import { TuiEvent } from "./tui-event"
 import { VcsEvent } from "./vcs-event"
+import { Work } from "./work"
 import { WorkspaceEvent } from "./workspace-event"
 import { WorktreeEvent } from "./worktree-event"
 
@@ -79,6 +80,7 @@ export const Definitions = Event.inventory(
   ...WorkspaceEvent.Definitions,
   ...WorktreeEvent.Definitions,
   ...ServerEvent.Definitions,
+  ...Work.Event.Definitions,
 )
 export const Latest = Event.latest(Definitions)
 export { Durable }

@@ -43,6 +43,22 @@
 
 ---
 
+### OpenWork
+
+**OpenWork** is a work mode for the terminal built on the opencode harness: deploy agents into any local folder in
+seconds, let them run on a schedule, and see what they found on **Your Day** — agenda, todos, an Agent Inbox and every
+agent's last result. Run `/demo` to load a demo workspace and `/deploy <what and when>` to deploy your own.
+
+![OpenWork — Your Day](docs/openwork/screenshots/01-your-day.png)
+
+| | |
+| --- | --- |
+| ![OpenWork — Agents](docs/openwork/screenshots/03-agents.png) | ![OpenWork — Agent](docs/openwork/screenshots/05-agent-detail.png) |
+
+See [docs/openwork](docs/openwork/README.md) for the concepts, keys and every page.
+
+---
+
 ### Installation
 
 ```bash

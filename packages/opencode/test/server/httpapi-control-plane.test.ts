@@ -14,6 +14,13 @@ import { RootHttpApi } from "../../src/server/routes/instance/httpapi/api"
 import { controlHandlers } from "../../src/server/routes/instance/httpapi/handlers/control"
 import { controlPlaneHandlers } from "../../src/server/routes/instance/httpapi/handlers/control-plane"
 import { globalHandlers } from "../../src/server/routes/instance/httpapi/handlers/global"
+import { workHandlers } from "../../src/server/routes/instance/httpapi/handlers/work"
+import { Work } from "@opencode-ai/core/work"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { FSUtil } from "@opencode-ai/core/fs-util"
+import { WorkScheduler } from "../../src/work/scheduler"
+import { InstanceStore } from "../../src/project/instance-store"
+import { Session } from "../../src/session/session"
 import { authorizationLayer } from "../../src/server/routes/instance/httpapi/middleware/authorization"
 import { schemaErrorLayer } from "../../src/server/routes/instance/httpapi/middleware/schema-error"
 import { testEffect } from "../lib/effect"
@@ -27,7 +34,7 @@ const called = Ref.makeUnsafe<MoveSession.Input | undefined>(undefined)
 
 const apiLayer = HttpRouter.serve(
   HttpApiBuilder.layer(RootHttpApi).pipe(
-    Layer.provide([controlHandlers, controlPlaneHandlers, globalHandlers]),
+    Layer.provide([controlHandlers, controlPlaneHandlers, globalHandlers, workHandlers]),
     Layer.provide([authorizationLayer, schemaErrorLayer]),
     // Raw HttpApi routes expose an opaque handler context at the request boundary.
     // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion
@@ -37,6 +44,11 @@ const apiLayer = HttpRouter.serve(
 ).pipe(
   Layer.provideMerge(NodeHttpServer.layerTest),
   Layer.provide(Layer.mock(Auth.Service)({})),
+  Layer.provide(LayerNode.compile(Work.node)),
+  Layer.provide(Layer.mock(WorkScheduler.Service)({})),
+  Layer.provide(Layer.mock(InstanceStore.Service)({})),
+  Layer.provide(Layer.mock(Session.Service)({})),
+  Layer.provide(LayerNode.compile(FSUtil.node)),
   Layer.provide(Layer.mock(Config.Service)({})),
   Layer.provide(Layer.mock(Installation.Service)({})),
   Layer.provide(

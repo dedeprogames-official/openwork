@@ -1,0 +1,7 @@
+Remember facts about the user across OpenWork chats and agents.
+
+- list: show everything you remember
+- save: store one short, durable fact (e.g. "Prefers summaries as bullet points", "Dog's name is Biscuit")
+- forget: delete a memory by `id`
+
+Save only things that will still be true and useful later. Saved memories are shown to you at the start of every conversation.

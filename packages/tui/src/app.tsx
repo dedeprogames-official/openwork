@@ -86,6 +86,12 @@ import * as TuiAudio from "./audio"
 import { win32DisableProcessedInput, win32FlushInputBuffer } from "./terminal-win32"
 import { destroyRenderer } from "./util/renderer"
 import { cliErrorMessage, errorFormat } from "./util/error"
+import { WorkProvider } from "./work/context"
+import { WorkNav } from "./work/nav"
+import { WorkPage } from "./work/page"
+import { NAV_WIDTH, RAIL_WIDTH, ShellInset } from "./work/shell"
+import { useNavCollapsed, useWorkCommands } from "./work/commands"
+import { isWorkRun } from "./work/session"
 
 registerOpencodeSpinner()
 
@@ -290,7 +296,9 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                                             type: "session",
                                             sessionID: "dummy",
                                           }
-                                        : undefined
+                                        : input.args.prompt
+                                          ? { type: "home" }
+                                          : undefined
                                     }
                                   >
                                     <TuiConfigProvider config={input.config}>
@@ -315,10 +323,12 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                                                               <PromptRefProvider>
                                                                 <EditorContextProvider>
                                                                   <LocationProvider>
-                                                                    <App
-                                                                      onSnapshot={input.onSnapshot}
-                                                                      pluginHost={input.pluginHost}
-                                                                    />
+                                                                    <WorkProvider>
+                                                                      <App
+                                                                        onSnapshot={input.onSnapshot}
+                                                                        pluginHost={input.pluginHost}
+                                                                      />
+                                                                    </WorkProvider>
                                                                   </LocationProvider>
                                                                 </EditorContextProvider>
                                                               </PromptRefProvider>
@@ -407,6 +417,11 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
     }),
   )
   const [ready, setReady] = createSignal(false)
+  useWorkCommands()
+  const [navCollapsed, setNavCollapsed] = useNavCollapsed()
+  // Plugin routes such as the diff viewer stay full screen.
+  const navVisible = () => route.data.type !== "plugin"
+  const navWidth = () => (navVisible() ? (navCollapsed() ? RAIL_WIDTH : NAV_WIDTH) : 0)
   props.pluginHost
     .start({
       api,
@@ -456,24 +471,29 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
     if (!terminalTitleEnabled() || Flag.OPENCODE_DISABLE_TERMINAL_TITLE) return
 
     if (route.data.type === "home") {
-      renderer.setTerminalTitle("OpenCode")
+      renderer.setTerminalTitle("OpenWork")
+      return
+    }
+
+    if (route.data.type === "work") {
+      renderer.setTerminalTitle(`OW | ${route.data.page === "day" ? "Your Day" : route.data.page}`)
       return
     }
 
     if (route.data.type === "session") {
       const session = sync.session.get(route.data.sessionID)
       if (!session || isDefaultTitle(session.title)) {
-        renderer.setTerminalTitle("OpenCode")
+        renderer.setTerminalTitle("OpenWork")
         return
       }
 
       const title = session.title.length > 40 ? session.title.slice(0, 37) + "…" : session.title
-      renderer.setTerminalTitle(`OC | ${title}`)
+      renderer.setTerminalTitle(`OW | ${title}`)
       return
     }
 
     if (route.data.type === "plugin") {
-      renderer.setTerminalTitle(`OC | ${route.data.id}`)
+      renderer.setTerminalTitle(`OW | ${route.data.id}`)
     }
   })
 
@@ -506,7 +526,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
     if (continued || sync.status === "loading" || !args.continue) return
     const match = sync.data.session
       .toSorted((a, b) => b.time.updated - a.time.updated)
-      .find((x) => x.parentID === undefined)?.id
+      .find((x) => x.parentID === undefined && !isWorkRun(x))?.id
     if (match) {
       continued = true
       if (args.fork) {
@@ -1072,7 +1092,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
     await DialogAlert.show(
       dialog,
       "Update Complete",
-      `Successfully updated to OpenCode v${result.data.version}. Please restart the application.`,
+      `Successfully updated to OpenWork v${result.data.version}. Please restart the application.`,
     )
 
     void exit()
@@ -1110,18 +1130,28 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         <TimeToFirstDraw />
       </Show>
       <Show when={ready()}>
-        <box flexGrow={1} minHeight={0} flexDirection="column">
-          <Switch>
-            <Match when={route.data.type === "home"}>
-              <Home />
-            </Match>
-            <Match when={route.data.type === "session"}>
-              <Show when={route.data.type === "session" ? route.data.sessionID : undefined} keyed>
-                {(_) => <Session />}
-              </Show>
-            </Match>
-          </Switch>
-          {plugin()}
+        <box flexGrow={1} minHeight={0} flexDirection="row">
+          <Show when={navVisible()}>
+            <WorkNav collapsed={navCollapsed()} onToggle={() => setNavCollapsed(!navCollapsed())} />
+          </Show>
+          <ShellInset.Provider value={navWidth}>
+            <box flexGrow={1} minHeight={0} flexDirection="column">
+              <Switch>
+                <Match when={route.data.type === "home"}>
+                  <Home />
+                </Match>
+                <Match when={route.data.type === "work"}>
+                  <WorkPage />
+                </Match>
+                <Match when={route.data.type === "session"}>
+                  <Show when={route.data.type === "session" ? route.data.sessionID : undefined} keyed>
+                    {(_) => <Session />}
+                  </Show>
+                </Match>
+              </Switch>
+              {plugin()}
+            </box>
+          </ShellInset.Provider>
         </box>
         <box flexShrink={0}>
           <pluginRuntime.Slot name="app_bottom" />

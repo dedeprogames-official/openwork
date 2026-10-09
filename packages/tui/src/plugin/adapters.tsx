@@ -1,7 +1,7 @@
 import type { TuiDialogSelectOption, TuiPluginApi, TuiSlotProps } from "@opencode-ai/plugin/tui"
 import type { TuiConfig } from "../config"
 import type { useEvent } from "../context/event"
-import type { useRoute } from "../context/route"
+import { WorkPages, type useRoute } from "../context/route"
 import type { useSDK } from "../context/sdk"
 import type { useSync } from "../context/sync"
 import type { useTheme } from "../context/theme"
@@ -51,6 +51,12 @@ function routeNavigate(route: ReturnType<typeof useRoute>, name: string, params?
     return
   }
 
+  const page = WorkPages.find((item) => `work.${item}` === name)
+  if (page) {
+    route.navigate({ type: "work", page, ...(typeof params?.id === "string" ? { id: params.id } : {}) })
+    return
+  }
+
   route.navigate({ type: "plugin", id: name, data: params })
 }
 
@@ -64,6 +70,10 @@ function routeCurrent(route: ReturnType<typeof useRoute>): TuiPluginApi["route"]
         prompt: route.data.prompt,
       },
     }
+  }
+
+  if (route.data.type === "work") {
+    return { name: `work.${route.data.page}`, params: route.data.id ? { id: route.data.id } : undefined }
   }
 
   return {

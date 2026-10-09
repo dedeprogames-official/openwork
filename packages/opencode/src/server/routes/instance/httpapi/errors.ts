@@ -191,3 +191,13 @@ export function notFound(message: string) {
     data: { message },
   })
 }
+
+export class WorkNotFoundError extends Schema.TaggedErrorClass<WorkNotFoundError>()(
+  "WorkNotFoundError",
+  {
+    kind: Schema.String,
+    id: Schema.String,
+    message: Schema.String,
+  },
+  { httpApiStatus: 404 },
+) {}

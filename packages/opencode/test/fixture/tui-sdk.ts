@@ -73,6 +73,27 @@ export function createFetch(override?: FetchHandler) {
         return json([])
       case "/vcs":
         return json({ branch: "main" })
+      case "/work/state":
+        return json({
+          now: 0,
+          paused: false,
+          spaces: [],
+          deployments: [],
+          latest: [],
+          runs: [],
+          upcoming: [],
+          messages: [],
+          todos: [],
+          agenda: [],
+          memories: [],
+          usage: {
+            today: { tokens: 0, cost: 0 },
+            hour: { tokens: 0, cost: 0 },
+            providers: [],
+            runsToday: 0,
+            runsRemaining: 0,
+          },
+        })
     }
 
     throw new Error(`unexpected request: ${url.pathname}`)

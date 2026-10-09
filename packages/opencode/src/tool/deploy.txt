@@ -1,0 +1,7 @@
+Deploy and manage OpenWork agents: background agents that run a task on a schedule in a folder.
+
+- create: deploy a new agent. Describe it in `request`, including when it should run, for example "check the Half Moon Bay beach cam every 10m and tell me if it's sunny" or "summarize my inbox every morning at 8". Optionally override `title`, `task`, `schedule` (e.g. "every 30m", "hourly", "daily at 9am", "now"), `directory` (defaults to the current folder), `space` (a space name; created if missing), `skill` and `access` (read, write or full).
+- list: list deployed agents with their ids and schedules
+- pause / resume / run / remove: act on an agent by `id`
+
+Deployed agents run without supervision with the access level you choose, so prefer `read` unless the task needs to change files.

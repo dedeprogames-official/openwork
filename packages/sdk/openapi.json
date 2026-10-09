@@ -574,6 +574,1267 @@
         ]
       }
     },
+    "/work/state": {
+      "get": {
+        "tags": ["work"],
+        "operationId": "work.state",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OpenWork dashboard state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Everything the OpenWork dashboard shows: spaces, deployed agents, today's runs, inbox, todos, agenda, memory and usage.",
+        "summary": "Get OpenWork state",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.work.state({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/work/pause": {
+      "post": {
+        "tags": ["work"],
+        "operationId": "work.pause",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Agents paused or resumed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Agents paused or resumed"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Pause or resume every scheduled agent.",
+        "summary": "Pause agents",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkPauseInput"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.work.pause({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/work/demo": {
+      "post": {
+        "tags": ["work"],
+        "operationId": "work.demo",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Demo workspace created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkDemoResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Seed a demo workspace with spaces, agents, runs, inbox, todos and agenda.",
+        "summary": "Load demo",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkDemoInput"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.work.demo({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/work/deployment": {
+      "post": {
+        "tags": ["work"],
+        "operationId": "work.deployment.create",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Deployed agent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkDeployment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "WorkNotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkNotFoundError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConflictError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Deploy an agent that runs a task in a folder on a schedule.",
+        "summary": "Deploy agent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkDeploymentCreate"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.work.deployment.create({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/work/deployment/{deploymentID}": {
+      "patch": {
+        "tags": ["work"],
+        "operationId": "work.deployment.update",
+        "parameters": [
+          {
+            "name": "deploymentID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^wdp_"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated agent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkDeployment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "WorkNotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkNotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Edit, pause or resume a deployed agent.",
+        "summary": "Update agent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkDeploymentPatch"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.work.deployment.update({\n  ...\n})"
+          }
+        ]
+      },
+      "delete": {
+        "tags": ["work"],
+        "operationId": "work.deployment.remove",
+        "parameters": [
+          {
+            "name": "deploymentID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^wdp_"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Agent removed"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "WorkNotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkNotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Remove a deployed agent and its runs.",
+        "summary": "Remove agent",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.work.deployment.remove({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/work/deployment/{deploymentID}/run": {
+      "post": {
+        "tags": ["work"],
+        "operationId": "work.deployment.run",
+        "parameters": [
+          {
+            "name": "deploymentID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^wdp_"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Started run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkRun"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "WorkNotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkNotFoundError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConflictError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Start a run of a deployed agent right away.",
+        "summary": "Run agent now",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.work.deployment.run({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/work/deployment/{deploymentID}/runs": {
+      "get": {
+        "tags": ["work"],
+        "operationId": "work.deployment.runs",
+        "parameters": [
+          {
+            "name": "deploymentID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^wdp_"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recent runs, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkRun"
+                  },
+                  "description": "Recent runs, newest first"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "WorkNotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkNotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "List the 50 most recent runs of an agent.",
+        "summary": "List agent runs",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.work.deployment.runs({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/work/deployment/{deploymentID}/chat": {
+      "post": {
+        "tags": ["work"],
+        "operationId": "work.deployment.chat",
+        "parameters": [
+          {
+            "name": "deploymentID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^wdp_"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Chat session for the agent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkChatResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "WorkNotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkNotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get or create the session used to ask a deployed agent about its work.",
+        "summary": "Chat with agent",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.work.deployment.chat({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/work/space": {
+      "post": {
+        "tags": ["work"],
+        "operationId": "work.space.create",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Created space",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkSpace"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Create a space that groups agents.",
+        "summary": "Create space",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkSpaceCreate"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.work.space.create({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/work/space/{spaceID}": {
+      "patch": {
+        "tags": ["work"],
+        "operationId": "work.space.update",
+        "parameters": [
+          {
+            "name": "spaceID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^wsp_"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated space",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkSpace"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "WorkNotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkNotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Rename a space or change its goal or color.",
+        "summary": "Update space",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkSpacePatch"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.work.space.update({\n  ...\n})"
+          }
+        ]
+      },
+      "delete": {
+        "tags": ["work"],
+        "operationId": "work.space.remove",
+        "parameters": [
+          {
+            "name": "spaceID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^wsp_"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Space removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Space removed"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "WorkNotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkNotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Remove a space; its agents stay deployed.",
+        "summary": "Remove space",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.work.space.remove({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/work/message/{messageID}": {
+      "patch": {
+        "tags": ["work"],
+        "operationId": "work.message.update",
+        "parameters": [
+          {
+            "name": "messageID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^wms_"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated inbox message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkMessage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "WorkNotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkNotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Mark an Agent Inbox message as read or done.",
+        "summary": "Update inbox message",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkMessagePatch"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.work.message.update({\n  ...\n})"
+          }
+        ]
+      },
+      "delete": {
+        "tags": ["work"],
+        "operationId": "work.message.remove",
+        "parameters": [
+          {
+            "name": "messageID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^wms_"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inbox message removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Inbox message removed"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "WorkNotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkNotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Delete an Agent Inbox message.",
+        "summary": "Remove inbox message",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.work.message.remove({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/work/todo": {
+      "post": {
+        "tags": ["work"],
+        "operationId": "work.todo.create",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Created todo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkTodo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Add an item to the user's todo list.",
+        "summary": "Add todo",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkTodoCreate"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.work.todo.create({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/work/todo/{todoID}": {
+      "patch": {
+        "tags": ["work"],
+        "operationId": "work.todo.update",
+        "parameters": [
+          {
+            "name": "todoID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^wtd_"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated todo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkTodo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "WorkNotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkNotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Edit a todo or mark it done.",
+        "summary": "Update todo",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkTodoPatch"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.work.todo.update({\n  ...\n})"
+          }
+        ]
+      },
+      "delete": {
+        "tags": ["work"],
+        "operationId": "work.todo.remove",
+        "parameters": [
+          {
+            "name": "todoID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^wtd_"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Todo removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Todo removed"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "WorkNotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkNotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Delete a todo.",
+        "summary": "Remove todo",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.work.todo.remove({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/work/agenda": {
+      "post": {
+        "tags": ["work"],
+        "operationId": "work.agenda.create",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Created event",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkAgenda"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Add an event to the user's agenda.",
+        "summary": "Add event",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkAgendaCreate"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.work.agenda.create({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/work/agenda/{agendaID}": {
+      "patch": {
+        "tags": ["work"],
+        "operationId": "work.agenda.update",
+        "parameters": [
+          {
+            "name": "agendaID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^wag_"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated event",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkAgenda"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "WorkNotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkNotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Edit an agenda event.",
+        "summary": "Update event",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkAgendaPatch"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.work.agenda.update({\n  ...\n})"
+          }
+        ]
+      },
+      "delete": {
+        "tags": ["work"],
+        "operationId": "work.agenda.remove",
+        "parameters": [
+          {
+            "name": "agendaID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^wag_"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Event removed"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "WorkNotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkNotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Delete an agenda event.",
+        "summary": "Remove event",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.work.agenda.remove({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/work/memory": {
+      "post": {
+        "tags": ["work"],
+        "operationId": "work.memory.create",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Saved memory",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkMemory"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Save a fact for every OpenWork chat and agent.",
+        "summary": "Save memory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkMemoryCreate"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.work.memory.create({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/work/memory/{memoryID}": {
+      "delete": {
+        "tags": ["work"],
+        "operationId": "work.memory.remove",
+        "parameters": [
+          {
+            "name": "memoryID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^wmm_"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Memory removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Memory removed"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "WorkNotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkNotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Delete a saved memory.",
+        "summary": "Forget memory",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.work.memory.remove({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/event": {
       "get": {
         "tags": ["event"],
@@ -15525,6 +16786,9 @@
             "$ref": "#/components/schemas/EventGlobalDisposed"
           },
           {
+            "$ref": "#/components/schemas/EventWorkUpdated"
+          },
+          {
             "$ref": "#/components/schemas/EventServerInstanceDisposed"
           }
         ]
@@ -20417,6 +21681,35 @@
                 "additionalProperties": false
               },
               {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^evt_"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": ["work.updated"]
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": ["space", "deployment", "run", "message", "todo", "agenda", "memory", "settings"]
+                      },
+                      "id": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["kind"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "type", "properties"],
+                "additionalProperties": false
+              },
+              {
                 "$ref": "#/components/schemas/EventServerInstanceDisposed"
               },
               {
@@ -21563,6 +22856,43 @@
             "additionalProperties": false
           }
         },
+        "additionalProperties": false
+      },
+      "WorkNotFoundError": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["WorkNotFoundError"]
+          },
+          "kind": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["_tag", "kind", "id", "message"],
+        "additionalProperties": false
+      },
+      "ConflictError": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["ConflictError"]
+          },
+          "message": {
+            "type": "string"
+          },
+          "resource": {
+            "type": "string"
+          }
+        },
+        "required": ["_tag", "message"],
         "additionalProperties": false
       },
       "Model": {
@@ -23592,23 +24922,6 @@
         "required": ["text"],
         "additionalProperties": false
       },
-      "ConflictError": {
-        "type": "object",
-        "properties": {
-          "_tag": {
-            "type": "string",
-            "enum": ["ConflictError"]
-          },
-          "message": {
-            "type": "string"
-          },
-          "resource": {
-            "type": "string"
-          }
-        },
-        "required": ["_tag", "message"],
-        "additionalProperties": false
-      },
       "ServiceUnavailableError": {
         "type": "object",
         "properties": {
@@ -24275,6 +25588,9 @@
           },
           {
             "$ref": "#/components/schemas/GlobalDisposed"
+          },
+          {
+            "$ref": "#/components/schemas/WorkUpdated"
           }
         ]
       },
@@ -27077,6 +28393,931 @@
           }
         },
         "required": ["action", "effect", "resource"],
+        "additionalProperties": false
+      },
+      "WorkColor": {
+        "type": "string",
+        "enum": ["purple", "yellow", "blue", "green", "pink", "cyan", "orange"]
+      },
+      "WorkSpace": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^wsp_"
+          },
+          "name": {
+            "type": "string"
+          },
+          "goal": {
+            "type": "string"
+          },
+          "color": {
+            "$ref": "#/components/schemas/WorkColor"
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "created": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "updated": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["created", "updated"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "name", "color", "time"],
+        "additionalProperties": false
+      },
+      "WorkModelRef": {
+        "type": "object",
+        "properties": {
+          "providerID": {
+            "type": "string"
+          },
+          "modelID": {
+            "type": "string"
+          }
+        },
+        "required": ["providerID", "modelID"],
+        "additionalProperties": false
+      },
+      "WorkSchedule": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["manual"]
+              }
+            },
+            "required": ["type"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["once"]
+              },
+              "at": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["type", "at"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["interval"]
+              },
+              "every": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Interval in milliseconds"
+              }
+            },
+            "required": ["type", "every"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["daily"]
+              },
+              "at": {
+                "type": "string",
+                "description": "Local time of day as HH:MM"
+              }
+            },
+            "required": ["type", "at"],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "WorkAccess": {
+        "type": "string",
+        "enum": ["read", "write", "full"]
+      },
+      "WorkDeploymentStatus": {
+        "type": "string",
+        "enum": ["active", "paused", "done"]
+      },
+      "WorkDeployment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^wdp_"
+          },
+          "spaceID": {
+            "type": "string",
+            "pattern": "^wsp_"
+          },
+          "title": {
+            "type": "string"
+          },
+          "task": {
+            "type": "string"
+          },
+          "directory": {
+            "type": "string"
+          },
+          "agent": {
+            "type": "string"
+          },
+          "model": {
+            "$ref": "#/components/schemas/WorkModelRef"
+          },
+          "skill": {
+            "type": "string"
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/WorkSchedule"
+          },
+          "access": {
+            "$ref": "#/components/schemas/WorkAccess"
+          },
+          "status": {
+            "$ref": "#/components/schemas/WorkDeploymentStatus"
+          },
+          "nextRunAt": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "lastRunAt": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "runRequestedAt": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "runCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "chatSessionID": {
+            "type": "string"
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "created": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "updated": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["created", "updated"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "title", "task", "directory", "agent", "schedule", "access", "status", "runCount", "time"],
+        "additionalProperties": false
+      },
+      "WorkRunStatus": {
+        "type": "string",
+        "enum": ["running", "done", "error", "cancelled"]
+      },
+      "WorkRunTrigger": {
+        "type": "string",
+        "enum": ["schedule", "manual"]
+      },
+      "WorkTokens": {
+        "type": "object",
+        "properties": {
+          "input": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "output": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reasoning": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cache": {
+            "type": "object",
+            "properties": {
+              "read": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "write": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["read", "write"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["input", "output", "reasoning", "cache"],
+        "additionalProperties": false
+      },
+      "WorkRun": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^wrn_"
+          },
+          "deploymentID": {
+            "type": "string",
+            "pattern": "^wdp_"
+          },
+          "number": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "status": {
+            "$ref": "#/components/schemas/WorkRunStatus"
+          },
+          "trigger": {
+            "$ref": "#/components/schemas/WorkRunTrigger"
+          },
+          "sessionID": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "tokens": {
+            "$ref": "#/components/schemas/WorkTokens"
+          },
+          "cost": {
+            "type": "number"
+          },
+          "providerID": {
+            "type": "string"
+          },
+          "modelID": {
+            "type": "string"
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "started": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "finished": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["started"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "deploymentID", "number", "status", "trigger", "tokens", "cost", "time"],
+        "additionalProperties": false
+      },
+      "WorkUpcoming": {
+        "type": "object",
+        "properties": {
+          "deploymentID": {
+            "type": "string",
+            "pattern": "^wdp_"
+          },
+          "at": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": ["deploymentID", "at"],
+        "additionalProperties": false
+      },
+      "WorkPriority": {
+        "type": "string",
+        "enum": ["normal", "high"]
+      },
+      "WorkMessage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^wms_"
+          },
+          "deploymentID": {
+            "type": "string",
+            "pattern": "^wdp_"
+          },
+          "runID": {
+            "type": "string",
+            "pattern": "^wrn_"
+          },
+          "sessionID": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/WorkPriority"
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "created": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "read": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "done": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["created"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "title", "body", "priority", "time"],
+        "additionalProperties": false
+      },
+      "WorkTodo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^wtd_"
+          },
+          "content": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "deploymentID": {
+            "type": "string",
+            "pattern": "^wdp_"
+          },
+          "position": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "created": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "done": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["created"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "content", "position", "time"],
+        "additionalProperties": false
+      },
+      "WorkAgenda": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^wag_"
+          },
+          "title": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "endsAt": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "spaceID": {
+            "type": "string",
+            "pattern": "^wsp_"
+          },
+          "note": {
+            "type": "string"
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "created": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["created"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "title", "startsAt", "time"],
+        "additionalProperties": false
+      },
+      "WorkMemory": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^wmm_"
+          },
+          "content": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "created": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["created"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "content", "time"],
+        "additionalProperties": false
+      },
+      "WorkProviderUsage": {
+        "type": "object",
+        "properties": {
+          "providerID": {
+            "type": "string"
+          },
+          "tokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cost": {
+            "type": "number"
+          }
+        },
+        "required": ["providerID", "tokens", "cost"],
+        "additionalProperties": false
+      },
+      "WorkUsage": {
+        "type": "object",
+        "properties": {
+          "today": {
+            "type": "object",
+            "properties": {
+              "tokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cost": {
+                "type": "number"
+              }
+            },
+            "required": ["tokens", "cost"],
+            "additionalProperties": false
+          },
+          "hour": {
+            "type": "object",
+            "properties": {
+              "tokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cost": {
+                "type": "number"
+              }
+            },
+            "required": ["tokens", "cost"],
+            "additionalProperties": false
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkProviderUsage"
+            }
+          },
+          "runsToday": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "runsRemaining": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": ["today", "hour", "providers", "runsToday", "runsRemaining"],
+        "additionalProperties": false
+      },
+      "WorkState": {
+        "type": "object",
+        "properties": {
+          "now": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "paused": {
+            "type": "boolean"
+          },
+          "spaces": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkSpace"
+            }
+          },
+          "deployments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkDeployment"
+            }
+          },
+          "latest": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkRun"
+            },
+            "description": "Most recent run of each deployment"
+          },
+          "runs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkRun"
+            },
+            "description": "Runs started today, oldest first"
+          },
+          "upcoming": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkUpcoming"
+            },
+            "description": "Scheduled runs still to come today"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkMessage"
+            }
+          },
+          "todos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkTodo"
+            }
+          },
+          "agenda": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkAgenda"
+            }
+          },
+          "memories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkMemory"
+            }
+          },
+          "usage": {
+            "$ref": "#/components/schemas/WorkUsage"
+          }
+        },
+        "required": [
+          "now",
+          "paused",
+          "spaces",
+          "deployments",
+          "latest",
+          "runs",
+          "upcoming",
+          "messages",
+          "todos",
+          "agenda",
+          "memories",
+          "usage"
+        ],
+        "additionalProperties": false
+      },
+      "WorkPauseInput": {
+        "type": "object",
+        "properties": {
+          "paused": {
+            "type": "boolean"
+          }
+        },
+        "required": ["paused"],
+        "additionalProperties": false
+      },
+      "WorkDemoInput": {
+        "type": "object",
+        "properties": {
+          "directory": {
+            "type": "string",
+            "description": "Folder the demo agents work in"
+          }
+        },
+        "additionalProperties": false
+      },
+      "WorkDemoResult": {
+        "type": "object",
+        "properties": {
+          "spaces": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity", "-Infinity", "NaN"]
+              }
+            ]
+          },
+          "agents": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity", "-Infinity", "NaN"]
+              }
+            ]
+          },
+          "directory": {
+            "type": "string"
+          }
+        },
+        "required": ["spaces", "agents", "directory"],
+        "additionalProperties": false
+      },
+      "WorkDeploymentCreate": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "task": {
+            "type": "string"
+          },
+          "directory": {
+            "type": "string"
+          },
+          "spaceID": {
+            "type": "string",
+            "pattern": "^wsp_"
+          },
+          "agent": {
+            "type": "string"
+          },
+          "model": {
+            "$ref": "#/components/schemas/WorkModelRef"
+          },
+          "skill": {
+            "type": "string"
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/WorkSchedule"
+          },
+          "access": {
+            "$ref": "#/components/schemas/WorkAccess"
+          },
+          "runNow": {
+            "type": "boolean"
+          }
+        },
+        "required": ["title", "task", "directory", "schedule"],
+        "additionalProperties": false
+      },
+      "WorkDeploymentPatch": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "task": {
+            "type": "string"
+          },
+          "directory": {
+            "type": "string"
+          },
+          "spaceID": {
+            "type": "string",
+            "pattern": "^wsp_"
+          },
+          "agent": {
+            "type": "string"
+          },
+          "model": {
+            "$ref": "#/components/schemas/WorkModelRef"
+          },
+          "skill": {
+            "type": "string"
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/WorkSchedule"
+          },
+          "access": {
+            "$ref": "#/components/schemas/WorkAccess"
+          },
+          "status": {
+            "$ref": "#/components/schemas/WorkDeploymentStatus"
+          }
+        },
+        "additionalProperties": false
+      },
+      "WorkChatResult": {
+        "type": "object",
+        "properties": {
+          "sessionID": {
+            "type": "string"
+          }
+        },
+        "required": ["sessionID"],
+        "additionalProperties": false
+      },
+      "WorkSpaceCreate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "goal": {
+            "type": "string"
+          },
+          "color": {
+            "$ref": "#/components/schemas/WorkColor"
+          }
+        },
+        "required": ["name"],
+        "additionalProperties": false
+      },
+      "WorkSpacePatch": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "goal": {
+            "type": "string"
+          },
+          "color": {
+            "$ref": "#/components/schemas/WorkColor"
+          }
+        },
+        "additionalProperties": false
+      },
+      "WorkMessagePatch": {
+        "type": "object",
+        "properties": {
+          "read": {
+            "type": "boolean"
+          },
+          "done": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "WorkTodoCreate": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "deploymentID": {
+            "type": "string",
+            "pattern": "^wdp_"
+          }
+        },
+        "required": ["content"],
+        "additionalProperties": false
+      },
+      "WorkTodoPatch": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "done": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "WorkAgendaCreate": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "endsAt": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "spaceID": {
+            "type": "string",
+            "pattern": "^wsp_"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": ["title", "startsAt"],
+        "additionalProperties": false
+      },
+      "WorkAgendaPatch": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "endsAt": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "spaceID": {
+            "type": "string",
+            "pattern": "^wsp_"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "WorkMemoryCreate": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": ["content"],
         "additionalProperties": false
       },
       "ProjectDirectories": {
@@ -33710,6 +35951,57 @@
         "required": ["id", "type", "data"],
         "additionalProperties": false
       },
+      "WorkUpdated": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["work.updated"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["space", "deployment", "run", "message", "todo", "agenda", "memory", "settings"]
+              },
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": ["kind"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
       "QuestionV2Request": {
         "type": "object",
         "properties": {
@@ -36690,6 +38982,35 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "EventWorkUpdated": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["work.updated"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["space", "deployment", "run", "message", "todo", "agenda", "memory", "settings"]
+              },
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": ["kind"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
       "CredentialOAuth": {
         "type": "object",
         "properties": {
@@ -36814,6 +39135,10 @@
     {
       "name": "global",
       "description": "Global server routes."
+    },
+    {
+      "name": "work",
+      "description": "OpenWork dashboard routes."
     },
     {
       "name": "event",

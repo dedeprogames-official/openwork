@@ -35,7 +35,7 @@ import { coverageResult, parseOptions, routeKey, routeKeys, selectedScenarios } 
 import { runScenario } from "./runner"
 import { disposeApps } from "./backend"
 import { runtime } from "./runtime"
-import { type Scenario } from "./types"
+import { type Scenario, type ScenarioContext } from "./types"
 
 function cursor(input: Record<string, unknown>) {
   return Buffer.from(JSON.stringify(input)).toString("base64url")
@@ -1740,7 +1740,198 @@ const scenarios: Scenario[] = [
     .probe({ path: "/global/upgrade", body: { target: 1 } })
     .at(() => ({ path: "/global/upgrade", body: { target: 1 } }))
     .status(400),
+  ...workScenarios(),
 ]
+
+function workScenarios(): Scenario[] {
+  const deploy = (ctx: ScenarioContext) =>
+    ctx.work((work) =>
+      work.deployment.create({
+        title: "Beach watcher",
+        task: "Check the beach cam",
+        directory: ctx.directory ?? exerciseDataDirectory,
+        agent: "work",
+        schedule: { type: "manual" },
+      }),
+    )
+  return [
+    http.protected.get("/work/state", "work.state").json(200, (body) => {
+      object(body)
+      array(body.deployments)
+      array(body.runs)
+      object(body.usage)
+    }),
+    http.protected
+      .post("/work/pause", "work.pause")
+      .mutating()
+      .at(() => ({ path: "/work/pause", body: { paused: true } }))
+      .json(200, (body) => check(body === true, "pause should return true")),
+    http.protected
+      .post("/work/demo", "work.demo")
+      .mutating()
+      // The demo writes project skills into its folder, so never let it fall back to the process cwd.
+      .at((ctx) => ({ path: "/work/demo", body: { directory: ctx.directory ?? exerciseDataDirectory } }))
+      .json(200, (body) => {
+        object(body)
+        check(body.agents === 17, "demo should deploy 17 agents")
+      }),
+    http.protected
+      .post("/work/deployment", "work.deployment.create")
+      .mutating()
+      .at((ctx) => ({
+        path: "/work/deployment",
+        body: { title: "Watcher", task: "Watch", directory: ctx.directory, schedule: { type: "manual" } },
+      }))
+      .json(200, (body) => {
+        object(body)
+        check(body.agent === "work", "deployments default to the work agent")
+      }),
+    http.protected
+      .patch("/work/deployment/{deploymentID}", "work.deployment.update")
+      .mutating()
+      .seeded((ctx) => deploy(ctx))
+      .at((ctx) => ({ path: `/work/deployment/${ctx.state.id}`, body: { status: "paused" } }))
+      .json(200, (body) => {
+        object(body)
+        check(body.status === "paused", "deployment should be paused")
+      }),
+    http.protected
+      .delete("/work/deployment/{deploymentID}", "work.deployment.remove")
+      .mutating()
+      .seeded((ctx) => deploy(ctx))
+      .at((ctx) => ({ path: `/work/deployment/${ctx.state.id}` }))
+      .json(200, (body) => check(body === true, "remove should return true")),
+    http.protected
+      .post("/work/deployment/{deploymentID}/run", "work.deployment.run")
+      .mutating()
+      .seeded((ctx) =>
+        deploy(ctx).pipe(
+          Effect.tap((deployment) =>
+            ctx.work((work) =>
+              work.run.claim({ deploymentID: deployment.id, trigger: "manual", now: Date.now(), pid: process.pid }),
+            ),
+          ),
+        ),
+      )
+      .at((ctx) => ({ path: `/work/deployment/${ctx.state.id}/run` }))
+      .status(409),
+    http.protected
+      .get("/work/deployment/{deploymentID}/runs", "work.deployment.runs")
+      .mutating()
+      .seeded((ctx) => deploy(ctx))
+      .at((ctx) => ({ path: `/work/deployment/${ctx.state.id}/runs` }))
+      .json(200, (body) => array(body)),
+    http.protected
+      .post("/work/deployment/{deploymentID}/chat", "work.deployment.chat")
+      .mutating()
+      .seeded((ctx) => deploy(ctx))
+      .at((ctx) => ({ path: `/work/deployment/${ctx.state.id}/chat` }))
+      .json(200, (body) => {
+        object(body)
+        check(typeof body.sessionID === "string", "chat should return a session id")
+      }),
+    http.protected
+      .post("/work/space", "work.space.create")
+      .mutating()
+      .at(() => ({ path: "/work/space", body: { name: "Beach date" } }))
+      .json(200, (body) => {
+        object(body)
+        check(body.name === "Beach date", "space should be created")
+      }),
+    http.protected
+      .patch("/work/space/{spaceID}", "work.space.update")
+      .mutating()
+      .seeded((ctx) => ctx.work((work) => work.space.create({ name: "Beach" })))
+      .at((ctx) => ({ path: `/work/space/${ctx.state.id}`, body: { goal: "Sunset walk" } }))
+      .json(200, (body) => {
+        object(body)
+        check(body.goal === "Sunset walk", "space goal should update")
+      }),
+    http.protected
+      .delete("/work/space/{spaceID}", "work.space.remove")
+      .mutating()
+      .seeded((ctx) => ctx.work((work) => work.space.create({ name: "Beach" })))
+      .at((ctx) => ({ path: `/work/space/${ctx.state.id}` }))
+      .json(200, (body) => check(body === true, "remove should return true")),
+    http.protected
+      .patch("/work/message/{messageID}", "work.message.update")
+      .mutating()
+      .seeded((ctx) => ctx.work((work) => work.message.post({ title: "Beach", body: "Sunny" })))
+      .at((ctx) => ({ path: `/work/message/${ctx.state.id}`, body: { done: true } }))
+      .json(200, (body) => {
+        object(body)
+        object(body.time)
+        check(typeof body.time.done === "number", "message should be done")
+      }),
+    http.protected
+      .delete("/work/message/{messageID}", "work.message.remove")
+      .mutating()
+      .seeded((ctx) => ctx.work((work) => work.message.post({ title: "Beach", body: "Sunny" })))
+      .at((ctx) => ({ path: `/work/message/${ctx.state.id}` }))
+      .json(200, (body) => check(body === true, "remove should return true")),
+    http.protected
+      .post("/work/todo", "work.todo.create")
+      .mutating()
+      .at(() => ({ path: "/work/todo", body: { content: "Book a table" } }))
+      .json(200, (body) => {
+        object(body)
+        check(body.content === "Book a table", "todo should be created")
+      }),
+    http.protected
+      .patch("/work/todo/{todoID}", "work.todo.update")
+      .mutating()
+      .seeded((ctx) => ctx.work((work) => work.todo.add({ content: "Book a table" })))
+      .at((ctx) => ({ path: `/work/todo/${ctx.state.id}`, body: { done: true } }))
+      .json(200, (body) => {
+        object(body)
+        object(body.time)
+        check(typeof body.time.done === "number", "todo should be done")
+      }),
+    http.protected
+      .delete("/work/todo/{todoID}", "work.todo.remove")
+      .mutating()
+      .seeded((ctx) => ctx.work((work) => work.todo.add({ content: "Book a table" })))
+      .at((ctx) => ({ path: `/work/todo/${ctx.state.id}` }))
+      .json(200, (body) => check(body === true, "remove should return true")),
+    http.protected
+      .post("/work/agenda", "work.agenda.create")
+      .mutating()
+      .at(() => ({ path: "/work/agenda", body: { title: "Sunset", startsAt: 1_800_000_000_000 } }))
+      .json(200, (body) => {
+        object(body)
+        check(body.title === "Sunset", "event should be created")
+      }),
+    http.protected
+      .patch("/work/agenda/{agendaID}", "work.agenda.update")
+      .mutating()
+      .seeded((ctx) => ctx.work((work) => work.agenda.add({ title: "Sunset", startsAt: 1_800_000_000_000 })))
+      .at((ctx) => ({ path: `/work/agenda/${ctx.state.id}`, body: { title: "Sunset walk" } }))
+      .json(200, (body) => {
+        object(body)
+        check(body.title === "Sunset walk", "event should update")
+      }),
+    http.protected
+      .delete("/work/agenda/{agendaID}", "work.agenda.remove")
+      .mutating()
+      .seeded((ctx) => ctx.work((work) => work.agenda.add({ title: "Sunset", startsAt: 1_800_000_000_000 })))
+      .at((ctx) => ({ path: `/work/agenda/${ctx.state.id}` }))
+      .json(200, (body) => check(body === true, "remove should return true")),
+    http.protected
+      .post("/work/memory", "work.memory.create")
+      .mutating()
+      .at(() => ({ path: "/work/memory", body: { content: "Dog is called Biscuit" } }))
+      .json(200, (body) => {
+        object(body)
+        check(body.content === "Dog is called Biscuit", "memory should be saved")
+      }),
+    http.protected
+      .delete("/work/memory/{memoryID}", "work.memory.remove")
+      .mutating()
+      .seeded((ctx) => ctx.work((work) => work.memory.save({ content: "Dog is called Biscuit" })))
+      .at((ctx) => ({ path: `/work/memory/${ctx.state.id}` }))
+      .json(200, (body) => check(body === true, "remove should return true")),
+  ]
+}
 
 const llmScenarios = new Set([
   "session.init",
