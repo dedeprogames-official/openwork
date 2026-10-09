@@ -1,0 +1,17 @@
+{
+  "name": "openwork-cli",
+  "version": "0.0.0",
+  "description": "OpenWork: deploy agents into your folders. They work on a schedule; you read the results on Your Day.",
+  "license": "MIT",
+  "repository": "github:dedeprogames-official/openwork",
+  "homepage": "https://github.com/dedeprogames-official/openwork",
+  "bin": {
+    "openwork": "bin/openwork.cjs"
+  },
+  "files": [
+    "bin"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}
