@@ -23,11 +23,24 @@ Chats use the new `work` agent: a knowledge-work persona (folders are workspaces
 the inbox, todo, agenda and memory tools and can **deploy other agents** with the `deploy` tool — "check the Half
 Moon Bay cam every 10m and tell me if it's sunny" in a chat creates a scheduled agent.
 
-## Running it
+## Installing it
+
+```bash
+curl -fsSL https://github.com/dedeprogames-official/openwork/releases/latest/download/install | bash      # macOS, Linux
+irm https://github.com/dedeprogames-official/openwork/releases/latest/download/install.ps1 | iex          # Windows PowerShell
+npx https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz           # any OS with Node.js 18+
+```
+
+The installers put `openwork` in `~/.openwork/bin` (`%USERPROFILE%\.openwork\bin` on Windows) and add it to your PATH. The
+npm package is a small launcher that downloads the binary for your platform from the same release on first use.
+OpenWork keeps its data in `~/.local/share/openwork` and its global config in `~/.config/openwork`, apart from any
+opencode install, and `openwork upgrade` only ever installs OpenWork releases.
+
+## Running it from source
 
 ```bash
 bun install
-bun dev            # or: opencode / openwork once installed
+bun dev            # or: openwork once installed
 ```
 
 Inside the TUI:
@@ -37,6 +50,9 @@ Inside the TUI:
 - `/deploy <what and when>` or `ctrl+x d` deploys an agent: description → folder → space → schedule → access.
   Pressing enter at every step deploys in seconds and runs it once right away.
 - `alt+1` … `alt+8` switch pages, `ctrl+x w` collapses the navigation, `ctrl+p` lists every command.
+- `m` on an agent's page moves it to another space (or out of its space); on the Spaces page, `m` or
+  **+ Move an agent here...** moves an agent into the selected space. In a chat, the `deploy` tool's `move` action does
+  the same ("move the beach agent to Beach date").
 - Everything also works with the mouse, as in opencode: click the navigation, buttons and the key hints at the
   bottom of each page; in lists the first click selects a row and a click on the selected row opens it (like
   enter); checkboxes toggle at once; the wheel scrolls lists and the agent calendar; the calendar's zoom and Live
@@ -85,6 +101,14 @@ the day only looks full later on.
 | ![Integrations](screenshots/13-integrations.png)           | ![Deploy an agent](screenshots/14-deploy.png)                            |
 | ![Deploy: pick a folder](screenshots/15-deploy-folder.png) | ![Commands](screenshots/16-command-palette.png)                          |
 | ![New chat](screenshots/17-new-chat.png)                   | ![Navigation collapsed](screenshots/18-nav-collapsed.png)                |
+
+## Releases
+
+Pushing a tag such as `v0.1.0` runs `.github/workflows/openwork-release.yml`: it cross-compiles every target on Linux
+with `packages/opencode/script/build.ts`, signs the macOS binaries ad hoc and smoke-tests them on a Mac, smoke-tests the
+Windows binary, then `packages/opencode/script/openwork/release.ts` packages `openwork-<target>` archives, the install
+scripts, the npm launcher (`openwork-cli.tgz`) and `SHA256SUMS` into the GitHub release. The same workflow can be run by
+hand with a version.
 
 ## Architecture
 

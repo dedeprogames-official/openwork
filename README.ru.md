@@ -61,6 +61,7 @@ OpenWork превращает терминальный интерфейс openco
 - **Настоящие транскрипты** — каждый запуск — это настоящая сессия opencode, которую можно открыть, с вызовами инструментов, токенами и стоимостью.
 - **Агенты, которые отчитываются** — cowork-инструменты `inbox`, `user_todo`, `agenda`, `memory` и `deploy` позволяют агентам писать во входящие, добавлять задачи, читать повестку и запоминать факты о вас. Чат может разворачивать новых агентов.
 - **Spaces** — группируйте агентов вокруг цели, события или клиента.
+- **Перенос агентов между spaces** — нажмите `m` на странице агента, используйте **+ Move an agent here...** на странице Spaces или попросите в чате.
 - **Память** — факты о вас, которые получает каждый чат и каждый агент.
 - **Статистика токенов** — локальные и облачные токены считаются отдельно, скорость расхода, дневной прогноз и сколько экономят локальные модели.
 - **Клавиатура и мышь** — `alt+1` … `alt+8` для страниц и `ctrl+p` для всех команд; кликайте по навигации, кнопкам, строкам, флажкам и подсказкам клавиш; прокручивайте списки и календарь колёсиком.
@@ -107,9 +108,47 @@ OpenWork превращает терминальный интерфейс openco
 
 ### Начало работы
 
-**Требования:** [Bun](https://bun.sh) 1.3 или новее, git и терминал с truecolor и поддержкой мыши (xfce4-terminal, GNOME Terminal, Konsole, kitty, WezTerm, Ghostty, iTerm2, Windows Terminal…). Модели: любой провайдер, который поддерживает opencode, или локальная модель через Ollama, LM Studio, llama.cpp или vLLM.
+#### Установка
+
+```bash
+# macOS и Linux
+curl -fsSL https://github.com/dedeprogames-official/openwork/releases/latest/download/install | bash
+```
+
+```powershell
+# Windows (PowerShell)
+irm https://github.com/dedeprogames-official/openwork/releases/latest/download/install.ps1 | iex
+```
+
+```bash
+# Любая ОС с Node.js 18+: npx запускает один раз, npm install -g оставляет команду openwork
+npx https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+npm install -g https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+```
+
+Затем откройте папку и запустите `openwork`. `openwork upgrade` обновляет до последнего релиза, а `openwork uninstall` удаляет его.
+
+#### Загрузки
+
+| Платформа                | Файл                                                                                                                                          |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Linux x64                | [`openwork-linux-x64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64.tar.gz)           |
+| Linux arm64              | [`openwork-linux-arm64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-arm64.tar.gz)       |
+| Linux x64 (musl, Alpine) | [`openwork-linux-x64-musl.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64-musl.tar.gz) |
+| macOS Apple Silicon      | [`openwork-darwin-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-arm64.zip)           |
+| macOS Intel              | [`openwork-darwin-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-x64.zip)               |
+| Windows x64              | [`openwork-windows-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-x64.zip)             |
+| Windows arm64            | [`openwork-windows-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-arm64.zip)         |
+
+Все версии — на [странице релизов](https://github.com/dedeprogames-official/openwork/releases). В каждом архиве лежит бинарник `openwork`; сборки `-baseline` — для x64-процессоров без AVX2, `-musl` — для Alpine, и установщики выбирают нужную сами. Бинарники для macOS подписаны ad hoc, без нотаризации: после загрузки zip через браузер один раз выполните `xattr -d com.apple.quarantine openwork`.
+
+#### Windows
+
+Установщик для PowerShell кладёт `openwork.exe` в `%USERPROFILE%\.openwork\bin` и добавляет папку в PATH: откройте новый терминал и запустите `openwork`. Лучше всего работает в Windows Terminal (truecolor и мышь). Можно также распаковать `openwork-windows-x64.zip` куда угодно и запустить `openwork.exe` или использовать `npx`, как выше.
 
 #### Запуск из исходников
+
+**Требования:** [Bun](https://bun.sh) 1.3 или новее, git и терминал с truecolor и поддержкой мыши (xfce4-terminal, GNOME Terminal, Konsole, kitty, WezTerm, Ghostty, iTerm2, Windows Terminal…). Модели: любой провайдер, который поддерживает opencode, или локальная модель через Ollama, LM Studio, llama.cpp или vLLM.
 
 ```bash
 git clone https://github.com/dedeprogames-official/openwork.git
@@ -174,14 +213,15 @@ bun dev ~/work        # папка, в которой откроется OpenWor
 
 ### Клавиатура и мышь
 
-| Клавиши           | Действие                           |
-| ----------------- | ---------------------------------- |
-| `alt+1` … `alt+8` | переключение страниц               |
-| `ctrl+x d`        | развернуть агента                  |
-| `ctrl+x w`        | свернуть или развернуть навигацию  |
-| `ctrl+p`          | палитра команд                     |
-| `c`               | фокус на поле чата (`esc` — выход) |
-| `esc`             | назад                              |
+| Клавиши           | Действие                                                                                         |
+| ----------------- | ------------------------------------------------------------------------------------------------ |
+| `alt+1` … `alt+8` | переключение страниц                                                                             |
+| `ctrl+x d`        | развернуть агента                                                                                |
+| `ctrl+x w`        | свернуть или развернуть навигацию                                                                |
+| `m`               | перенести агента в другой space (на его странице) или добавить агента в выбранный space (Spaces) |
+| `ctrl+p`          | палитра команд                                                                                   |
+| `c`               | фокус на поле чата (`esc` — выход)                                                               |
+| `esc`             | назад                                                                                            |
 
 Каждая страница показывает свои клавиши внизу. Слэш-команды: `/day`, `/chats`, `/spaces`, `/agents`, `/skills`, `/memory`, `/models`, `/integrations`, `/deploy <текст>`, `/pause`, `/demo`, `/connect`.
 
@@ -191,7 +231,7 @@ bun dev ~/work        # папка, в которой откроется OpenWor
 
 ### Локальные модели
 
-Любой OpenAI-совместимый сервер на `localhost` считается локальным, как и провайдеры `ollama`, `lmstudio`, `llamacpp` и `vllm`. Например, с Ollama, в `opencode.json` (в вашей папке или в `~/.config/opencode/`):
+Любой OpenAI-совместимый сервер на `localhost` считается локальным, как и провайдеры `ollama`, `lmstudio`, `llamacpp` и `vllm`. Например, с Ollama, в `opencode.json` (в вашей папке или в `~/.config/openwork/`):
 
 ```json
 {
@@ -213,6 +253,7 @@ bun dev ~/work        # папка, в которой откроется OpenWor
 - Планировщик живёт в серверном процессе OpenWork. Каждые 5 секунд он ищет агентов, которым пора запускаться, и выполняет до 3 одновременно. Захват запуска атомарен в SQLite, поэтому несколько окон OpenWork никогда не запустят одного агента дважды, а запуски, оставшиеся после сбоя, помечаются как прерванные. `OPENCODE_DISABLE_WORK_SCHEDULER=1` отключает его.
 - Каждый запуск — это сессия opencode с агентом `work` — персоной для интеллектуальной работы, для которой папки — это рабочие пространства, а файлы — результаты, — с вашей памятью и недавними результатами агента в системном контексте и разрешениями без присмотра для его уровня доступа.
 - OpenWork сохраняет конфигурацию opencode: `opencode.json`, `.opencode/`, переменные `OPENCODE_*`, провайдеры, MCP-серверы и skills работают как прежде.
+- OpenWork хранит свои данные в `~/.local/share/openwork`, а глобальную конфигурацию — в `~/.config/openwork`, отдельно от установки opencode, и обновляется только из собственных релизов на GitHub.
 
 | Где                                                     | Что                                                             |
 | ------------------------------------------------------- | --------------------------------------------------------------- |

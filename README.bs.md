@@ -61,6 +61,7 @@ I dalje je terminalska aplikacija i i dalje radi na opencode harnessu: iste sesi
 - **Pravi transkripti** — svako pokretanje je prava opencode sesija koju možeš otvoriti, s pozivima alata, tokenima i cijenom.
 - **Agenti koji javljaju** — cowork alati `inbox`, `user_todo`, `agenda`, `memory` i `deploy` omogućavaju agentima da pišu u tvoj inbox, dodaju zadatke, čitaju tvoju agendu i pamte činjenice o tebi. Chat može postaviti nove agente.
 - **Spaces** — grupiši agente oko cilja, događaja ili klijenta.
+- **Premještanje agenata između spaceova** — pritisni `m` na stranici agenta, koristi **+ Move an agent here...** na stranici Spaces ili zatraži u chatu.
 - **Memorija** — činjenice o tebi koje dobija svaki chat i svaki agent.
 - **Statistika tokena** — lokalni i cloud tokeni brojani odvojeno, brzina potrošnje, dnevna projekcija i koliko ti lokalni modeli štede.
 - **Tastatura i miš** — `alt+1` … `alt+8` za stranice i `ctrl+p` za sve komande; klikni navigaciju, dugmad, redove, polja za označavanje i savjete za tipke; skroluj liste i kalendar kotačićem.
@@ -107,9 +108,47 @@ I dalje je terminalska aplikacija i i dalje radi na opencode harnessu: iste sesi
 
 ### Početak
 
-**Preduslovi:** [Bun](https://bun.sh) 1.3 ili noviji, git i terminal s truecolor bojama i podrškom za miš (xfce4-terminal, GNOME Terminal, Konsole, kitty, WezTerm, Ghostty, iTerm2, Windows Terminal…). Za modele: bilo koji provajder koji opencode podržava ili lokalni model preko Ollame, LM Studija, llama.cpp-a ili vLLM-a.
+#### Instalacija
+
+```bash
+# macOS i Linux
+curl -fsSL https://github.com/dedeprogames-official/openwork/releases/latest/download/install | bash
+```
+
+```powershell
+# Windows (PowerShell)
+irm https://github.com/dedeprogames-official/openwork/releases/latest/download/install.ps1 | iex
+```
+
+```bash
+# Bilo koji sistem s Node.js 18+: npx ga pokrene jednom, npm install -g zadrži komandu openwork
+npx https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+npm install -g https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+```
+
+Zatim otvori folder i pokreni `openwork`. `openwork upgrade` ga ažurira na najnovije izdanje, a `openwork uninstall` ga uklanja.
+
+#### Preuzimanja
+
+| Platforma                | Preuzimanje                                                                                                                                   |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Linux x64                | [`openwork-linux-x64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64.tar.gz)           |
+| Linux arm64              | [`openwork-linux-arm64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-arm64.tar.gz)       |
+| Linux x64 (musl, Alpine) | [`openwork-linux-x64-musl.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64-musl.tar.gz) |
+| macOS Apple Silicon      | [`openwork-darwin-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-arm64.zip)           |
+| macOS Intel              | [`openwork-darwin-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-x64.zip)               |
+| Windows x64              | [`openwork-windows-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-x64.zip)             |
+| Windows arm64            | [`openwork-windows-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-arm64.zip)         |
+
+Sve verzije su na [stranici izdanja](https://github.com/dedeprogames-official/openwork/releases). Svaka arhiva sadrži binarnu datoteku `openwork`; `-baseline` buildovi su za x64 procesore bez AVX2, a `-musl` za Alpine, i instalateri biraju pravi. macOS binarne datoteke su potpisane ad hoc, bez notarizacije: nakon preuzimanja zipa u pregledniku jednom pokreni `xattr -d com.apple.quarantine openwork`.
+
+#### Windows
+
+PowerShell instalater stavlja `openwork.exe` u `%USERPROFILE%\.openwork\bin` i dodaje ga u tvoj PATH: otvori novi terminal i pokreni `openwork`. Najbolje radi u Windows Terminalu (truecolor i miš). Možeš i raspakovati `openwork-windows-x64.zip` bilo gdje i pokrenuti `openwork.exe`, ili koristiti `npx` kao gore.
 
 #### Pokretanje iz izvornog koda
+
+**Preduslovi:** [Bun](https://bun.sh) 1.3 ili noviji, git i terminal s truecolor bojama i podrškom za miš (xfce4-terminal, GNOME Terminal, Konsole, kitty, WezTerm, Ghostty, iTerm2, Windows Terminal…). Za modele: bilo koji provajder koji opencode podržava ili lokalni model preko Ollame, LM Studija, llama.cpp-a ili vLLM-a.
 
 ```bash
 git clone https://github.com/dedeprogames-official/openwork.git
@@ -174,14 +213,15 @@ Pokretanja su bez nadzora: pitanja i sve što bi prikazalo zahtjev za dozvolu bi
 
 ### Tastatura i miš
 
-| Tipke             | Radnja                                |
-| ----------------- | ------------------------------------- |
-| `alt+1` … `alt+8` | promjena stranice                     |
-| `ctrl+x d`        | postavljanje agenta                   |
-| `ctrl+x w`        | skupljanje ili širenje navigacije     |
-| `ctrl+p`          | paleta komandi                        |
-| `c`               | fokus na polje za chat (`esc` izlazi) |
-| `esc`             | nazad                                 |
+| Tipke             | Radnja                                                                                     |
+| ----------------- | ------------------------------------------------------------------------------------------ |
+| `alt+1` … `alt+8` | promjena stranice                                                                          |
+| `ctrl+x d`        | postavljanje agenta                                                                        |
+| `ctrl+x w`        | skupljanje ili širenje navigacije                                                          |
+| `m`               | premjesti agenta u drugi space (na njegovoj stranici) ili jednog u izabrani space (Spaces) |
+| `ctrl+p`          | paleta komandi                                                                             |
+| `c`               | fokus na polje za chat (`esc` izlazi)                                                      |
+| `esc`             | nazad                                                                                      |
 
 Svaka stranica prikazuje svoje tipke na dnu. Slash komande: `/day`, `/chats`, `/spaces`, `/agents`, `/skills`, `/memory`, `/models`, `/integrations`, `/deploy <tekst>`, `/pause`, `/demo`, `/connect`.
 
@@ -191,7 +231,7 @@ Sve radi i mišem: klikni navigaciju, dugmad i savjete za tipke; u listama prvi 
 
 ### Lokalni modeli
 
-Svaki server kompatibilan s OpenAI-jem na `localhost` računa se kao lokalni, kao i provajderi `ollama`, `lmstudio`, `llamacpp` i `vllm`. Na primjer, s Ollamom, u `opencode.json` (u tvom folderu ili u `~/.config/opencode/`):
+Svaki server kompatibilan s OpenAI-jem na `localhost` računa se kao lokalni, kao i provajderi `ollama`, `lmstudio`, `llamacpp` i `vllm`. Na primjer, s Ollamom, u `opencode.json` (u tvom folderu ili u `~/.config/openwork/`):
 
 ```json
 {
@@ -213,6 +253,7 @@ Svaki server kompatibilan s OpenAI-jem na `localhost` računa se kao lokalni, ka
 - Planer živi u procesu OpenWork servera. Svakih 5 sekundi traži agente koje treba pokrenuti i pokreće do 3 istovremeno. Rezervacije su atomske u SQLiteu, pa više OpenWork prozora nikad ne pokrene istog agenta dvaput, a pokretanja koja ostanu nakon pada označavaju se kao prekinuta. `OPENCODE_DISABLE_WORK_SCHEDULER=1` ga isključuje.
 - Svako pokretanje je opencode sesija s agentom `work` — personom za intelektualni rad kojoj su folderi radni prostori, a datoteke isporuke — s tvojom memorijom i nedavnim rezultatima agenta u sistemskom kontekstu, i dozvolama bez nadzora za njegov nivo pristupa.
 - OpenWork zadržava opencode konfiguraciju: `opencode.json`, `.opencode/`, varijable `OPENCODE_*`, provajderi, MCP serveri i skillovi rade kao i prije.
+- OpenWork čuva svoje podatke u `~/.local/share/openwork`, a globalnu konfiguraciju u `~/.config/openwork`, odvojeno od bilo koje opencode instalacije, i ažurira se samo iz vlastitih GitHub izdanja.
 
 | Gdje                                                    | Šta                                                       |
 | ------------------------------------------------------- | --------------------------------------------------------- |

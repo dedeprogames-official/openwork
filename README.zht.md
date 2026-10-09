@@ -61,6 +61,7 @@ OpenWork 把 opencode 的終端機介面變成完成工作的地方——不只�
 - **真實的紀錄**——每次執行都是一個可以開啟的真實 opencode 工作階段，包含工具呼叫、token 和費用。
 - **會回報的代理**——cowork 工具 `inbox`、`user_todo`、`agenda`、`memory` 和 `deploy` 讓代理可以傳訊息到你的收件匣、新增待辦、讀取行程、記住關於你的事實。聊天也能部署新的代理。
 - **Spaces**——圍繞一個目標、一個活動或一位客戶來組織代理。
+- **在 space 之間移動代理**——在代理頁面按 `m`，在 Spaces 頁面使用 **+ Move an agent here...**，或在聊天中提出。
 - **記憶**——每個聊天和每個代理都會收到的、關於你的事實。
 - **Token 統計**——本機與雲端 token 分開計算，消耗速率、每日預估，以及本機模型幫你省下多少。
 - **鍵盤與滑鼠**——`alt+1` … `alt+8` 切換頁面，`ctrl+p` 開啟所有指令；可點擊導覽、按鈕、列、核取方塊和按鍵提示；用滾輪捲動清單和行事曆。
@@ -107,9 +108,47 @@ OpenWork 把 opencode 的終端機介面變成完成工作的地方——不只�
 
 ### 快速開始
 
-**需求：**[Bun](https://bun.sh) 1.3 或更新版本、git，以及支援全彩和滑鼠的終端機（xfce4-terminal、GNOME Terminal、Konsole、kitty、WezTerm、Ghostty、iTerm2、Windows Terminal……）。模型方面：任何 opencode 支援的供應商，或由 Ollama、LM Studio、llama.cpp、vLLM 提供的本機模型。
+#### 安裝
+
+```bash
+# macOS 與 Linux
+curl -fsSL https://github.com/dedeprogames-official/openwork/releases/latest/download/install | bash
+```
+
+```powershell
+# Windows（PowerShell）
+irm https://github.com/dedeprogames-official/openwork/releases/latest/download/install.ps1 | iex
+```
+
+```bash
+# 任何裝有 Node.js 18+ 的系統：npx 執行一次，npm install -g 保留 openwork 指令
+npx https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+npm install -g https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+```
+
+接著開啟一個資料夾並執行 `openwork`。`openwork upgrade` 會更新到最新版本，`openwork uninstall` 會將其移除。
+
+#### 下載
+
+| 平台                     | 下載                                                                                                                                          |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Linux x64                | [`openwork-linux-x64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64.tar.gz)           |
+| Linux arm64              | [`openwork-linux-arm64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-arm64.tar.gz)       |
+| Linux x64 (musl, Alpine) | [`openwork-linux-x64-musl.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64-musl.tar.gz) |
+| macOS Apple Silicon      | [`openwork-darwin-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-arm64.zip)           |
+| macOS Intel              | [`openwork-darwin-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-x64.zip)               |
+| Windows x64              | [`openwork-windows-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-x64.zip)             |
+| Windows arm64            | [`openwork-windows-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-arm64.zip)         |
+
+所有版本都在[發布頁面](https://github.com/dedeprogames-official/openwork/releases)。每個壓縮檔都包含 `openwork` 執行檔；`-baseline` 版本適用於不支援 AVX2 的 x64 CPU，`-musl` 版本適用於 Alpine，安裝程式會自動挑選合適的版本。macOS 執行檔為 ad hoc 簽章，未經公證：用瀏覽器下載 zip 後，請執行一次 `xattr -d com.apple.quarantine openwork`。
+
+#### Windows
+
+PowerShell 安裝程式會把 `openwork.exe` 放進 `%USERPROFILE%\.openwork\bin` 並加入你的 PATH：開啟新的終端機並執行 `openwork`。在 Windows Terminal 中效果最好（全彩與滑鼠）。你也可以把 `openwork-windows-x64.zip` 解壓縮到任何位置後執行 `openwork.exe`，或像上面那樣使用 `npx`。
 
 #### 從原始碼執行
+
+**需求：**[Bun](https://bun.sh) 1.3 或更新版本、git，以及支援全彩和滑鼠的終端機（xfce4-terminal、GNOME Terminal、Konsole、kitty、WezTerm、Ghostty、iTerm2、Windows Terminal……）。模型方面：任何 opencode 支援的供應商，或由 Ollama、LM Studio、llama.cpp、vLLM 提供的本機模型。
 
 ```bash
 git clone https://github.com/dedeprogames-official/openwork.git
@@ -174,14 +213,15 @@ bun dev ~/work        # OpenWork 開啟的資料夾
 
 ### 鍵盤與滑鼠
 
-| 按鍵              | 動作                         |
-| ----------------- | ---------------------------- |
-| `alt+1` … `alt+8` | 切換頁面                     |
-| `ctrl+x d`        | 部署代理                     |
-| `ctrl+x w`        | 收合或展開導覽               |
-| `ctrl+p`          | 指令面板                     |
-| `c`               | 聚焦聊天輸入框（`esc` 離開） |
-| `esc`             | 返回                         |
+| 按鍵              | 動作                                                                     |
+| ----------------- | ------------------------------------------------------------------------ |
+| `alt+1` … `alt+8` | 切換頁面                                                                 |
+| `ctrl+x d`        | 部署代理                                                                 |
+| `ctrl+x w`        | 收合或展開導覽                                                           |
+| `m`               | 把代理移到另一個 space（在其頁面）或把一個代理移入所選的 space（Spaces） |
+| `ctrl+p`          | 指令面板                                                                 |
+| `c`               | 聚焦聊天輸入框（`esc` 離開）                                             |
+| `esc`             | 返回                                                                     |
 
 每個頁面都會在底部列出自己的按鍵。斜線指令：`/day`、`/chats`、`/spaces`、`/agents`、`/skills`、`/memory`、`/models`、`/integrations`、`/deploy <文字>`、`/pause`、`/demo`、`/connect`。
 
@@ -191,7 +231,7 @@ bun dev ~/work        # OpenWork 開啟的資料夾
 
 ### 本機模型
 
-任何執行在 `localhost` 上的 OpenAI 相容伺服器都算本機，`ollama`、`lmstudio`、`llamacpp` 和 `vllm` 供應商也是。例如使用 Ollama 時，在 `opencode.json` 中（放在你的資料夾或 `~/.config/opencode/` 裡）：
+任何執行在 `localhost` 上的 OpenAI 相容伺服器都算本機，`ollama`、`lmstudio`、`llamacpp` 和 `vllm` 供應商也是。例如使用 Ollama 時，在 `opencode.json` 中（放在你的資料夾或 `~/.config/openwork/` 裡）：
 
 ```json
 {
@@ -213,6 +253,7 @@ bun dev ~/work        # OpenWork 開啟的資料夾
 - 排程器執行在 OpenWork 伺服器程序中。它每 5 秒檢查一次到期的代理，同時最多執行 3 個。認領在 SQLite 中是原子操作，所以多個 OpenWork 視窗絕不會把同一個代理執行兩次，當機遺留的執行會被標記為已中斷。`OPENCODE_DISABLE_WORK_SCHEDULER=1` 可以關閉它。
 - 每次執行都是一個使用 `work` 代理的 opencode 工作階段——這是知識工作者角色，把資料夾當作工作區、把檔案當作交付成果——系統脈絡中帶有你的記憶和該代理最近的結果，並依其存取層級使用無人值守權限。
 - OpenWork 保留 opencode 的設定：`opencode.json`、`.opencode/`、`OPENCODE_*` 變數、供應商、MCP 伺服器和 skills 都照常運作。
+- OpenWork 把自己的資料放在 `~/.local/share/openwork`，全域設定放在 `~/.config/openwork`，與任何 opencode 安裝分開，而且只從自己的 GitHub 發布更新。
 
 | 位置                                                    | 內容                                                      |
 | ------------------------------------------------------- | --------------------------------------------------------- |

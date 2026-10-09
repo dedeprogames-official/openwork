@@ -61,6 +61,7 @@ OpenWork เปลี่ยน UI เทอร์มินัลของ openco
 - **บันทึกจริง** — ทุกการรันคือเซสชัน opencode จริงที่คุณเปิดดูได้ พร้อมการเรียกเครื่องมือ โทเคน และค่าใช้จ่าย
 - **เอเจนต์ที่รายงานกลับ** — เครื่องมือ cowork อย่าง `inbox`, `user_todo`, `agenda`, `memory` และ `deploy` ช่วยให้เอเจนต์โพสต์ลงกล่องข้อความ เพิ่มงาน อ่านวาระ และจำข้อมูลเกี่ยวกับคุณ แชตก็ส่งเอเจนต์ใหม่ได้
 - **Spaces** — จัดกลุ่มเอเจนต์ตามเป้าหมาย งาน หรือลูกค้า
+- **ย้ายเอเจนต์ระหว่าง space** — กด `m` ในหน้าของเอเจนต์ ใช้ **+ Move an agent here...** ในหน้า Spaces หรือขอในแชต
 - **ความจำ** — ข้อมูลเกี่ยวกับคุณที่ทุกแชตและทุกเอเจนต์ได้รับ
 - **สถิติโทเคน** — นับโทเคนในเครื่องและบนคลาวด์แยกกัน อัตราการใช้ คาดการณ์รายวัน และเงินที่โมเดลในเครื่องช่วยประหยัด
 - **คีย์บอร์ดและเมาส์** — `alt+1` … `alt+8` สำหรับหน้าต่าง ๆ และ `ctrl+p` สำหรับทุกคำสั่ง คลิกการนำทาง ปุ่ม แถว ช่องทำเครื่องหมาย และคำแนะนำปุ่มได้ เลื่อนรายการและปฏิทินด้วยลูกกลิ้ง
@@ -107,9 +108,47 @@ OpenWork เปลี่ยน UI เทอร์มินัลของ openco
 
 ### เริ่มต้นใช้งาน
 
-**สิ่งที่ต้องมี:** [Bun](https://bun.sh) 1.3 ขึ้นไป, git และเทอร์มินัลที่รองรับ truecolor และเมาส์ (xfce4-terminal, GNOME Terminal, Konsole, kitty, WezTerm, Ghostty, iTerm2, Windows Terminal…) สำหรับโมเดล: ผู้ให้บริการใดก็ได้ที่ opencode รองรับ หรือโมเดลในเครื่องผ่าน Ollama, LM Studio, llama.cpp หรือ vLLM
+#### การติดตั้ง
+
+```bash
+# macOS และ Linux
+curl -fsSL https://github.com/dedeprogames-official/openwork/releases/latest/download/install | bash
+```
+
+```powershell
+# Windows (PowerShell)
+irm https://github.com/dedeprogames-official/openwork/releases/latest/download/install.ps1 | iex
+```
+
+```bash
+# ทุกระบบที่มี Node.js 18+: npx รันครั้งเดียว ส่วน npm install -g จะติดตั้งคำสั่ง openwork ไว้
+npx https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+npm install -g https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+```
+
+จากนั้นเปิดโฟลเดอร์แล้วรัน `openwork` คำสั่ง `openwork upgrade` อัปเดตเป็นรุ่นล่าสุด และ `openwork uninstall` ใช้ถอนการติดตั้ง
+
+#### ดาวน์โหลด
+
+| แพลตฟอร์ม                | ดาวน์โหลด                                                                                                                                     |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Linux x64                | [`openwork-linux-x64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64.tar.gz)           |
+| Linux arm64              | [`openwork-linux-arm64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-arm64.tar.gz)       |
+| Linux x64 (musl, Alpine) | [`openwork-linux-x64-musl.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64-musl.tar.gz) |
+| macOS Apple Silicon      | [`openwork-darwin-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-arm64.zip)           |
+| macOS Intel              | [`openwork-darwin-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-x64.zip)               |
+| Windows x64              | [`openwork-windows-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-x64.zip)             |
+| Windows arm64            | [`openwork-windows-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-arm64.zip)         |
+
+ทุกเวอร์ชันอยู่ใน[หน้ารีลีส](https://github.com/dedeprogames-official/openwork/releases) แต่ละไฟล์มีไบนารี `openwork` อยู่ข้างใน รุ่น `-baseline` สำหรับซีพียู x64 ที่ไม่มี AVX2 และรุ่น `-musl` สำหรับ Alpine ตัวติดตั้งจะเลือกให้เอง ไบนารี macOS เซ็นแบบ ad hoc และไม่ได้ notarize: หากดาวน์โหลด zip ผ่านเบราว์เซอร์ ให้รัน `xattr -d com.apple.quarantine openwork` หนึ่งครั้ง
+
+#### Windows
+
+ตัวติดตั้ง PowerShell จะวาง `openwork.exe` ไว้ที่ `%USERPROFILE%\.openwork\bin` และเพิ่มลงใน PATH: เปิดเทอร์มินัลใหม่แล้วรัน `openwork` ใช้ Windows Terminal จะได้ผลดีที่สุด (truecolor และเมาส์) หรือจะแตกไฟล์ `openwork-windows-x64.zip` ไว้ที่ใดก็ได้แล้วรัน `openwork.exe` หรือใช้ `npx` ตามด้านบนก็ได้
 
 #### รันจากซอร์สโค้ด
+
+**สิ่งที่ต้องมี:** [Bun](https://bun.sh) 1.3 ขึ้นไป, git และเทอร์มินัลที่รองรับ truecolor และเมาส์ (xfce4-terminal, GNOME Terminal, Konsole, kitty, WezTerm, Ghostty, iTerm2, Windows Terminal…) สำหรับโมเดล: ผู้ให้บริการใดก็ได้ที่ opencode รองรับ หรือโมเดลในเครื่องผ่าน Ollama, LM Studio, llama.cpp หรือ vLLM
 
 ```bash
 git clone https://github.com/dedeprogames-official/openwork.git
@@ -174,14 +213,15 @@ bun dev ~/work        # โฟลเดอร์ที่ OpenWork จะเป�
 
 ### คีย์บอร์ดและเมาส์
 
-| ปุ่ม              | การทำงาน                      |
-| ----------------- | ----------------------------- |
-| `alt+1` … `alt+8` | สลับหน้า                      |
-| `ctrl+x d`        | ส่งเอเจนต์                    |
-| `ctrl+x w`        | ย่อหรือขยายการนำทาง           |
-| `ctrl+p`          | พาเลตคำสั่ง                   |
-| `c`               | โฟกัสช่องแชต (`esc` เพื่อออก) |
-| `esc`             | ย้อนกลับ                      |
+| ปุ่ม              | การทำงาน                                                                              |
+| ----------------- | ------------------------------------------------------------------------------------- |
+| `alt+1` … `alt+8` | สลับหน้า                                                                              |
+| `ctrl+x d`        | ส่งเอเจนต์                                                                            |
+| `ctrl+x w`        | ย่อหรือขยายการนำทาง                                                                   |
+| `m`               | ย้ายเอเจนต์ไปอีก space (ในหน้าของมัน) หรือย้ายเอเจนต์เข้ามาใน space ที่เลือก (Spaces) |
+| `ctrl+p`          | พาเลตคำสั่ง                                                                           |
+| `c`               | โฟกัสช่องแชต (`esc` เพื่อออก)                                                         |
+| `esc`             | ย้อนกลับ                                                                              |
 
 แต่ละหน้าแสดงปุ่มของตัวเองไว้ด้านล่าง คำสั่งสแลช: `/day`, `/chats`, `/spaces`, `/agents`, `/skills`, `/memory`, `/models`, `/integrations`, `/deploy <ข้อความ>`, `/pause`, `/demo`, `/connect`
 
@@ -191,7 +231,7 @@ bun dev ~/work        # โฟลเดอร์ที่ OpenWork จะเป�
 
 ### โมเดลในเครื่อง
 
-เซิร์ฟเวอร์ที่เข้ากันได้กับ OpenAI บน `localhost` ทุกตัวนับเป็นโมเดลในเครื่อง รวมถึงผู้ให้บริการ `ollama`, `lmstudio`, `llamacpp` และ `vllm` ตัวอย่างเช่นกับ Ollama ใน `opencode.json` (ในโฟลเดอร์ของคุณหรือใน `~/.config/opencode/`):
+เซิร์ฟเวอร์ที่เข้ากันได้กับ OpenAI บน `localhost` ทุกตัวนับเป็นโมเดลในเครื่อง รวมถึงผู้ให้บริการ `ollama`, `lmstudio`, `llamacpp` และ `vllm` ตัวอย่างเช่นกับ Ollama ใน `opencode.json` (ในโฟลเดอร์ของคุณหรือใน `~/.config/openwork/`):
 
 ```json
 {
@@ -213,6 +253,7 @@ bun dev ~/work        # โฟลเดอร์ที่ OpenWork จะเป�
 - ตัวจัดตารางอยู่ในโปรเซสเซิร์ฟเวอร์ของ OpenWork มันตรวจหาเอเจนต์ที่ถึงเวลาทุก 5 วินาทีและรันพร้อมกันได้สูงสุด 3 ตัว การจองเป็นแบบอะตอมิกใน SQLite หน้าต่าง OpenWork หลายหน้าต่างจึงไม่มีทางรันเอเจนต์ตัวเดียวกันซ้ำ และการรันที่ค้างจากการแครชจะถูกทำเครื่องหมายว่าถูกขัดจังหวะ `OPENCODE_DISABLE_WORK_SCHEDULER=1` ใช้ปิดมัน
 - แต่ละการรันคือเซสชัน opencode ที่ใช้เอเจนต์ `work` — เพอร์โซนาสำหรับงานความรู้ที่มองโฟลเดอร์เป็นพื้นที่ทำงานและไฟล์เป็นผลงาน — โดยมีความจำของคุณและผลลัพธ์ล่าสุดของเอเจนต์อยู่ในบริบทระบบ และใช้สิทธิ์แบบไม่มีคนดูแลตามระดับการเข้าถึง
 - OpenWork ใช้การตั้งค่าของ opencode ตามเดิม: `opencode.json`, `.opencode/`, ตัวแปร `OPENCODE_*`, ผู้ให้บริการ เซิร์ฟเวอร์ MCP และ skills ทำงานเหมือนเดิม
+- OpenWork เก็บข้อมูลของตัวเองไว้ที่ `~/.local/share/openwork` และการตั้งค่าส่วนกลางที่ `~/.config/openwork` แยกจากการติดตั้ง opencode และอัปเดตจากรีลีสบน GitHub ของตัวเองเท่านั้น
 
 | ที่ไหน                                                  | อะไร                                                             |
 | ------------------------------------------------------- | ---------------------------------------------------------------- |

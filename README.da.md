@@ -61,6 +61,7 @@ Det er stadig en terminal-app og kører stadig på opencode-harnessen: de samme 
 - **Rigtige transskriptioner** — hver kørsel er en rigtig opencode-session, du kan åbne, med værktøjskald, tokens og pris.
 - **Agenter, der melder tilbage** — cowork-værktøjerne `inbox`, `user_todo`, `agenda`, `memory` og `deploy` lader agenter skrive i din indbakke, tilføje todos, læse din kalender og huske fakta om dig. En chat kan udrulle nye agenter.
 - **Spaces** — saml agenter om et mål, en begivenhed eller en kunde.
+- **Flyt agenter mellem spaces** — tryk `m` på en agents side, brug **+ Move an agent here...** på siden Spaces, eller spørg i en chat.
 - **Hukommelse** — fakta om dig, som hver chat og hver agent får med.
 - **Token-statistik** — lokale og cloud-tokens talt hver for sig, forbrugshastighed, en dagsprognose og hvad lokale modeller sparer dig.
 - **Tastatur og mus** — `alt+1` … `alt+8` til siderne og `ctrl+p` til alle kommandoer; klik på navigation, knapper, rækker, afkrydsningsfelter og tastetips; rul i lister og kalenderen med hjulet.
@@ -107,9 +108,47 @@ Det er stadig en terminal-app og kører stadig på opencode-harnessen: de samme 
 
 ### Kom i gang
 
-**Krav:** [Bun](https://bun.sh) 1.3 eller nyere, git og en terminal med truecolor og musestøtte (xfce4-terminal, GNOME Terminal, Konsole, kitty, WezTerm, Ghostty, iTerm2, Windows Terminal…). Til modeller: enhver udbyder, opencode understøtter, eller en lokal model via Ollama, LM Studio, llama.cpp eller vLLM.
+#### Installation
+
+```bash
+# macOS og Linux
+curl -fsSL https://github.com/dedeprogames-official/openwork/releases/latest/download/install | bash
+```
+
+```powershell
+# Windows (PowerShell)
+irm https://github.com/dedeprogames-official/openwork/releases/latest/download/install.ps1 | iex
+```
+
+```bash
+# Ethvert system med Node.js 18+: npx kører det én gang, npm install -g beholder kommandoen openwork
+npx https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+npm install -g https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-cli.tgz
+```
+
+Åbn derefter en mappe og kør `openwork`. `openwork upgrade` opdaterer til den nyeste udgivelse, og `openwork uninstall` fjerner det.
+
+#### Downloads
+
+| Platform                 | Download                                                                                                                                      |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Linux x64                | [`openwork-linux-x64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64.tar.gz)           |
+| Linux arm64              | [`openwork-linux-arm64.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-arm64.tar.gz)       |
+| Linux x64 (musl, Alpine) | [`openwork-linux-x64-musl.tar.gz`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-linux-x64-musl.tar.gz) |
+| macOS Apple Silicon      | [`openwork-darwin-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-arm64.zip)           |
+| macOS Intel              | [`openwork-darwin-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-darwin-x64.zip)               |
+| Windows x64              | [`openwork-windows-x64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-x64.zip)             |
+| Windows arm64            | [`openwork-windows-arm64.zip`](https://github.com/dedeprogames-official/openwork/releases/latest/download/openwork-windows-arm64.zip)         |
+
+Alle versioner ligger på [udgivelsessiden](https://github.com/dedeprogames-official/openwork/releases). Hvert arkiv indeholder binærfilen `openwork`; `-baseline`-builds er til x64-CPU'er uden AVX2 og `-musl`-builds til Alpine, og installationsprogrammerne vælger den rigtige. macOS-binærfilerne er signeret ad hoc, ikke notariseret: kør `xattr -d com.apple.quarantine openwork` én gang efter at have hentet en zip i en browser.
+
+#### Windows
+
+PowerShell-installationen lægger `openwork.exe` i `%USERPROFILE%\.openwork\bin` og føjer mappen til din PATH: åbn en ny terminal og kør `openwork`. Windows Terminal giver det bedste resultat (truecolor og mus). Du kan også pakke `openwork-windows-x64.zip` ud hvor som helst og køre `openwork.exe` eller bruge `npx` som ovenfor.
 
 #### Kør fra kildekoden
+
+**Krav:** [Bun](https://bun.sh) 1.3 eller nyere, git og en terminal med truecolor og musestøtte (xfce4-terminal, GNOME Terminal, Konsole, kitty, WezTerm, Ghostty, iTerm2, Windows Terminal…). Til modeller: enhver udbyder, opencode understøtter, eller en lokal model via Ollama, LM Studio, llama.cpp eller vLLM.
 
 ```bash
 git clone https://github.com/dedeprogames-official/openwork.git
@@ -174,14 +213,15 @@ Kørsler er uden opsyn: spørgsmål og alt, der ville vise en tilladelsesanmodni
 
 ### Tastatur og mus
 
-| Taster            | Handling                                   |
-| ----------------- | ------------------------------------------ |
-| `alt+1` … `alt+8` | skift side                                 |
-| `ctrl+x d`        | udrul en agent                             |
-| `ctrl+x w`        | klap navigationen sammen eller ud          |
-| `ctrl+p`          | kommandopalet                              |
-| `c`               | fokusér chat-prompten (`esc` forlader den) |
-| `esc`             | tilbage                                    |
+| Taster            | Handling                                                                                     |
+| ----------------- | -------------------------------------------------------------------------------------------- |
+| `alt+1` … `alt+8` | skift side                                                                                   |
+| `ctrl+x d`        | udrul en agent                                                                               |
+| `ctrl+x w`        | klap navigationen sammen eller ud                                                            |
+| `m`               | flyt agenten til et andet space (på dens side) eller hent en ind i det valgte space (Spaces) |
+| `ctrl+p`          | kommandopalet                                                                                |
+| `c`               | fokusér chat-prompten (`esc` forlader den)                                                   |
+| `esc`             | tilbage                                                                                      |
 
 Hver side viser sine egne taster nederst. Slash-kommandoer: `/day`, `/chats`, `/spaces`, `/agents`, `/skills`, `/memory`, `/models`, `/integrations`, `/deploy <tekst>`, `/pause`, `/demo`, `/connect`.
 
@@ -191,7 +231,7 @@ Alt virker også med musen: klik på navigationen, knapperne og tastetipsene; i 
 
 ### Lokale modeller
 
-Enhver OpenAI-kompatibel server på `localhost` tæller som lokal, ligesom udbyderne `ollama`, `lmstudio`, `llamacpp` og `vllm`. For eksempel med Ollama, i `opencode.json` (i din mappe eller i `~/.config/opencode/`):
+Enhver OpenAI-kompatibel server på `localhost` tæller som lokal, ligesom udbyderne `ollama`, `lmstudio`, `llamacpp` og `vllm`. For eksempel med Ollama, i `opencode.json` (i din mappe eller i `~/.config/openwork/`):
 
 ```json
 {
@@ -213,6 +253,7 @@ Enhver OpenAI-kompatibel server på `localhost` tæller som lokal, ligesom udbyd
 - Planlæggeren bor i OpenWork-serverprocessen. Den leder efter agenter, der skal køre, hvert 5. sekund og kører op til 3 ad gangen. Reservationer er atomare i SQLite, så flere OpenWork-vinduer aldrig kører den samme agent to gange, og kørsler efterladt af et nedbrud markeres som afbrudte. `OPENCODE_DISABLE_WORK_SCHEDULER=1` slår den fra.
 - Hver kørsel er en opencode-session med agenten `work` — en vidensarbejder-persona, hvor mapper er arbejdsområder og filer er leverancer — med din hukommelse og agentens seneste resultater i systemkonteksten og tilladelser uden opsyn til dens adgangsniveau.
 - OpenWork beholder opencode-konfigurationen: `opencode.json`, `.opencode/`, `OPENCODE_*`-variabler, udbydere, MCP-servere og skills virker som før.
+- OpenWork gemmer sine data i `~/.local/share/openwork` og sin globale konfiguration i `~/.config/openwork`, adskilt fra en opencode-installation, og opdaterer kun sig selv fra sine egne GitHub-udgivelser.
 
 | Hvor                                                    | Hvad                                                             |
 | ------------------------------------------------------- | ---------------------------------------------------------------- |
