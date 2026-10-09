@@ -18,6 +18,7 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { tint, useTheme } from "../../context/theme"
 import { EmptyBorder, SplitBorder } from "../../ui/border"
 import { useTuiPaths, useTuiTerminalEnvironment } from "../../context/runtime"
+import { abbreviateHome } from "../../runtime"
 import { useClipboard } from "../../context/clipboard"
 import { Spinner } from "../spinner"
 import { useSDK } from "../../context/sdk"
@@ -1665,7 +1666,7 @@ export function Prompt(props: PromptProps) {
               {props.hint ?? (
                 <Show when={props.sessionID} fallback={<text />}>
                   <box marginLeft={1}>
-                    <text fg={theme.textMuted}>{location()?.directory ?? paths.cwd}</text>
+                    <text fg={theme.textMuted}>{abbreviateHome(location()?.directory ?? paths.cwd, paths.home)}</text>
                   </box>
                 </Show>
               )}
