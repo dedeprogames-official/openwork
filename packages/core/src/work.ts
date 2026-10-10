@@ -13,6 +13,8 @@ import {
   WorkDeploymentTable,
   WorkMemoryTable,
   WorkMessageTable,
+  WorkPermissionTable,
+  WorkResumeTable,
   WorkRunTable,
   WorkSettingTable,
   WorkSpaceTable,
@@ -33,6 +35,8 @@ export const AgendaID = Work.AgendaID
 export type AgendaID = Work.AgendaID
 export const MemoryID = Work.MemoryID
 export type MemoryID = Work.MemoryID
+export const PermissionID = Work.PermissionID
+export type PermissionID = Work.PermissionID
 
 export type Space = Work.Space
 export type Deployment = Work.Deployment
@@ -79,6 +83,22 @@ export interface Interface {
   readonly state: (now?: number) => Effect.Effect<Work.State>
   readonly paused: () => Effect.Effect<boolean>
   readonly setPaused: (paused: boolean) => Effect.Effect<void>
+  /** Defaults for agents deployed from the TUI or by the `deploy` tool. */
+  readonly defaults: () => Effect.Effect<Work.Defaults>
+  readonly setDefaults: (patch: Work.DefaultsPatch) => Effect.Effect<Work.Defaults>
+  /** MCP servers the user switched off; they stay off in every folder until switched back on. */
+  readonly integrations: {
+    readonly disabled: () => Effect.Effect<string[]>
+    readonly setEnabled: (name: string, enabled: boolean) => Effect.Effect<void>
+  }
+  /** Sessions answering right now; any still listed at the next start were cut off when OpenWork stopped. */
+  readonly resume: {
+    readonly add: (sessionID: string, pid: number) => Effect.Effect<void>
+    readonly remove: (sessionID: string) => Effect.Effect<void>
+    readonly has: (sessionID: string) => Effect.Effect<boolean>
+    /** Removes and returns the sessions whose process died, so exactly one live process picks each one up. */
+    readonly take: (alive: (pid: number) => boolean) => Effect.Effect<string[]>
+  }
   readonly space: {
     readonly list: () => Effect.Effect<Work.Space[]>
     readonly get: (id: SpaceID) => Effect.Effect<Work.Space | undefined>
@@ -124,8 +144,8 @@ export interface Interface {
     readonly finish: (id: RunID, outcome: RunOutcome) => Effect.Effect<void>
     readonly get: (id: RunID) => Effect.Effect<Work.Run | undefined>
     readonly list: (deploymentID: DeploymentID, limit?: number) => Effect.Effect<Work.Run[]>
-    /** Marks runs whose owning process died as interrupted. */
-    readonly recover: (alive: (pid: number) => boolean) => Effect.Effect<void>
+    /** Marks runs whose owning process died as interrupted and returns them. */
+    readonly recover: (alive: (pid: number) => boolean) => Effect.Effect<Work.Run[]>
   }
   readonly message: {
     readonly list: () => Effect.Effect<Work.Message[]>
@@ -152,11 +172,27 @@ export interface Interface {
     readonly save: (input: Work.MemoryCreate) => Effect.Effect<Work.Memory>
     readonly remove: (id: MemoryID) => Effect.Effect<void, NotFoundError>
   }
+  /** "Always allow" answers, kept per folder so they survive a restart. */
+  readonly permission: {
+    readonly list: (directory?: string) => Effect.Effect<Work.Permission[]>
+    readonly add: (input: {
+      readonly directory: string
+      readonly permission: string
+      readonly patterns: ReadonlyArray<string>
+    }) => Effect.Effect<void>
+    readonly remove: (id: PermissionID) => Effect.Effect<void, NotFoundError>
+  }
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Work") {}
 
+/** Why a run stopped when OpenWork closed or crashed before it finished. */
+export const INTERRUPTED = "Interrupted: OpenWork stopped before this run finished"
+
 const PAUSED = "paused"
+const DEFAULT_ACCESS = "default_access"
+const RUN_ON_DEPLOY = "run_on_deploy"
+const MCP_DISABLED = "mcp_disabled"
 const HOUR = 60 * 60 * 1000
 
 const layer = Layer.effect(
@@ -171,14 +207,42 @@ const layer = Layer.effect(
 
     const missing = (kind: string, id: string) => Effect.fail(new NotFoundError({ kind, id }))
 
-    const paused = Effect.fn("Work.paused")(function* () {
+    const setting = Effect.fn("Work.setting")(function* (key: string) {
       const row = yield* db
         .select()
         .from(WorkSettingTable)
-        .where(eq(WorkSettingTable.key, PAUSED))
+        .where(eq(WorkSettingTable.key, key))
         .get()
         .pipe(Effect.orDie)
-      return row?.value === true
+      return row?.value
+    })
+
+    const saveSetting = Effect.fn("Work.saveSetting")(function* (key: string, value: unknown) {
+      yield* db
+        .insert(WorkSettingTable)
+        .values({ key, value })
+        .onConflictDoUpdate({ target: WorkSettingTable.key, set: { value, time_updated: Date.now() } })
+        .run()
+        .pipe(Effect.orDie)
+      yield* changed("settings", key)
+    })
+
+    const paused = Effect.fn("Work.paused")(function* () {
+      return (yield* setting(PAUSED)) === true
+    })
+
+    const disabledIntegrations = Effect.fn("Work.integrations.disabled")(function* () {
+      const value = yield* setting(MCP_DISABLED)
+      return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []
+    })
+
+    const defaults = Effect.fn("Work.defaults")(function* () {
+      const access = yield* setting(DEFAULT_ACCESS)
+      const runOnDeploy = yield* setting(RUN_ON_DEPLOY)
+      return {
+        access: Schema.is(Work.Access)(access) ? access : "read",
+        runOnDeploy: typeof runOnDeploy === "boolean" ? runOnDeploy : true,
+      } satisfies Work.Defaults
     })
 
     const getSpace = Effect.fn("Work.space.get")(function* (id: SpaceID) {
@@ -288,53 +352,118 @@ const layer = Layer.effect(
     return Service.of({
       paused,
       setPaused: Effect.fn("Work.setPaused")(function* (value: boolean) {
-        yield* db
-          .insert(WorkSettingTable)
-          .values({ key: PAUSED, value })
-          .onConflictDoUpdate({ target: WorkSettingTable.key, set: { value, time_updated: Date.now() } })
-          .run()
-          .pipe(Effect.orDie)
-        yield* changed("settings", PAUSED)
+        yield* saveSetting(PAUSED, value)
       }),
+      defaults,
+      setDefaults: Effect.fn("Work.setDefaults")(function* (patch: Work.DefaultsPatch) {
+        if (patch.access !== undefined) yield* saveSetting(DEFAULT_ACCESS, patch.access)
+        if (patch.runOnDeploy !== undefined) yield* saveSetting(RUN_ON_DEPLOY, patch.runOnDeploy)
+        return yield* defaults()
+      }),
+      integrations: {
+        disabled: disabledIntegrations,
+        setEnabled: Effect.fn("Work.integrations.setEnabled")(function* (name: string, enabled: boolean) {
+          const current = yield* disabledIntegrations()
+          const next = enabled ? current.filter((item) => item !== name) : Array.from(new Set([...current, name]))
+          if (next.length === current.length && next.every((item, index) => item === current[index])) return
+          yield* saveSetting(MCP_DISABLED, next)
+        }),
+      },
+      resume: {
+        add: Effect.fn("Work.resume.add")(function* (sessionID: string, pid: number) {
+          yield* db
+            .insert(WorkResumeTable)
+            .values({ session_id: sessionID, owner_pid: pid })
+            .onConflictDoUpdate({
+              target: WorkResumeTable.session_id,
+              set: { owner_pid: pid, time_updated: Date.now() },
+            })
+            .run()
+            .pipe(Effect.orDie)
+        }),
+        remove: Effect.fn("Work.resume.remove")(function* (sessionID: string) {
+          yield* db.delete(WorkResumeTable).where(eq(WorkResumeTable.session_id, sessionID)).run().pipe(Effect.orDie)
+        }),
+        has: Effect.fn("Work.resume.has")(function* (sessionID: string) {
+          const row = yield* db
+            .select({ id: WorkResumeTable.session_id })
+            .from(WorkResumeTable)
+            .where(eq(WorkResumeTable.session_id, sessionID))
+            .get()
+            .pipe(Effect.orDie)
+          return row !== undefined
+        }),
+        take: Effect.fn("Work.resume.take")(function* (alive: (pid: number) => boolean) {
+          const rows = yield* db
+            .select({ id: WorkResumeTable.session_id, pid: WorkResumeTable.owner_pid })
+            .from(WorkResumeTable)
+            .all()
+            .pipe(Effect.orDie)
+          const dead = rows.filter((row) => !alive(row.pid)).map((row) => row.id)
+          if (dead.length === 0) return []
+          // Another process may take the same rows at the same moment; each row is deleted, and returned, only once.
+          const taken = yield* db
+            .delete(WorkResumeTable)
+            .where(inArray(WorkResumeTable.session_id, dead))
+            .returning({ id: WorkResumeTable.session_id })
+            .all()
+            .pipe(Effect.orDie)
+          return taken.map((row) => row.id)
+        }),
+      },
       state: Effect.fn("Work.state")(function* (input?: number) {
         const now = input ?? Date.now()
         const since = WorkSchedule.startOfDay(now)
         const until = WorkSchedule.endOfDay(now)
-        const [isPaused, spaces, deployments, latest, runs, messages, todos, agenda, memories, totals] =
-          yield* Effect.all([
-            paused(),
-            db.select().from(WorkSpaceTable).orderBy(asc(WorkSpaceTable.time_created)).all(),
-            db.select().from(WorkDeploymentTable).orderBy(asc(WorkDeploymentTable.time_created)).all(),
-            db
-              .select()
-              .from(WorkRunTable)
-              .where(
-                sql`(${WorkRunTable.deployment_id}, ${WorkRunTable.number}) in (select deployment_id, max(number) from work_run group by deployment_id)`,
-              )
-              .all(),
-            db
-              .select()
-              .from(WorkRunTable)
-              .where(gte(WorkRunTable.time_started, since))
-              .orderBy(desc(WorkRunTable.time_started))
-              .limit(2000)
-              .all(),
-            db.select().from(WorkMessageTable).orderBy(desc(WorkMessageTable.time_created)).limit(100).all(),
-            db
-              .select()
-              .from(WorkTodoTable)
-              .where(or(isNull(WorkTodoTable.time_done), gte(WorkTodoTable.time_done, since)))
-              .orderBy(asc(WorkTodoTable.position))
-              .all(),
-            db
-              .select()
-              .from(WorkAgendaTable)
-              .where(and(gte(WorkAgendaTable.starts_at, since), lte(WorkAgendaTable.starts_at, since + 7 * 24 * HOUR)))
-              .orderBy(asc(WorkAgendaTable.starts_at))
-              .all(),
-            db.select().from(WorkMemoryTable).orderBy(desc(WorkMemoryTable.time_created)).limit(200).all(),
-            usage(now),
-          ]).pipe(Effect.orDie)
+        const [
+          isPaused,
+          preferences,
+          spaces,
+          deployments,
+          latest,
+          runs,
+          messages,
+          todos,
+          agenda,
+          memories,
+          permissions,
+          totals,
+        ] = yield* Effect.all([
+          paused(),
+          defaults(),
+          db.select().from(WorkSpaceTable).orderBy(asc(WorkSpaceTable.time_created)).all(),
+          db.select().from(WorkDeploymentTable).orderBy(asc(WorkDeploymentTable.time_created)).all(),
+          db
+            .select()
+            .from(WorkRunTable)
+            .where(
+              sql`(${WorkRunTable.deployment_id}, ${WorkRunTable.number}) in (select deployment_id, max(number) from work_run group by deployment_id)`,
+            )
+            .all(),
+          db
+            .select()
+            .from(WorkRunTable)
+            .where(gte(WorkRunTable.time_started, since))
+            .orderBy(desc(WorkRunTable.time_started))
+            .limit(2000)
+            .all(),
+          db.select().from(WorkMessageTable).orderBy(desc(WorkMessageTable.time_created)).limit(100).all(),
+          db
+            .select()
+            .from(WorkTodoTable)
+            .where(or(isNull(WorkTodoTable.time_done), gte(WorkTodoTable.time_done, since)))
+            .orderBy(asc(WorkTodoTable.position))
+            .all(),
+          db
+            .select()
+            .from(WorkAgendaTable)
+            .where(and(gte(WorkAgendaTable.starts_at, since), lte(WorkAgendaTable.starts_at, since + 7 * 24 * HOUR)))
+            .orderBy(asc(WorkAgendaTable.starts_at))
+            .all(),
+          db.select().from(WorkMemoryTable).orderBy(desc(WorkMemoryTable.time_created)).limit(200).all(),
+          db.select().from(WorkPermissionTable).orderBy(asc(WorkPermissionTable.time_created)).all(),
+          usage(now),
+        ]).pipe(Effect.orDie)
         const projected = deployments
           .filter((row) => row.status === "active")
           .map((row) => ({
@@ -345,6 +474,7 @@ const layer = Layer.effect(
         return {
           now,
           paused: isPaused,
+          defaults: preferences,
           spaces: spaces.map(fromSpace),
           deployments: deployments.map(fromDeployment),
           latest: latest.map(fromRun),
@@ -359,6 +489,7 @@ const layer = Layer.effect(
           todos: todos.map(fromTodo),
           agenda: agenda.map(fromAgenda),
           memories: memories.map(fromMemory),
+          permissions: permissions.map(fromPermission),
           usage: { ...totals, runsToday: runs.length, runsRemaining: remaining },
         } satisfies Work.State
       }),
@@ -430,7 +561,7 @@ const layer = Layer.effect(
               model: input.model,
               skill: input.skill,
               schedule: input.schedule,
-              access: input.access ?? "read",
+              access: input.access ?? (yield* defaults()).access,
               status: "active",
               next_run_at: WorkSchedule.first(input.schedule, Date.now()),
             })
@@ -683,18 +814,16 @@ const layer = Layer.effect(
             .all()
             .pipe(Effect.orDie)
           const dead = rows.filter((row) => row.pid === null || !alive(row.pid)).map((row) => row.id)
-          if (dead.length === 0) return
-          yield* db
+          if (dead.length === 0) return []
+          const recovered = yield* db
             .update(WorkRunTable)
-            .set({
-              status: "error",
-              error: "Interrupted: the process running this agent stopped",
-              time_finished: Date.now(),
-            })
+            .set({ status: "error", error: INTERRUPTED, time_finished: Date.now() })
             .where(and(inArray(WorkRunTable.id, dead), eq(WorkRunTable.status, "running")))
-            .run()
+            .returning()
+            .all()
             .pipe(Effect.orDie)
-          yield* changed("run")
+          if (recovered.length > 0) yield* changed("run")
+          return recovered.map(fromRun)
         }),
       },
       message: {
@@ -887,6 +1016,44 @@ const layer = Layer.effect(
           yield* changed("memory", id)
         }),
       },
+      permission: {
+        list: Effect.fn("Work.permission.list")(function* (directory?: string) {
+          return (yield* db
+            .select()
+            .from(WorkPermissionTable)
+            .where(directory === undefined ? undefined : eq(WorkPermissionTable.directory, directory))
+            .orderBy(asc(WorkPermissionTable.time_created))
+            .all()
+            .pipe(Effect.orDie)).map(fromPermission)
+        }),
+        add: Effect.fn("Work.permission.add")(function* (input) {
+          if (input.patterns.length === 0) return
+          yield* db
+            .insert(WorkPermissionTable)
+            .values(
+              input.patterns.map((pattern) => ({
+                id: PermissionID.create(),
+                directory: input.directory,
+                permission: input.permission,
+                pattern,
+              })),
+            )
+            .onConflictDoNothing()
+            .run()
+            .pipe(Effect.orDie)
+          yield* changed("settings", "permission")
+        }),
+        remove: Effect.fn("Work.permission.remove")(function* (id: PermissionID) {
+          const removed = yield* db
+            .delete(WorkPermissionTable)
+            .where(eq(WorkPermissionTable.id, id))
+            .returning({ id: WorkPermissionTable.id })
+            .all()
+            .pipe(Effect.orDie)
+          if (removed.length === 0) return yield* missing("permission", id)
+          yield* changed("settings", "permission")
+        }),
+      },
     })
 
     function getMessage(id: MessageID) {
@@ -1032,6 +1199,16 @@ function fromAgenda(row: typeof WorkAgendaTable.$inferSelect): Work.Agenda {
     ...present("endsAt", row.ends_at),
     ...present("spaceID", row.space_id),
     ...present("note", row.note),
+    time: { created: row.time_created },
+  }
+}
+
+function fromPermission(row: typeof WorkPermissionTable.$inferSelect): Work.Permission {
+  return {
+    id: row.id,
+    directory: row.directory,
+    permission: row.permission,
+    pattern: row.pattern,
     time: { created: row.time_created },
   }
 }
