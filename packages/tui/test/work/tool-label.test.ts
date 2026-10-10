@@ -64,7 +64,9 @@ describe("tool labels", () => {
     expect(line(done("bash", { command: "ls -la", description: "List the folder" }))).toBe(
       "Ran a command · List the folder",
     )
-    expect(line(done("github_create_issue", { title: "x" }))).toBe("Used github_create_issue")
+    expect(line(done("github_create_issue", { count: 2, title: "Broken link" }))).toBe(
+      "Used github_create_issue · Broken link",
+    )
     expect(line(done("toString", {}))).toBe("Used toString")
   })
 
