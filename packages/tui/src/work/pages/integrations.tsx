@@ -4,10 +4,12 @@ import { useData } from "../../context/data"
 import { useSync } from "../../context/sync"
 import { useTheme } from "../../context/theme"
 import { useDialog } from "../../ui/dialog"
-import { Empty, Hints, PageHeader, Pill, SectionTitle } from "../components"
+import { Empty, Hints, PageHeader, Button, SectionTitle } from "../components"
 import { truncate } from "../format"
 import { step, usePageKeys, usePressed } from "../keys"
 import { COMMAND_PALETTE_COMMAND, useOpencodeKeymap } from "../../keymap"
+import { useIntegrations } from "../dialog-integration"
+import { Action, HoverRow } from "../hover"
 
 export function IntegrationsPage() {
   const sync = useSync()
@@ -34,11 +36,13 @@ export function IntegrationsPage() {
   const keymap = useOpencodeKeymap()
   const pressed = usePressed()
   const manage = () => dialog.replace(() => <DialogMcp />)
+  const wizard = useIntegrations()
 
   usePageKeys(() => [
     { key: "up,k", desc: "Previous", run: () => setSelected((index) => step(index, -1, servers().length)) },
     { key: "down,j", desc: "Next", run: () => setSelected((index) => step(index, 1, servers().length)) },
     { key: "return", desc: "Manage MCP servers", run: manage },
+    { key: "n", desc: "Add an integration", run: () => void wizard.add() },
   ])
 
   return (
@@ -46,17 +50,22 @@ export function IntegrationsPage() {
       <PageHeader
         title="Integrations"
         subtitle="Connectors give chats and agents access to your tools: mail, calendars, drives, CRMs and more (MCP)."
-        right={<Pill label="Manage" active onClick={manage} />}
+        right={
+          <box flexDirection="row" gap={1}>
+            <Button label="+ Add" onClick={() => void wizard.add()} />
+            <Button label="Manage" active onClick={manage} />
+          </box>
+        }
       />
       <SectionTitle title="MCP servers" meta={`${servers().length}`} />
       <box height={1} flexShrink={0} />
       <For each={servers()}>
         {(entry, index) => (
-          <box
+          <HoverRow
             flexDirection="row"
             paddingBottom={1}
-            backgroundColor={index() === selected() ? theme.backgroundElement : undefined}
-            onMouseUp={() => {
+            selected={index() === selected()}
+            onClick={() => {
               if (!pressed()) return
               setSelected(index())
               manage()
@@ -71,12 +80,12 @@ export function IntegrationsPage() {
                 ? `failed: ${truncate(entry[1].error, 60)}`
                 : entry[1].status.replace(/_/g, " ")}
             </text>
-          </box>
+          </HoverRow>
         )}
       </For>
       <Show when={servers().length === 0}>
         <Empty>
-          No MCP servers configured. Add one under "mcp" in opencode.json, e.g. a Gmail, Google Drive or Linear server.
+          No MCP servers yet. Press n or click + Add to connect one, e.g. a Gmail, Google Drive or Linear server.
         </Empty>
       </Show>
       <box height={1} flexShrink={0} />
@@ -98,21 +107,20 @@ export function IntegrationsPage() {
         {connected().length === 0 ? "No accounts connected yet. " : ""}
         {`Run /connect to add one of ${integrations().length} providers and services: ${available()}…`}
       </text>
-      <text
-        fg={theme.textMuted}
-        flexShrink={0}
-        paddingTop={1}
-        selectable={false}
-        onMouseUp={() => keymap.dispatchCommand("provider.connect")}
-      >
-        + Connect an account...
-      </text>
+      <box flexShrink={0} paddingTop={1}>
+        <Action
+          label="+ Connect an account..."
+          pad={false}
+          onClick={() => keymap.dispatchCommand("provider.connect")}
+        />
+      </box>
       <box flexGrow={1} />
       <box flexShrink={0} paddingTop={1}>
         <Hints
           items={[
             ["↑↓", "select"],
             ["enter", "manage servers", manage],
+            ["n", "add", () => void wizard.add()],
             ["ctrl+p", "commands", () => keymap.dispatchCommand(COMMAND_PALETTE_COMMAND)],
           ]}
         />

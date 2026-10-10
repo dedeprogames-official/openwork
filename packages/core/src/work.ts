@@ -59,6 +59,9 @@ export type MessageCreate = Work.MessageCreate
 export type TodoCreate = Work.TodoCreate
 export type AgendaCreate = Work.AgendaCreate
 export type MemoryCreate = Work.MemoryCreate
+export type Integration = Work.Integration
+export type IntegrationCreate = Work.IntegrationCreate
+export type IntegrationSync = Work.IntegrationSync
 
 export const Colors = Work.Colors
 export const Event = Work.Event
@@ -90,6 +93,10 @@ export interface Interface {
   readonly integrations: {
     readonly disabled: () => Effect.Effect<string[]>
     readonly setEnabled: (name: string, enabled: boolean) => Effect.Effect<void>
+    /** Servers added in OpenWork that opencode.json does not have yet, by name; their config is opaque here. */
+    readonly staged: () => Effect.Effect<Record<string, unknown>>
+    readonly stage: (name: string, config: unknown) => Effect.Effect<void>
+    readonly unstage: (name: string) => Effect.Effect<void>
   }
   /** Sessions answering right now; any still listed at the next start were cut off when OpenWork stopped. */
   readonly resume: {
@@ -193,6 +200,7 @@ const PAUSED = "paused"
 const DEFAULT_ACCESS = "default_access"
 const RUN_ON_DEPLOY = "run_on_deploy"
 const MCP_DISABLED = "mcp_disabled"
+const MCP_STAGED = "mcp_servers"
 const HOUR = 60 * 60 * 1000
 
 const layer = Layer.effect(
@@ -234,6 +242,13 @@ const layer = Layer.effect(
     const disabledIntegrations = Effect.fn("Work.integrations.disabled")(function* () {
       const value = yield* setting(MCP_DISABLED)
       return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []
+    })
+
+    const stagedIntegrations = Effect.fn("Work.integrations.staged")(function* () {
+      const value = yield* setting(MCP_STAGED)
+      return typeof value === "object" && value !== null && !Array.isArray(value)
+        ? Object.fromEntries(Object.entries(value))
+        : {}
     })
 
     const defaults = Effect.fn("Work.defaults")(function* () {
@@ -367,6 +382,18 @@ const layer = Layer.effect(
           const next = enabled ? current.filter((item) => item !== name) : Array.from(new Set([...current, name]))
           if (next.length === current.length && next.every((item, index) => item === current[index])) return
           yield* saveSetting(MCP_DISABLED, next)
+        }),
+        staged: stagedIntegrations,
+        stage: Effect.fn("Work.integrations.stage")(function* (name: string, config: unknown) {
+          yield* saveSetting(MCP_STAGED, { ...(yield* stagedIntegrations()), [name]: config })
+        }),
+        unstage: Effect.fn("Work.integrations.unstage")(function* (name: string) {
+          const current = yield* stagedIntegrations()
+          if (!(name in current)) return
+          yield* saveSetting(
+            MCP_STAGED,
+            Object.fromEntries(Object.entries(current).filter(([key]) => key !== name)),
+          )
         }),
       },
       resume: {

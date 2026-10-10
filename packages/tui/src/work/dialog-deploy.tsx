@@ -105,7 +105,7 @@ export function useDeploy() {
   }
 }
 
-function choose<T>(dialog: DialogContext, title: string, options: DialogSelectOption<T>[]) {
+export function choose<T>(dialog: DialogContext, title: string, options: DialogSelectOption<T>[]) {
   return new Promise<T | undefined>((resolve) => {
     dialog.replace(
       () => <DialogSelect title={title} options={options} onSelect={(option) => resolve(option.value)} />,

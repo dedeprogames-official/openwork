@@ -431,6 +431,11 @@ const scenarios: Scenario[] = [
     .mutating()
     .at((ctx) => ({ path: route("/mcp/{name}/disconnect", { name: "httpapi-missing" }), headers: ctx.headers() }))
     .json(404, object, "status"),
+  http.protected
+    .delete("/mcp/{name}", "mcp.remove")
+    .mutating()
+    .at((ctx) => ({ path: route("/mcp/{name}", { name: "httpapi-missing" }), headers: ctx.headers() }))
+    .json(200, (body) => check(body === true, "remove should return true")),
   http.protected.get("/pty/shells", "pty.shells").json(200, array),
   http.protected.get("/pty", "pty.list").json(200, array),
   http.protected
@@ -1971,6 +1976,36 @@ function workScenarios(): Scenario[] {
         ),
       )
       .at((ctx) => ({ path: `/work/permission/${ctx.state.id}` }))
+      .json(200, (body) => check(body === true, "remove should return true")),
+    http.protected.get("/work/integration", "work.integration.list").json(200, array),
+    http.protected
+      .post("/work/integration", "work.integration.create")
+      .mutating()
+      .at(() => ({
+        path: "/work/integration",
+        body: { name: "exercise-docs", type: "remote", url: "https://mcp.example.com/mcp" },
+      }))
+      .json(200, (body) => {
+        object(body)
+        check(body.name === "exercise-docs", "integration should be added")
+        check(body.file === false, "integration should wait in OpenWork until the file is written")
+      }),
+    http.protected
+      .post("/work/integration/sync", "work.integration.sync")
+      .mutating()
+      .json(200, (body) => {
+        object(body)
+        check(Array.isArray(body.written), "sync should list what it wrote")
+      }),
+    http.protected
+      .delete("/work/integration/{name}", "work.integration.remove")
+      .mutating()
+      .seeded((ctx) =>
+        ctx.work((work) =>
+          work.integrations.stage("exercise-remove", { type: "remote", url: "https://mcp.example.com" }),
+        ),
+      )
+      .at(() => ({ path: "/work/integration/exercise-remove" }))
       .json(200, (body) => check(body === true, "remove should return true")),
   ]
 }

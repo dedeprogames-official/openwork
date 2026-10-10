@@ -350,6 +350,40 @@ export const Version = Schema.Struct({
 }).annotate({ identifier: "Work.Version" })
 export interface Version extends Schema.Schema.Type<typeof Version> {}
 
+export const IntegrationCreate = Schema.Struct({
+  name: Schema.String.annotate({ description: "Name of the integration; its tools are prefixed with it" }),
+  type: Schema.Literals(["remote", "local"]).annotate({
+    description: "remote connects to a URL, local starts a command on this computer",
+  }),
+  url: optional(Schema.String.annotate({ description: "URL of the MCP server (remote)" })),
+  headers: optional(
+    Schema.Record(Schema.String, Schema.String).annotate({ description: "Headers sent with every request (remote)" }),
+  ),
+  command: optional(Schema.Array(Schema.String).annotate({ description: "Command and its arguments (local)" })),
+  environment: optional(
+    Schema.Record(Schema.String, Schema.String).annotate({ description: "Environment variables of the command (local)" }),
+  ),
+}).annotate({ identifier: "Work.IntegrationCreate" })
+export interface IntegrationCreate extends Schema.Schema.Type<typeof IntegrationCreate> {}
+
+export const Integration = Schema.Struct({
+  name: Schema.String,
+  type: Schema.Literals(["remote", "local"]),
+  target: Schema.String.annotate({
+    description: "Where it connects: the URL without its query, or the program a local command starts",
+  }),
+  file: Schema.Boolean.annotate({
+    description: "Already in the global opencode.json; false means OpenWork keeps it until it can write the file",
+  }),
+}).annotate({ identifier: "Work.Integration", description: "An integration added in OpenWork or the global opencode.json" })
+export interface Integration extends Schema.Schema.Type<typeof Integration> {}
+
+export const IntegrationSync = Schema.Struct({
+  written: Schema.Array(Schema.String).annotate({ description: "Integrations written to the global opencode.json" }),
+  warning: optional(Schema.String.annotate({ description: "Why the file could not be written, when it could not" })),
+}).annotate({ identifier: "Work.IntegrationSync" })
+export interface IntegrationSync extends Schema.Schema.Type<typeof IntegrationSync> {}
+
 export const ChatResult = Schema.Struct({ sessionID: Schema.String }).annotate({ identifier: "Work.ChatResult" })
 export interface ChatResult extends Schema.Schema.Type<typeof ChatResult> {}
 

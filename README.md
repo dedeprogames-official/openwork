@@ -208,7 +208,7 @@ Runs are unattended: questions and anything that would show a permission prompt 
 | Agent        | `enter` | One agent: task, schedule, access, each run's tool calls and result, run history and its own chat.     |
 | Skills       | `alt+5` | Skills from `.opencode/skills` and `~/.agents/skills`.                                                 |
 | Memory       | `alt+6` | What chats and agents know about you.                                                                  |
-| Models       | `alt+7` | Local and cloud models; local tokens are counted apart in the Usage card.                              |
+| Models       | `alt+7` | Local and cloud models; local tokens are counted apart in the Usage section.                              |
 | Integrations | `alt+8` | MCP servers and connected accounts.                                                                    |
 
 ### Keyboard and mouse

@@ -4217,6 +4217,61 @@ export type WorkMemoryCreate = {
   source?: string
 }
 
+export type WorkIntegration = {
+  name: string
+  type: "remote" | "local"
+  /**
+   * Where it connects: the URL without its query, or the program a local command starts
+   */
+  target: string
+  /**
+   * Already in the global opencode.json; false means OpenWork keeps it until it can write the file
+   */
+  file: boolean
+}
+
+export type WorkIntegrationCreate = {
+  /**
+   * Name of the integration; its tools are prefixed with it
+   */
+  name: string
+  /**
+   * remote connects to a URL, local starts a command on this computer
+   */
+  type: "remote" | "local"
+  /**
+   * URL of the MCP server (remote)
+   */
+  url?: string
+  /**
+   * Headers sent with every request (remote)
+   */
+  headers?: {
+    [key: string]: string
+  }
+  /**
+   * Command and its arguments (local)
+   */
+  command?: Array<string>
+  /**
+   * Environment variables of the command (local)
+   */
+  environment?: {
+    [key: string]: string
+  }
+}
+
+export type WorkIntegrationSync = {
+  /**
+   * Integrations written to the global opencode.json
+   */
+  written: Array<string>
+  /**
+   * Why the file could not be written, when it could not
+   */
+  warning?: string
+}
+
 export type ProjectDirectories = Array<{
   directory: string
   strategy?: string
@@ -8538,6 +8593,108 @@ export type WorkPermissionRemoveResponses = {
 
 export type WorkPermissionRemoveResponse = WorkPermissionRemoveResponses[keyof WorkPermissionRemoveResponses]
 
+export type WorkIntegrationListData = {
+  body?: never
+  path?: never
+  query?: never
+  url: "/work/integration"
+}
+
+export type WorkIntegrationListErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type WorkIntegrationListError = WorkIntegrationListErrors[keyof WorkIntegrationListErrors]
+
+export type WorkIntegrationListResponses = {
+  /**
+   * Integrations added in OpenWork or the global opencode.json
+   */
+  200: Array<WorkIntegration>
+}
+
+export type WorkIntegrationListResponse = WorkIntegrationListResponses[keyof WorkIntegrationListResponses]
+
+export type WorkIntegrationCreateData = {
+  body?: WorkIntegrationCreate
+  path?: never
+  query?: never
+  url: "/work/integration"
+}
+
+export type WorkIntegrationCreateErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+}
+
+export type WorkIntegrationCreateError = WorkIntegrationCreateErrors[keyof WorkIntegrationCreateErrors]
+
+export type WorkIntegrationCreateResponses = {
+  /**
+   * Integration added
+   */
+  200: WorkIntegration
+}
+
+export type WorkIntegrationCreateResponse = WorkIntegrationCreateResponses[keyof WorkIntegrationCreateResponses]
+
+export type WorkIntegrationSyncData = {
+  body?: never
+  path?: never
+  query?: never
+  url: "/work/integration/sync"
+}
+
+export type WorkIntegrationSyncErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type WorkIntegrationSyncError = WorkIntegrationSyncErrors[keyof WorkIntegrationSyncErrors]
+
+export type WorkIntegrationSyncResponses = {
+  /**
+   * Integrations written to opencode.json
+   */
+  200: WorkIntegrationSync
+}
+
+export type WorkIntegrationSyncResponse = WorkIntegrationSyncResponses[keyof WorkIntegrationSyncResponses]
+
+export type WorkIntegrationRemoveData = {
+  body?: never
+  path: {
+    name: string
+  }
+  query?: never
+  url: "/work/integration/{name}"
+}
+
+export type WorkIntegrationRemoveErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+}
+
+export type WorkIntegrationRemoveError = WorkIntegrationRemoveErrors[keyof WorkIntegrationRemoveErrors]
+
+export type WorkIntegrationRemoveResponses = {
+  /**
+   * Integration removed
+   */
+  200: boolean
+}
+
+export type WorkIntegrationRemoveResponse = WorkIntegrationRemoveResponses[keyof WorkIntegrationRemoveResponses]
+
 export type EventSubscribeData = {
   body?: never
   path?: never
@@ -9853,6 +10010,36 @@ export type McpDisconnectResponses = {
 }
 
 export type McpDisconnectResponse = McpDisconnectResponses[keyof McpDisconnectResponses]
+
+export type McpRemoveData = {
+  body?: never
+  path: {
+    name: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/mcp/{name}"
+}
+
+export type McpRemoveErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type McpRemoveError = McpRemoveErrors[keyof McpRemoveErrors]
+
+export type McpRemoveResponses = {
+  /**
+   * MCP server removed from this folder
+   */
+  200: boolean
+}
+
+export type McpRemoveResponse = McpRemoveResponses[keyof McpRemoveResponses]
 
 export type ProjectListData = {
   body?: never

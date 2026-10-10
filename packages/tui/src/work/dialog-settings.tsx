@@ -1,7 +1,7 @@
 import { RGBA, TextAttributes, type InputRenderable, type ScrollBoxRenderable } from "@opentui/core"
 import { useTerminalDimensions } from "@opentui/solid"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
-import { createEffect, createMemo, For, on, onMount, Show } from "solid-js"
+import { createEffect, createMemo, createSignal, For, on, onMount, Show } from "solid-js"
 import { createStore } from "solid-js/store"
 import { DialogAgent } from "../component/dialog-agent"
 import { DialogModel } from "../component/dialog-model"
@@ -16,13 +16,16 @@ import { useRoute } from "../context/route"
 import { useTuiPaths } from "../context/runtime"
 import { useSDK } from "../context/sdk"
 import { useSync } from "../context/sync"
-import { selectedForeground, useTheme } from "../context/theme"
+import { selectedForeground, tint, useTheme } from "../context/theme"
 import { COMMAND_PALETTE_COMMAND, useBindings, useOpencodeKeymap } from "../keymap"
 import { abbreviateHome } from "../runtime"
 import { useDialog } from "../ui/dialog"
 import { DialogConfirm } from "../ui/dialog-confirm"
 import { useWork } from "./context"
 import { ACCESS } from "./format"
+import { Button } from "./components"
+import { useIntegrations } from "./dialog-integration"
+import { Action, hoverFill, useHover } from "./hover"
 
 export type SettingsSection = "general" | "chat" | "agents" | "models" | "integrations" | "permissions" | "about"
 
@@ -39,7 +42,15 @@ type Setting =
   | { kind: "action"; label: string; description: string; value?: () => string; accent?: boolean; run: () => void }
   | { kind: "info"; label: string; description?: string; value: () => string }
 
-type Section = { id: SettingsSection; label: string; icon: string; description: string; settings: Setting[] }
+type Section = {
+  id: SettingsSection
+  label: string
+  icon: string
+  description: string
+  settings: Setting[]
+  /** A button at the top right of the section, for the thing most people come here to do. */
+  action?: { label: string; run: () => void }
+}
 
 /** Settings in the shape most chat apps use: sections on the left, the selected section's settings on the right. */
 function DialogSettings(props: { sections: () => Section[]; section?: SettingsSection }) {
@@ -138,9 +149,7 @@ function DialogSettings(props: { sections: () => Section[]; section?: SettingsSe
         <text fg={theme.text} attributes={TextAttributes.BOLD}>
           Settings
         </text>
-        <text fg={theme.textMuted} selectable={false} onMouseUp={() => dialog.clear()}>
-          esc
-        </text>
+        <Action label="esc" base={theme.backgroundPanel} onClick={() => dialog.clear()} />
       </box>
       <box flexDirection="row" flexGrow={1} minHeight={0} paddingLeft={2} paddingRight={2} gap={2}>
         <box width={compact() ? 7 : 24} flexShrink={0} gap={1}>
@@ -183,13 +192,29 @@ function DialogSettings(props: { sections: () => Section[]; section?: SettingsSe
           </box>
         </box>
         <box flexGrow={1} minWidth={0} minHeight={0}>
-          <box paddingLeft={2} flexShrink={0}>
-            <text fg={theme.text} attributes={TextAttributes.BOLD} wrapMode="none">
-              {query() ? `Results for "${store.filter.trim()}"` : current().label}
-            </text>
-            <text fg={theme.textMuted} wrapMode="none">
-              {query() ? `${rows().length} ${rows().length === 1 ? "setting" : "settings"}` : current().description}
-            </text>
+          <box flexDirection="row" paddingLeft={2} gap={2} flexShrink={0}>
+            <box flexGrow={1} minWidth={0}>
+              <text fg={theme.text} attributes={TextAttributes.BOLD} wrapMode="none">
+                {query() ? `Results for "${store.filter.trim()}"` : current().label}
+              </text>
+              <text fg={theme.textMuted} wrapMode="none">
+                {query() ? `${rows().length} ${rows().length === 1 ? "setting" : "settings"}` : current().description}
+              </text>
+            </box>
+            <Show when={!query() ? current().action : undefined}>
+              {(action) => (
+                <box flexShrink={0}>
+                  <Button
+                    label={action().label}
+                    active
+                    onClick={() => {
+                      action().run()
+                      refocus()
+                    }}
+                  />
+                </box>
+              )}
+            </Show>
           </box>
           <box height={1} flexShrink={0} />
           <scrollbox
@@ -262,12 +287,20 @@ function step(setting: Setting, delta: number) {
 // The open section is marked quietly: the selected setting on the right has the focus colour.
 function SectionItem(props: { section: Section; active: boolean; compact: boolean; onPress: () => void }) {
   const { theme } = useTheme()
+  const hover = useHover()
   return (
     <box
       flexDirection="row"
       paddingLeft={1}
       paddingRight={1}
-      backgroundColor={props.active ? theme.backgroundElement : RGBA.fromInts(0, 0, 0, 0)}
+      backgroundColor={
+        props.active
+          ? theme.backgroundElement
+          : hover.active()
+            ? tint(theme.backgroundPanel, hoverFill(theme, theme.backgroundPanel), 0.55)
+            : RGBA.fromInts(0, 0, 0, 0)
+      }
+      {...hover.bind}
       onMouseUp={props.onPress}
     >
       <text fg={props.active ? theme.primary : theme.textMuted} flexShrink={0} selectable={false}>
@@ -387,6 +420,15 @@ export function useSettings() {
   const keymap = useOpencodeKeymap()
   const themes = useTheme()
   const upgrade = useCloseAndUpgrade()
+  const integrations = useIntegrations()
+  // Where each integration lives: true when it is in the global opencode.json, false while OpenWork still holds it.
+  const [inFile, setInFile] = createSignal<Record<string, boolean>>({})
+  const locate = () =>
+    sdk.client.work.integration
+      .list()
+      .then((result) => setInFile(Object.fromEntries((result.data ?? []).map((item) => [item.name, item.file]))))
+      .catch(() => undefined)
+  const manage = (run: () => Promise<boolean>) => () => void run().then(() => open("integrations"))
 
   const flag = (key: string, fallback: boolean): Pick<Extract<Setting, { kind: "toggle" }>, "value" | "set"> => ({
     value: () => kv.get(key, fallback) === true,
@@ -403,6 +445,7 @@ export function useSettings() {
 
   const open = (section?: SettingsSection) => {
     work.checkVersion()
+    void locate()
     dialog.replace(() => <DialogSettings sections={sections} section={section} />)
   }
   const update = (latest: string) =>
@@ -633,15 +676,28 @@ export function useSettings() {
       label: "Integrations",
       icon: "⊞",
       description: "MCP servers that give chats and agents more tools",
+      action: { label: "+ Add", run: manage(integrations.add) },
       settings: [
+        {
+          kind: "action",
+          label: "Add an integration…",
+          description: "A name, the server's URL or command, and any keys it needs; no need to edit opencode.json",
+          accent: true,
+          run: manage(integrations.add),
+        },
         ...Object.entries(sync.data.mcp)
           .toSorted((a, b) => a[0].localeCompare(b[0]))
           .map(
             ([name, status]): Setting => ({
               kind: "toggle",
               label: name,
-              description:
+              description: [
                 status.status === "failed" ? "Failed to start" : capitalize(status.status.replace(/_/g, " ")),
+                inFile()[name] === true ? "opencode.json" : undefined,
+                inFile()[name] === false ? "OpenWork, written to opencode.json when it closes" : undefined,
+              ]
+                .filter(Boolean)
+                .join(" · "),
               value: () => local.mcp.isEnabled(name),
               set: () =>
                 void local.mcp
@@ -653,6 +709,12 @@ export function useSettings() {
                   .catch(() => undefined),
             }),
           ),
+        {
+          kind: "action",
+          label: "Remove an integration…",
+          description: "Delete one from OpenWork and from your global opencode.json",
+          run: manage(integrations.remove),
+        },
         {
           kind: "action",
           label: "Integrations page",

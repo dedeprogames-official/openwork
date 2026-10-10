@@ -3,9 +3,10 @@ import { useTheme } from "../../context/theme"
 import { DialogPrompt } from "../../ui/dialog-prompt"
 import { useDialog } from "../../ui/dialog"
 import { useWork } from "../context"
-import { Empty, Hints, PageHeader, Pill } from "../components"
+import { Empty, Hints, PageHeader, Button } from "../components"
 import { ago } from "../format"
 import { step, useFollowSelection, usePageKeys, usePressed } from "../keys"
+import { Action, HoverRow } from "../hover"
 
 export function MemoryPage() {
   const work = useWork()
@@ -40,17 +41,17 @@ export function MemoryPage() {
       <PageHeader
         title="Memory"
         subtitle="What OpenWork remembers about you. Every chat and agent sees these facts; agents can save new ones."
-        right={<Pill label="+ Remember" active onClick={() => void add()} />}
+        right={<Button label="+ Remember" active onClick={() => void add()} />}
       />
       <scrollbox ref={follow} flexGrow={1} minHeight={0} verticalScrollbarOptions={{ visible: false }}>
         <For each={memories()}>
           {(memory, index) => (
-            <box
+            <HoverRow
               id={`memory-${index()}`}
               flexDirection="row"
               paddingBottom={1}
-              backgroundColor={index() === selected() ? theme.backgroundElement : undefined}
-              onMouseUp={() => pressed() && setSelected(index())}
+              selected={index() === selected()}
+              onClick={() => pressed() && setSelected(index())}
             >
               <text fg={theme.primary} flexShrink={0}>
                 {"◍ "}
@@ -62,19 +63,17 @@ export function MemoryPage() {
                 {`${memory.source ? `${memory.source} · ` : ""}${ago(memory.time.created, work.now())}`}
               </text>
               <Show when={index() === selected()}>
-                <text
+                <Action
+                  label="  ✕ forget"
+                  pad={false}
+                  stop
                   fg={theme.error}
-                  flexShrink={0}
-                  selectable={false}
-                  onMouseUp={(event: { stopPropagation(): void }) => {
-                    event.stopPropagation()
-                    void work.memory.remove(memory.id)
-                  }}
-                >
-                  {"  ✕ forget"}
-                </text>
+                  hoverFg={theme.error}
+                  base={theme.backgroundElement}
+                  onClick={() => void work.memory.remove(memory.id)}
+                />
               </Show>
-            </box>
+            </HoverRow>
           )}
         </For>
         <Show when={memories().length === 0}>
