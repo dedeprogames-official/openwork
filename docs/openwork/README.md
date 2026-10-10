@@ -35,6 +35,8 @@ npx https://github.com/dedeprogames-official/openwork/releases/latest/download/o
 
 The installers put `openwork` in `~/.openwork/bin` (`%USERPROFILE%\.openwork\bin` on Windows) and add it to your PATH. The
 npm package is a small launcher that downloads the binary for your platform from the same release on first use.
+`openwork upgrade` updates either kind of install: the install script's binary is replaced in place, and an npm
+install gets the newer launcher through `npm install -g` (its binary downloads right away, so the next start is instant).
 OpenWork keeps its data in `~/.local/share/openwork` and its global config in `~/.config/openwork`, apart from any
 opencode install, and `openwork upgrade` only ever installs OpenWork releases. When a newer release is out, Settings
 (`ctrl+x o` or ⚙) shows it at the top of General with an **Update** button: OpenWork closes and runs

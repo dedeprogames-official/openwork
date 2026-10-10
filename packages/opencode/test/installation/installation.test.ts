@@ -91,6 +91,20 @@ describe("installation", () => {
         }),
     )
 
+    // The launcher is an OpenWork package from GitHub, so its newest version is the newest release, not opencode-ai.
+    const launcherCalls: string[] = []
+    testEffect(
+      testLayer((request) => {
+        launcherCalls.push(request.url)
+        return jsonResponse({ tag_name: "v0.3.0" })
+      }),
+    ).effect("reads the launcher's version from OpenWork's GitHub releases", () =>
+      Effect.gen(function* () {
+        expect(yield* Installation.use.latest("launcher")).toBe("0.3.0")
+        expect(launcherCalls).toEqual(["https://api.github.com/repos/dedeprogames-official/openwork/releases/latest"])
+      }),
+    )
+
     const npmCalls: string[] = []
     testEffect(
       testLayer((request) => {
@@ -187,6 +201,23 @@ describe("installation", () => {
   })
 
   describe("method", () => {
+    // Where the binary runs tells how it was installed, on Windows paths as well as POSIX ones.
+    testEffect(testLayer(() => jsonResponse({}))).effect("tells the install script from the npm launcher", () =>
+      Effect.gen(function* () {
+        const launcher = "C:\\Users\\andre\\.openwork\\npm\\0.1.0\\windows-x64\\openwork.exe"
+        expect(Installation.methodOf(launcher)).toBe("launcher")
+        expect(Installation.methodOf("/home/me/.openwork/npm/0.2.0/linux-x64/openwork")).toBe("launcher")
+        expect(Installation.methodOf("C:\\Users\\andre\\.openwork\\bin\\openwork.exe")).toBe("curl")
+        expect(Installation.methodOf("/home/me/.openwork/bin/openwork")).toBe("curl")
+        expect(Installation.methodOf("C:\\Users\\andre\\.OpenWork\\NPM\\0.1.0\\windows-x64\\openwork.exe")).toBe(
+          "launcher",
+        )
+        // A development run through bun, or another program with a similar name, is neither.
+        expect(Installation.methodOf("/home/me/.bun/bin/bun")).toBe("unknown")
+        expect(Installation.methodOf("/home/me/.openwork-old/npm-cache/openwork")).toBe("unknown")
+      }),
+    )
+
     // An opencode install from a package manager must never make OpenWork upgrade itself into opencode.
     testEffect(
       testLayer(
@@ -214,6 +245,52 @@ describe("installation", () => {
       Effect.gen(function* () {
         yield* Installation.use.upgrade("curl", "9.9.9")
         expect(scriptCalls).toEqual([`${Installation.RELEASES}/latest/download/install`])
+      }),
+    )
+
+    // `openwork upgrade` on an npm launcher install replaces the launcher with the one of the new release.
+    const launcherRuns: string[] = []
+    testEffect(
+      testLayer(
+        () => jsonResponse({}),
+        (cmd, args) => {
+          launcherRuns.push([cmd, ...args].join(" "))
+          return "ok"
+        },
+      ),
+    ).effect("installs the new release's launcher with npm", () =>
+      Effect.gen(function* () {
+        yield* Installation.use.upgrade("launcher", "9.9.9")
+        expect(launcherRuns[0]).toBe(
+          "npm install -g https://github.com/dedeprogames-official/openwork/releases/download/v9.9.9/openwork-cli.tgz",
+        )
+        // It then starts the new launcher once, which downloads the new binary before the next start needs it.
+        expect(launcherRuns[1]).toBe("openwork --version")
+      }),
+    )
+
+    const failedRuns: string[] = []
+    testEffect(
+      testLayer(
+        () => jsonResponse({}),
+        (cmd, args) => {
+          failedRuns.push([cmd, ...args].join(" "))
+          if (cmd === "npm") return { code: 1, stderr: "token=secret command output" }
+          return ""
+        },
+      ),
+    ).effect("tells how to install the launcher by hand when npm fails", () =>
+      Effect.gen(function* () {
+        const error = yield* Effect.flip(Installation.use.upgrade("launcher", "9.9.9"))
+        expect(error).toBeInstanceOf(Installation.UpgradeFailedError)
+        expect(error.stderr).toBe(
+          "Upgrade failed (exit code 1). Install it yourself with: npm install -g https://github.com/dedeprogames-official/openwork/releases/download/v9.9.9/openwork-cli.tgz",
+        )
+        expect(error.stderr).not.toContain("secret")
+        // A failed install never starts the old launcher again.
+        expect(failedRuns).toEqual([
+          "npm install -g https://github.com/dedeprogames-official/openwork/releases/download/v9.9.9/openwork-cli.tgz",
+        ])
       }),
     )
 
