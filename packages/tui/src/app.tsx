@@ -461,14 +461,22 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
 
     renderer.clearSelection()
   }
-  const [terminalTitleEnabled, setTerminalTitleEnabled] = createSignal(kv.get("terminal_title_enabled", true))
-  const [pasteSummaryEnabled, setPasteSummaryEnabled] = createSignal(
-    kv.get("paste_summary_enabled", !sync.data.config.experimental?.disable_paste_summary),
-  )
+  // Read straight from KV so the settings dialog and the command palette stay in step.
+  const terminalTitleEnabled = () => kv.get("terminal_title_enabled", true) === true
+  const pasteSummaryEnabled = () =>
+    kv.get("paste_summary_enabled", !sync.data.config.experimental?.disable_paste_summary) === true
 
   // Update terminal window title based on current route and session
+  // Only clear a title this app set: with titles off from the start, the terminal keeps its own.
+  let titled = false
   createEffect(() => {
-    if (!terminalTitleEnabled() || Flag.OPENCODE_DISABLE_TERMINAL_TITLE) return
+    if (Flag.OPENCODE_DISABLE_TERMINAL_TITLE) return
+    if (!terminalTitleEnabled()) {
+      if (titled) renderer.setTerminalTitle("")
+      titled = false
+      return
+    }
+    titled = true
 
     if (route.data.type === "home") {
       renderer.setTerminalTitle("OpenWork")
@@ -903,12 +911,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         title: terminalTitleEnabled() ? "Disable terminal title" : "Enable terminal title",
         category: "System",
         run: () => {
-          setTerminalTitleEnabled((prev) => {
-            const next = !prev
-            kv.set("terminal_title_enabled", next)
-            if (!next) renderer.setTerminalTitle("")
-            return next
-          })
+          kv.set("terminal_title_enabled", !terminalTitleEnabled())
           dialog.clear()
         },
       },
@@ -945,11 +948,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         title: pasteSummaryEnabled() ? "Disable paste summary" : "Enable paste summary",
         category: "System",
         run: () => {
-          setPasteSummaryEnabled((prev) => {
-            const next = !prev
-            kv.set("paste_summary_enabled", next)
-            return next
-          })
+          kv.set("paste_summary_enabled", !pasteSummaryEnabled())
           dialog.clear()
         },
       },

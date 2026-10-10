@@ -1,6 +1,7 @@
 import path from "path"
 import type { WorkAccess, WorkDeployment } from "@opencode-ai/sdk/v2"
 import { WorkSchedule } from "@opencode-ai/core/work/schedule"
+import { useKV } from "../context/kv"
 import { useLocal } from "../context/local"
 import { useRoute } from "../context/route"
 import { useSDK } from "../context/sdk"
@@ -26,6 +27,7 @@ export function useDeploy() {
   const sdk = useSDK()
   const paths = useTuiPaths()
   const toast = useToast()
+  const kv = useKV()
 
   return async (initial?: string) => {
     const text = initial?.trim()
@@ -75,11 +77,17 @@ export function useDeploy() {
     ])
     if (when === undefined) return
 
-    const access = await choose<WorkAccess>(dialog, "What may it do?", [
-      { title: ACCESS.read, value: "read", description: "read files, browse the web, post to your inbox" },
-      { title: ACCESS.write, value: "write", description: "also create and edit files in its folder" },
-      { title: ACCESS.full, value: "full", description: "every tool you allow, including shell commands" },
-    ])
+    // The default from Settings comes first, so Enter keeps it.
+    const preferred = kv.get("work_default_access", "read")
+    const access = await choose<WorkAccess>(
+      dialog,
+      "What may it do?",
+      [
+        { title: ACCESS.read, value: "read" as const, description: "read files, browse the web, post to your inbox" },
+        { title: ACCESS.write, value: "write" as const, description: "also create and edit files in its folder" },
+        { title: ACCESS.full, value: "full" as const, description: "every tool you allow, including shell commands" },
+      ].toSorted((a, b) => Number(b.value === preferred) - Number(a.value === preferred)),
+    )
     if (access === undefined) return
     dialog.clear()
 
@@ -90,7 +98,7 @@ export function useDeploy() {
       directory,
       schedule: when,
       access,
-      runNow: true,
+      runNow: kv.get("work_run_on_deploy", true) === true,
       ...(spaceID ? { spaceID } : {}),
       ...(model ? { model: { providerID: model.providerID, modelID: model.modelID } } : {}),
     })

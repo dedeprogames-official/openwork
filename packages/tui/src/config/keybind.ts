@@ -85,6 +85,7 @@ export const Definitions = {
   work_deploy: keybind("<leader>d", "Deploy an agent"),
   work_nav_toggle: keybind("<leader>w", "Toggle OpenWork navigation"),
   work_pause: keybind("none", "Pause or resume agents"),
+  work_settings: keybind("<leader>o", "Open settings"),
 
   editor_open: keybind("<leader>e", "Open external editor"),
   theme_list: keybind("<leader>t", "List available themes"),
@@ -305,6 +306,7 @@ export const CommandMap = {
   work_deploy: "work.deploy",
   work_nav_toggle: "work.nav.toggle",
   work_pause: "work.pause",
+  work_settings: "work.settings",
   editor_open: "prompt.editor",
   theme_list: "theme.switch",
   theme_switch_mode: "theme.switch_mode",

@@ -152,7 +152,7 @@ export function AgentsPage() {
                 height={6}
                 fraction={stats().perDay > 0 ? stats().today / stats().perDay : 0}
                 color={theme.primary}
-                track={theme.backgroundElement}
+                track={tint(theme.background, theme.text, 0.14)}
                 background={theme.background}
               />
               <text fg={theme.text} attributes={TextAttributes.BOLD}>
@@ -185,7 +185,7 @@ export function AgentsPage() {
                 <Donut
                   width={14}
                   slices={slices().map((item) => ({ value: item.value, color: spaceColor(theme, item.color) }))}
-                  track={theme.backgroundElement}
+                  track={tint(theme.background, theme.text, 0.14)}
                   background={theme.background}
                 />
                 <text fg={theme.text} wrapMode="none">
@@ -368,6 +368,8 @@ function CalendarRow(props: {
   const failed = () => props.entry.run?.status === "error"
   const background = () =>
     props.selected ? tint(theme.background, color(), 0.5) : tint(theme.background, color(), upcoming() ? 0.1 : 0.28)
+  // Secondary text is mixed from the row's own background, so it stays readable over any space color and theme.
+  const soft = () => tint(background(), theme.text, 0.6)
   const right = () => {
     if (running()) return "running"
     if (upcoming()) return "scheduled"
@@ -394,9 +396,9 @@ function CalendarRow(props: {
       >
         <text flexGrow={1} wrapMode="none" fg={upcoming() ? theme.textMuted : theme.text}>
           {title()}
-          <span style={{ fg: theme.textMuted }}>{spaceName() ? `  ${spaceName()}` : ""}</span>
+          <span style={{ fg: soft() }}>{spaceName() ? `  ${spaceName()}` : ""}</span>
         </text>
-        <text fg={running() ? theme.error : failed() ? theme.error : theme.textMuted} flexShrink={0}>
+        <text fg={running() ? theme.error : failed() ? theme.error : soft()} flexShrink={0}>
           {right()}
         </text>
       </box>

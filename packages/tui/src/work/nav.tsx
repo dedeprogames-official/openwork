@@ -3,8 +3,8 @@ import { createMemo, createSignal, For, Show } from "solid-js"
 import { useRoute, type WorkPage } from "../context/route"
 import { useSync } from "../context/sync"
 import { useTheme } from "../context/theme"
-import { COMMAND_PALETTE_COMMAND, useOpencodeKeymap } from "../keymap"
 import { useWork } from "./context"
+import { useSettings } from "./dialog-settings"
 import { isWorkRun } from "./session"
 import { tokens, truncate } from "./format"
 import { usage } from "./stats"
@@ -26,7 +26,7 @@ export function WorkNav(props: { collapsed: boolean; onToggle: () => void }) {
   const route = useRoute()
   const sync = useSync()
   const work = useWork()
-  const keymap = useOpencodeKeymap()
+  const openSettings = useSettings()
   // The row under the mouse pointer, highlighted so clickable rows are discoverable.
   const [hover, setHover] = createSignal<string>()
   const current = createMemo(() => {
@@ -159,7 +159,7 @@ export function WorkNav(props: { collapsed: boolean; onToggle: () => void }) {
         </box>
       </Show>
       <box flexDirection="row" flexShrink={0} gap={2} paddingTop={1}>
-        <text fg={theme.textMuted} selectable={false} onMouseUp={() => keymap.dispatchCommand(COMMAND_PALETTE_COMMAND)}>
+        <text fg={theme.textMuted} selectable={false} onMouseUp={() => openSettings()}>
           ⚙
         </text>
         <Show when={!props.collapsed}>

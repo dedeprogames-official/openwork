@@ -193,7 +193,8 @@ const layer = Layer.effect(
               user,
             ),
             prompt: PROMPT_WORK,
-            color: "#b49cff",
+            // A theme token, so the agent name stays readable in light and dark themes.
+            color: "primary",
             mode: "primary",
             native: true,
           },
