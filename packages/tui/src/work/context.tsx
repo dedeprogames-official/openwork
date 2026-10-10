@@ -1,9 +1,11 @@
 import type {
   WorkAgendaCreate,
+  WorkDefaultsPatch,
   WorkDeploymentCreate,
   WorkDeploymentPatch,
   WorkSpaceCreate,
   WorkState,
+  WorkVersion,
 } from "@opencode-ai/sdk/v2"
 import { createSignal, onCleanup } from "solid-js"
 import { createStore, reconcile } from "solid-js/store"
@@ -15,6 +17,7 @@ import { useToast } from "../ui/toast"
 const empty: WorkState = {
   now: 0,
   paused: false,
+  defaults: { access: "read", runOnDeploy: true },
   spaces: [],
   deployments: [],
   latest: [],
@@ -24,6 +27,7 @@ const empty: WorkState = {
   todos: [],
   agenda: [],
   memories: [],
+  permissions: [],
   usage: { today: { tokens: 0, cost: 0 }, hour: { tokens: 0, cost: 0 }, providers: [], runsToday: 0, runsRemaining: 0 },
 }
 
@@ -36,7 +40,9 @@ export const { use: useWork, provider: WorkProvider } = createSimpleContext({
     const toast = useToast()
     const [store, setStore] = createStore({ state: empty, loaded: false })
     const [now, setNow] = createSignal(Date.now())
+    const [version, setVersion] = createSignal<WorkVersion>()
     const timer = { refresh: undefined as ReturnType<typeof setTimeout> | undefined }
+    const update = { checked: false }
 
     const refresh = () =>
       sdk.client.work
@@ -91,9 +97,22 @@ export const { use: useWork, provider: WorkProvider } = createSimpleContext({
       },
       now,
       refresh,
+      /** Installed and newest version, once `checkVersion` has asked GitHub. */
+      version,
+      checkVersion: () => {
+        if (update.checked) return
+        update.checked = true
+        void sdk.client.work
+          .version()
+          .then((result) => {
+            if (result.data) setVersion(result.data)
+          })
+          .catch(() => undefined)
+      },
       pause: (paused: boolean) =>
         act(sdk.client.work.pause({ workPauseInput: { paused } }), paused ? "Agents paused" : "Agents resumed"),
       demo: (directory: string) => act(sdk.client.work.demo({ workDemoInput: { directory } })),
+      defaults: (patch: WorkDefaultsPatch) => act(sdk.client.work.defaults({ workDefaultsPatch: patch })),
       deploy: (input: WorkDeploymentCreate) => act(sdk.client.work.deployment.create({ workDeploymentCreate: input })),
       update: (deploymentID: string, patch: WorkDeploymentPatch) =>
         act(sdk.client.work.deployment.update({ deploymentID, workDeploymentPatch: patch })),
@@ -134,6 +153,10 @@ export const { use: useWork, provider: WorkProvider } = createSimpleContext({
         save: (content: string) =>
           act(sdk.client.work.memory.create({ workMemoryCreate: { content, source: "you" } }), "Remembered"),
         remove: (memoryID: string) => act(sdk.client.work.memory.remove({ memoryID })),
+      },
+      permission: {
+        remove: (permissionID: string) =>
+          act(sdk.client.work.permission.remove({ permissionID }), "OpenWork will ask again next time"),
       },
     }
   },

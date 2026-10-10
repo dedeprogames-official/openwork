@@ -4,7 +4,7 @@ import { createTestRenderer } from "@opentui/core/testing"
 import { Effect } from "effect"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { Global } from "@opencode-ai/core/global"
-import { createTuiResolvedConfig } from "./fixture/tui-runtime"
+import { createTuiResolvedConfig, resetTuiState } from "./fixture/tui-runtime"
 import { createEventSource, createFetch, directory, json } from "./fixture/tui-sdk"
 
 test("SIGHUP clears title and disposes scoped resources once", async () => {
@@ -27,6 +27,7 @@ test("SIGHUP clears title and disposes scoped resources once", async () => {
   let disposes = 0
 
   try {
+    await resetTuiState()
     const { run } = await import("../src/app")
     const task = Effect.runPromise(
       run({
@@ -93,6 +94,7 @@ test("app.exit prints the session epilogue after scoped cleanup", async () => {
   }) as typeof process.stdout.write
 
   try {
+    await resetTuiState()
     const { run } = await import("../src/app")
     const task = Effect.runPromise(
       run({
@@ -157,6 +159,7 @@ test("fatal startup errors set a nonzero exit after scoped cleanup", async () =>
   }) as typeof process.stderr.write
 
   try {
+    await resetTuiState()
     const { run } = await import("../src/app")
     const task = Effect.runPromise(
       run({

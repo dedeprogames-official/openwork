@@ -9,7 +9,7 @@ import {
   type Renderable,
 } from "@opentui/core"
 import type { CommandContext } from "@opentui/keymap"
-import { createEffect, createMemo, onMount, createSignal, onCleanup, on, Show, Switch, Match } from "solid-js"
+import { createEffect, createMemo, createSignal, onCleanup, onMount, on, Show, Switch, Match, untrack } from "solid-js"
 import { registerOpencodeSpinner } from "../register-spinner"
 import path from "path"
 import { fileURLToPath } from "url"
@@ -22,7 +22,7 @@ import { abbreviateHome } from "../../runtime"
 import { useClipboard } from "../../context/clipboard"
 import { Spinner } from "../spinner"
 import { useSDK } from "../../context/sdk"
-import { useRoute } from "../../context/route"
+import { useRoute, type Route } from "../../context/route"
 import { useProject } from "../../context/project"
 import { useSync } from "../../context/sync"
 import { useEvent } from "../../context/event"
@@ -35,6 +35,7 @@ import { usePromptHistory, type PromptInfo } from "../../prompt/history"
 import { computePromptTraits } from "../../prompt/traits"
 import { expandPastedTextPlaceholders, expandTrackedPastedText } from "../../prompt/part"
 import { usePromptStash } from "../../prompt/stash"
+import { usePromptDrafts } from "../../prompt/draft"
 import { DialogStash } from "../dialog-stash"
 import { type AutocompleteRef, Autocomplete } from "./autocomplete"
 import { useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
@@ -140,8 +141,6 @@ function formatEditorContext(selection: EditorSelection) {
 
   return `<system-reminder>${ranges.join("\n")} This may or may not be relevant to the current task.</system-reminder>\n`
 }
-
-let stashed: { prompt: PromptInfo; cursor: number } | undefined
 
 export function Prompt(props: PromptProps) {
   let input: TextareaRenderable
@@ -615,22 +614,43 @@ export function Prompt(props: PromptProps) {
     },
   }
 
-  onMount(() => {
-    const saved = stashed
-    stashed = undefined
-    if (store.prompt.input) return
-    if (saved && saved.prompt.input) {
-      input.setText(saved.prompt.input)
-      setStore("prompt", saved.prompt)
-      restoreExtmarksFromParts(saved.prompt.parts)
-      input.cursorOffset = saved.cursor
-    }
+  // Unsent text is kept per chat (or per page without a chat) and survives restarts.
+  const drafts = usePromptDrafts()
+  const draftKey = createMemo(() => props.sessionID ?? draftScope(route.data))
+  const restored = { key: undefined as string | undefined }
+
+  createEffect(() => {
+    const key = draftKey()
+    if (!drafts.ready || restored.key === key || !input || input.isDestroyed) return
+    untrack(() => {
+      const moved = restored.key !== undefined
+      restored.key = key
+      const saved = drafts.get(key)
+      if (saved?.prompt.input && (moved || !store.prompt.input)) {
+        input.setText(saved.prompt.input)
+        setStore("prompt", structuredClone(unwrap(saved.prompt)))
+        restoreExtmarksFromParts(saved.prompt.parts)
+        input.cursorOffset = saved.cursor
+        return
+      }
+      // A prompt reused for another chat starts empty instead of carrying the last chat's text.
+      if (moved) ref.reset()
+    })
   })
 
+  createEffect(
+    on(
+      () => [draftKey(), store.prompt.input, store.prompt.parts.length] as const,
+      ([key, text]) => {
+        if (restored.key !== key) return
+        if (!text) return drafts.remove(key)
+        drafts.set(key, { prompt: structuredClone(unwrap(store.prompt)), cursor: input.cursorOffset })
+      },
+      { defer: true },
+    ),
+  )
+
   onCleanup(() => {
-    if (store.prompt.input) {
-      stashed = { prompt: unwrap(store.prompt), cursor: input.cursorOffset }
-    }
     setInputTarget(undefined)
     props.ref?.(undefined)
   })
@@ -1733,4 +1753,11 @@ export function Prompt(props: PromptProps) {
       />
     </>
   )
+}
+
+/** Prompts outside a chat keep one draft per page, e.g. the agent page's "Ask about this agent's work". */
+function draftScope(route: Route) {
+  if (route.type === "work") return route.id ? `work:${route.page}:${route.id}` : `work:${route.page}`
+  if (route.type === "plugin") return `plugin:${route.id}`
+  return route.type
 }

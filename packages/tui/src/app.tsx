@@ -1,4 +1,5 @@
 import { render, TimeToFirstDraw, useRenderer, useTerminalDimensions } from "@opentui/solid"
+import path from "path"
 import { registerOpencodeSpinner } from "./component/register-spinner"
 import { createDefaultOpenTuiKeymap } from "@opentui/keymap/opentui"
 import { Deferred, Effect } from "effect"
@@ -6,7 +7,7 @@ import { Global } from "@opencode-ai/core/global"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { ClipboardProvider, useClipboard } from "./context/clipboard"
-import { ExitProvider, useExit } from "./context/exit"
+import { CloseAndUpgradeProvider, ExitProvider, useExit } from "./context/exit"
 import { EpilogueProvider } from "./context/epilogue"
 import * as Selection from "./util/selection"
 import { createCliRenderer, MouseButton } from "@opentui/core"
@@ -55,7 +56,7 @@ import { Home } from "./routes/home"
 import { Session } from "./routes/session"
 import { PromptHistoryProvider } from "./component/prompt/history"
 import { FrecencyProvider } from "./component/prompt/frecency"
-import { PromptStashProvider } from "./component/prompt/stash"
+import { PromptStorageProvider } from "./prompt/draft"
 import { DialogAlert } from "./ui/dialog-alert"
 import { DialogConfirm } from "./ui/dialog-confirm"
 import { ToastProvider, useToast } from "./ui/toast"
@@ -92,6 +93,7 @@ import { WorkPage } from "./work/page"
 import { NAV_WIDTH, RAIL_WIDTH, ShellInset } from "./work/shell"
 import { useNavCollapsed, useWorkCommands } from "./work/commands"
 import { isWorkRun } from "./work/session"
+import { useReopenLastPage } from "./work/reopen"
 
 registerOpencodeSpinner()
 
@@ -191,7 +193,7 @@ function isVersionGreater(left: string, right: string) {
 
 export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
   const global = yield* Global.Service
-  const exit = { epilogue: undefined as string | undefined, reason: undefined as unknown }
+  const exit = { epilogue: undefined as string | undefined, reason: undefined as unknown, upgrade: false }
   const result = yield* Effect.scoped(
     Effect.gen(function* () {
       const renderer = yield* Effect.acquireRelease(
@@ -316,7 +318,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                                                 <DataProvider>
                                                   <ThemeProvider mode={mode}>
                                                     <LocalProvider>
-                                                      <PromptStashProvider>
+                                                      <PromptStorageProvider>
                                                         <DialogProvider>
                                                           <FrecencyProvider>
                                                             <PromptHistoryProvider>
@@ -324,10 +326,18 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                                                                 <EditorContextProvider>
                                                                   <LocationProvider>
                                                                     <WorkProvider>
-                                                                      <App
-                                                                        onSnapshot={input.onSnapshot}
-                                                                        pluginHost={input.pluginHost}
-                                                                      />
+                                                                      <CloseAndUpgradeProvider
+                                                                        run={() => {
+                                                                          if (renderer.isDestroyed) return
+                                                                          exit.upgrade = true
+                                                                          destroyRenderer(renderer)
+                                                                        }}
+                                                                      >
+                                                                        <App
+                                                                          onSnapshot={input.onSnapshot}
+                                                                          pluginHost={input.pluginHost}
+                                                                        />
+                                                                      </CloseAndUpgradeProvider>
                                                                     </WorkProvider>
                                                                   </LocationProvider>
                                                                 </EditorContextProvider>
@@ -335,7 +345,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                                                             </PromptHistoryProvider>
                                                           </FrecencyProvider>
                                                         </DialogProvider>
-                                                      </PromptStashProvider>
+                                                      </PromptStorageProvider>
                                                     </LocalProvider>
                                                   </ThemeProvider>
                                                 </DataProvider>
@@ -361,7 +371,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
         }, renderer)
       })
       yield* Deferred.await(shutdown)
-      return { epilogue: exit.epilogue, reason: exit.reason }
+      return { epilogue: exit.epilogue, reason: exit.reason, upgrade: exit.upgrade }
     }),
   )
   yield* Effect.sync(() => {
@@ -372,7 +382,19 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
     }
     if (result.epilogue) process.stdout.write(result.epilogue + "\n")
   })
+  if (result.upgrade) yield* Effect.promise(upgradeAfterExit)
 })
+
+/** Runs `openwork upgrade` where OpenWork just closed, so its progress and any questions stay visible. */
+async function upgradeAfterExit() {
+  // A development run (bun src/index.ts) has no openwork binary to upgrade, and `bun upgrade` would update Bun.
+  if (path.basename(process.execPath).toLowerCase().startsWith("bun")) {
+    process.stdout.write("This is a development build; update it from source instead of with openwork upgrade.\n")
+    return
+  }
+  const child = Bun.spawn([process.execPath, "upgrade"], { stdin: "inherit", stdout: "inherit", stderr: "inherit" })
+  process.exitCode = await child.exited
+}
 
 function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPluginHost }) {
   const startup = useTuiStartup()
@@ -418,6 +440,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
   )
   const [ready, setReady] = createSignal(false)
   useWorkCommands()
+  useReopenLastPage()
   const [navCollapsed, setNavCollapsed] = useNavCollapsed()
   // Plugin routes such as the diff viewer stay full screen.
   const navVisible = () => route.data.type !== "plugin"

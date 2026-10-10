@@ -1,11 +1,13 @@
 import type { TuiPlugin, TuiPluginApi } from "@opencode-ai/plugin/tui"
 import type { BuiltinTuiPlugin } from "../builtins"
-import { createMemo, For, Match, Show, Switch, createSignal } from "solid-js"
+import { createMemo, For, Match, Show, Switch } from "solid-js"
 
 const id = "internal:sidebar-mcp"
 
 function View(props: { api: TuiPluginApi }) {
-  const [open, setOpen] = createSignal(true)
+  // Collapsed or expanded stays as you left it, also after a restart.
+  const open = () => Boolean(props.api.kv.get("sidebar_mcp_open", true))
+  const setOpen = (toggle: (open: boolean) => boolean) => props.api.kv.set("sidebar_mcp_open", toggle(open()))
   const theme = () => props.api.theme.current
   const list = createMemo(() => props.api.state.mcp())
   const on = createMemo(() => list().filter((item) => item.status === "connected").length)

@@ -13,6 +13,7 @@ import { useTheme } from "./theme"
 import { useToast } from "../ui/toast"
 import { useRoute } from "./route"
 import { usePermission } from "./permission"
+import { useKV } from "./kv"
 
 export type LocalTheme = {
   secondary: RGBA
@@ -60,6 +61,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
     const args = useArgs()
     const event = useEvent()
     const permission = usePermission()
+    const kv = useKV()
 
     function isModelValid(model: { providerID: string; modelID: string }) {
       const provider = sync.data.provider.find((item) => item.id === model.providerID)
@@ -94,14 +96,16 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           return agents()
         },
         current() {
-          // OpenWork starts in the work agent unless the user configured a default agent.
+          // The agent picked last time comes back; otherwise OpenWork starts in the work agent unless the user
+          // configured a default agent.
           return (
-            agents().find((x) => x.name === agentStore.current) ??
+            agents().find((x) => x.name === (agentStore.current ?? kv.get("chat_agent"))) ??
             (sync.data.config.default_agent ? undefined : agents().find((x) => x.name === "work")) ??
             agents().at(0)
           )
         },
-        set(name: string) {
+        /** `remember` keeps an explicit choice for the next start; switches made for the user are not kept. */
+        set(name: string, options?: { remember?: boolean }) {
           if (!agents().some((x) => x.name === name))
             return toast.show({
               variant: "warning",
@@ -109,6 +113,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
               duration: 3000,
             })
           setAgentStore("current", name)
+          if (options?.remember) kv.set("chat_agent", name)
         },
         move(direction: 1 | -1) {
           batch(() => {
@@ -119,6 +124,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
             if (next >= agents().length) next = 0
             const value = agents()[next]
             setAgentStore("current", value.name)
+            kv.set("chat_agent", value.name)
           })
         },
         color(name: string) {
@@ -178,6 +184,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         }
         state.pending = false
         void writeJsonAtomic(filePath, {
+          model: modelStore.model,
           recent: modelStore.recent,
           favorite: modelStore.favorite,
           variant: modelStore.variant,
@@ -188,6 +195,9 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         .then((x) => {
           if (!x || typeof x !== "object") return
           const value = x as Record<string, unknown>
+          // The model chosen for each agent, so every agent keeps its own model after a restart.
+          if (typeof value.model === "object" && value.model !== null && !Array.isArray(value.model))
+            setModelStore("model", value.model as Record<string, { providerID: string; modelID: string }>)
           if (Array.isArray(value.recent)) setModelStore("recent", value.recent)
           if (Array.isArray(value.favorite)) setModelStore("favorite", value.favorite)
           if (typeof value.variant === "object" && value.variant !== null)
@@ -291,6 +301,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           const a = agent.current()
           if (!a) return
           setModelStore("model", a.name, { ...val })
+          save()
         },
         cycleFavorite(direction: 1 | -1) {
           const favorites = modelStore.favorite.filter((item) => isModelValid(item))
@@ -335,10 +346,8 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
             const a = agent.current()
             if (!a) return
             setModelStore("model", a.name, model)
-            if (options?.recent) {
-              setModelStore("recent", recentModels(model, modelStore.recent))
-              save()
-            }
+            if (options?.recent) setModelStore("recent", recentModels(model, modelStore.recent))
+            save()
           })
         },
         toggleFavorite(model: { providerID: string; modelID: string }) {

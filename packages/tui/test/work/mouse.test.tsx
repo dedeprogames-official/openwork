@@ -4,7 +4,7 @@ import { createTestRenderer, type TestRendererSetup } from "@opentui/core/testin
 import { Effect } from "effect"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { Global } from "@opencode-ai/core/global"
-import { createTuiResolvedConfig } from "../fixture/tui-runtime"
+import { createTuiResolvedConfig, resetTuiState } from "../fixture/tui-runtime"
 import { createEventSource, createFetch, directory, json } from "../fixture/tui-sdk"
 
 const now = Date.now()
@@ -45,6 +45,8 @@ const runs = [run(1, now - 12 * minute, "Foggy all afternoon"), run(2, now - 2 *
 const state: WorkState = {
   now,
   paused: false,
+  defaults: { access: "read", runOnDeploy: true },
+  permissions: [],
   spaces: [{ id: "wsp_beach", name: "Beach date", goal: "make tonight easy", color: "blue", time }],
   deployments: [agent],
   latest: [runs[1]],
@@ -105,6 +107,7 @@ test("OpenWork pages respond to the mouse", async () => {
   })
 
   try {
+    await resetTuiState()
     const { run: start } = await import("../../src/app")
     const task = Effect.runPromise(
       start({
