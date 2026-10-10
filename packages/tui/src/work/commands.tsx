@@ -9,6 +9,7 @@ import { useDialog } from "../ui/dialog"
 import { useToast } from "../ui/toast"
 import { useWork } from "./context"
 import { useDeploy } from "./dialog-deploy"
+import { useSettings } from "./dialog-settings"
 import { PAGES } from "./nav"
 
 export const workBindingCommands = [
@@ -16,6 +17,7 @@ export const workBindingCommands = [
   "work.deploy",
   "work.nav.toggle",
   "work.pause",
+  "work.settings",
 ] as const
 
 export function useNavCollapsed() {
@@ -38,6 +40,7 @@ export function useWorkCommands() {
   const tuiConfig = useTuiConfig()
   const data = useData()
   const [collapsed, setCollapsed] = useNavCollapsed()
+  const openSettings = useSettings()
 
   useBindings(() => ({
     commands: [
@@ -72,6 +75,15 @@ export function useWorkCommands() {
           void work.pause(!work.state.paused)
           dialog.clear()
         },
+      },
+      {
+        name: "work.settings",
+        title: "Open settings",
+        category: "OpenWork",
+        namespace: "palette",
+        suggested: true,
+        slashName: "settings",
+        run: () => openSettings(),
       },
       {
         name: "work.nav.toggle",
