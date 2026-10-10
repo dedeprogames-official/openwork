@@ -8,6 +8,7 @@ import { DialogModel } from "../component/dialog-model"
 import { DialogProvider } from "../component/dialog-provider"
 import { DialogStatus } from "../component/dialog-status"
 import { DialogThemeList } from "../component/dialog-theme-list"
+import { useCloseAndUpgrade } from "../context/exit"
 import { useTuiConfig } from "../config"
 import { useKV } from "../context/kv"
 import { useLocal } from "../context/local"
@@ -19,10 +20,11 @@ import { selectedForeground, useTheme } from "../context/theme"
 import { COMMAND_PALETTE_COMMAND, useBindings, useOpencodeKeymap } from "../keymap"
 import { abbreviateHome } from "../runtime"
 import { useDialog } from "../ui/dialog"
+import { DialogConfirm } from "../ui/dialog-confirm"
 import { useWork } from "./context"
 import { ACCESS } from "./format"
 
-export type SettingsSection = "general" | "chat" | "agents" | "models" | "integrations" | "about"
+export type SettingsSection = "general" | "chat" | "agents" | "models" | "integrations" | "permissions" | "about"
 
 type Setting =
   | { kind: "toggle"; label: string; description: string; value: () => boolean; set: (value: boolean) => void }
@@ -34,7 +36,7 @@ type Setting =
       options: ReadonlyArray<{ value: string; label: string }>
       set: (value: string) => void
     }
-  | { kind: "action"; label: string; description: string; value?: () => string; run: () => void }
+  | { kind: "action"; label: string; description: string; value?: () => string; accent?: boolean; run: () => void }
   | { kind: "info"; label: string; description?: string; value: () => string }
 
 type Section = { id: SettingsSection; label: string; icon: string; description: string; settings: Setting[] }
@@ -356,7 +358,9 @@ function Control(props: { setting: Setting; active: boolean }) {
   if (setting.kind === "action")
     return (
       <text wrapMode="none" selectable={false}>
-        <span style={{ fg: color(theme.textMuted) }}>{setting.value ? setting.value() + "  " : ""}</span>
+        <span style={{ fg: color(setting.accent ? theme.success : theme.textMuted), bold: setting.accent }}>
+          {setting.value ? setting.value() + "  " : ""}
+        </span>
         <span style={{ fg: color(theme.text) }}>›</span>
       </text>
     )
@@ -382,6 +386,7 @@ export function useSettings() {
   const paths = useTuiPaths()
   const keymap = useOpencodeKeymap()
   const themes = useTheme()
+  const upgrade = useCloseAndUpgrade()
 
   const flag = (key: string, fallback: boolean): Pick<Extract<Setting, { kind: "toggle" }>, "value" | "set"> => ({
     value: () => kv.get(key, fallback) === true,
@@ -396,8 +401,36 @@ export function useSettings() {
     keymap.dispatchCommand(name)
   }
 
-  const open = (section?: SettingsSection) =>
+  const open = (section?: SettingsSection) => {
+    work.checkVersion()
     dialog.replace(() => <DialogSettings sections={sections} section={section} />)
+  }
+  const update = (latest: string) =>
+    void DialogConfirm.show(
+      dialog,
+      `Update to v${latest}`,
+      "OpenWork closes and runs openwork upgrade in this terminal. Chats, agents and settings are kept, and " +
+        "anything still running picks up again when you open OpenWork.",
+    ).then((confirmed) => {
+      if (confirmed) return upgrade()
+      if (confirmed === false) open("general")
+    })
+  // A newer release shows up first in General, where Settings opens.
+  const updates = (): Setting[] => {
+    const info = work.version()
+    if (!info?.available || !info.latest) return []
+    const latest = info.latest
+    return [
+      {
+        kind: "action",
+        label: `OpenWork v${latest} is available`,
+        description: `You have v${info.current} · closes OpenWork and runs openwork upgrade`,
+        value: () => "Update",
+        accent: true,
+        run: () => update(latest),
+      },
+    ]
+  }
   const sections = (): Section[] => [
     {
       id: "general",
@@ -405,6 +438,7 @@ export function useSettings() {
       icon: "⚙",
       description: "How OpenWork looks and behaves",
       settings: [
+        ...updates(),
         {
           kind: "action",
           label: "Theme",
@@ -530,16 +564,19 @@ export function useSettings() {
         {
           kind: "choice",
           label: "Access for new agents",
-          description: "What a new agent may do in its folder",
-          value: () => kv.get("work_default_access", "read"),
+          description: "What new agents may do, also when a chat deploys one",
+          value: () => work.state.defaults.access,
           options: (["read", "write", "full"] as const).map((value) => ({ value, label: ACCESS[value] })),
-          set: (value) => kv.set("work_default_access", value),
+          set: (value) => {
+            if (value === "read" || value === "write" || value === "full") void work.defaults({ access: value })
+          },
         },
         {
           kind: "toggle",
           label: "Run once after deploying",
           description: "Start a new agent's first run right away",
-          ...flag("work_run_on_deploy", true),
+          value: () => work.state.defaults.runOnDeploy,
+          set: (value) => void work.defaults({ runOnDeploy: value }),
         },
         {
           kind: "toggle",
@@ -627,6 +664,30 @@ export function useSettings() {
       ],
     },
     {
+      id: "permissions",
+      label: "Permissions",
+      icon: "✓",
+      description: 'What you chose to "Allow always", per folder',
+      settings: work.state.permissions.length
+        ? work.state.permissions.map(
+            (item): Setting => ({
+              kind: "action",
+              label: `${item.permission} · ${item.pattern}`,
+              description: `${abbreviateHome(item.directory, paths.home)} · forget it to be asked again`,
+              value: () => "Forget",
+              run: () => void work.permission.remove(item.id),
+            }),
+          )
+        : [
+            {
+              kind: "info",
+              label: "Nothing allowed yet",
+              description: 'Answer "Allow always" when OpenWork asks, and it is remembered here',
+              value: () => "",
+            },
+          ],
+    },
+    {
       id: "about",
       label: "About",
       icon: "ℹ",
@@ -635,7 +696,7 @@ export function useSettings() {
         {
           kind: "info",
           label: "Version",
-          description: "Update with: openwork upgrade",
+          description: versionNote(work.version()),
           value: () => (InstallationVersion === "local" ? "development build" : `v${InstallationVersion}`),
         },
         {
@@ -666,6 +727,13 @@ export function useSettings() {
     },
   ]
   return open
+}
+
+function versionNote(info: { available: boolean; latest?: string } | undefined) {
+  if (InstallationVersion === "local") return "Built from source"
+  if (info?.available && info.latest) return `v${info.latest} is available: Update is at the top of General`
+  if (info?.latest) return "Up to date"
+  return "Update with: openwork upgrade"
 }
 
 function capitalize(text: string) {

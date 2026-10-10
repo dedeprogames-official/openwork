@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "25812649-08dd-4ccc-9cc8-9b7cd40db19d",
+  "id": "e96e493a-92e0-4f52-8cbe-cfd28c5ee171",
   "prevIds": [
-    "f14a9b18-8207-487e-a3d3-227e629ba9ad"
+    "25812649-08dd-4ccc-9cc8-9b7cd40db19d"
   ],
   "ddl": [
     {
@@ -96,6 +96,14 @@
     },
     {
       "name": "work_message",
+      "entityType": "tables"
+    },
+    {
+      "name": "work_permission",
+      "entityType": "tables"
+    },
+    {
+      "name": "work_resume",
       "entityType": "tables"
     },
     {
@@ -1942,6 +1950,106 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "work_permission"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "directory",
+      "entityType": "columns",
+      "table": "work_permission"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "permission",
+      "entityType": "columns",
+      "table": "work_permission"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "pattern",
+      "entityType": "columns",
+      "table": "work_permission"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "work_permission"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "work_permission"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "session_id",
+      "entityType": "columns",
+      "table": "work_resume"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "owner_pid",
+      "entityType": "columns",
+      "table": "work_resume"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "work_resume"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "work_resume"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "work_run"
     },
     {
@@ -2789,6 +2897,24 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "work_permission_pk",
+      "table": "work_permission",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "session_id"
+      ],
+      "nameExplicit": false,
+      "name": "work_resume_pk",
+      "table": "work_resume",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "work_run_pk",
       "table": "work_run",
       "entityType": "pks"
@@ -3161,6 +3287,28 @@
       "name": "work_deployment_due_idx",
       "entityType": "indexes",
       "table": "work_deployment"
+    },
+    {
+      "columns": [
+        {
+          "value": "directory",
+          "isExpression": false
+        },
+        {
+          "value": "permission",
+          "isExpression": false
+        },
+        {
+          "value": "pattern",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "work_permission_rule_idx",
+      "entityType": "indexes",
+      "table": "work_permission"
     },
     {
       "columns": [

@@ -3,6 +3,8 @@ import path from "path"
 import { Effect, Layer } from "effect"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { FSUtil } from "@opencode-ai/core/fs-util"
+import { ModelV2 } from "@opencode-ai/core/model"
+import { ProviderV2 } from "@opencode-ai/core/provider"
 import { Work } from "@opencode-ai/core/work"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -11,6 +13,7 @@ import { MCP } from "../../src/mcp"
 import { InstanceStore } from "../../src/project/instance-store"
 import { InstanceBootstrap } from "../../src/project/bootstrap-service"
 import { Session } from "@/session/session"
+import { SessionPrompt } from "@/session/prompt"
 import { SessionSummary } from "../../src/session/summary"
 import { SessionID } from "../../src/session/schema"
 import { WorkScheduler } from "../../src/work/scheduler"
@@ -84,6 +87,7 @@ const it = testEffect(
       WorkScheduler.node,
       Work.node,
       Session.node,
+      SessionPrompt.node,
       SessionProjector.node,
       InstanceStore.node,
       FSUtil.node,
@@ -169,6 +173,95 @@ it.instance(
       expect(body).toContain("Run #1 of your deployed task")
       expect(body).toContain("<openwork_agent>")
       expect(body).not.toContain("You are opencode, an interactive CLI tool")
+    }),
+  30_000,
+)
+
+it.instance(
+  "answers a chat that was still waiting when OpenWork closed, but not a run",
+  () =>
+    Effect.gen(function* () {
+      const instance = yield* TestInstance
+      const llm = yield* TestLLMServer
+      const fs = yield* FSUtil.Service
+      yield* fs.writeWithDirs(path.join(instance.directory, "opencode.json"), JSON.stringify(config(llm.url)))
+      const work = yield* Work.Service
+      const scheduler = yield* WorkScheduler.Service
+      const sessions = yield* Session.Service
+      const prompts = yield* SessionPrompt.Service
+      const model = { providerID: ProviderV2.ID.make("test"), modelID: ModelV2.ID.make("test-model") }
+
+      // A question sent while the previous answer was still streaming, left unanswered by the shutdown.
+      const chat = yield* sessions.create({ title: "Plan my day" })
+      yield* prompts.prompt({
+        sessionID: chat.id,
+        agent: "work",
+        model,
+        noReply: true,
+        parts: [{ type: "text", text: "And what about tomorrow?" }],
+      })
+      const run = yield* sessions.create({
+        title: "Beach watcher · run #1",
+        metadata: WorkSession.metadata({ kind: "run", deploymentID: Work.DeploymentID.make("wdp_test") }),
+      })
+      // Both were answering in a process that has since died.
+      yield* work.resume.add(chat.id, 999_999_999)
+      yield* work.resume.add(run.id, 999_999_999)
+      yield* llm.text("Tomorrow is clear until noon.")
+
+      yield* scheduler.tick()
+      const answer = yield* Effect.promise(async () => {
+        for (let attempt = 0; attempt < 200; attempt++) {
+          const messages = await Effect.runPromise(sessions.messages({ sessionID: chat.id }))
+          const text = messages
+            .flatMap((message) => (message.info.role === "assistant" ? message.parts : []))
+            .find((part) => part.type === "text" && part.text.length > 0)
+          if (text?.type === "text") return text.text
+          await Bun.sleep(25)
+        }
+        throw new Error("the interrupted chat was never answered")
+      })
+      expect(answer).toBe("Tomorrow is clear until noon.")
+      // Each session is picked up once; the run is reported in the inbox instead of being resumed.
+      expect(yield* work.resume.take(() => false)).toEqual([])
+      expect(yield* llm.inputs).toHaveLength(1)
+      expect(yield* sessions.messages({ sessionID: run.id })).toEqual([])
+    }),
+  30_000,
+)
+
+it.instance(
+  "tells the user in the inbox when a run stopped because OpenWork closed",
+  () =>
+    Effect.gen(function* () {
+      const instance = yield* TestInstance
+      const work = yield* Work.Service
+      const scheduler = yield* WorkScheduler.Service
+      const deployment = yield* work.deployment.create({
+        title: "Beach watcher",
+        task: "Tell me if the beach is worth it tonight",
+        directory: instance.directory,
+        agent: "work",
+        schedule: { type: "manual" },
+      })
+      // A run owned by a process that no longer exists, like one that crashed or was closed mid-run.
+      const run = yield* work.run.claim({
+        deploymentID: deployment.id,
+        trigger: "manual",
+        now: Date.now(),
+        pid: 999_999_999,
+      })
+
+      yield* scheduler.tick()
+      expect((yield* work.run.get(run!.id))?.error).toBe(Work.INTERRUPTED)
+      const messages = yield* work.message.list()
+      expect(messages).toHaveLength(1)
+      expect(messages[0]).toMatchObject({ title: "Run #1 didn't finish", deploymentID: deployment.id, runID: run!.id })
+      expect(messages[0].body).toContain('OpenWork closed while "Beach watcher" was running')
+
+      // The next pass has nothing left to report.
+      yield* scheduler.tick()
+      expect(yield* work.message.list()).toHaveLength(1)
     }),
   30_000,
 )

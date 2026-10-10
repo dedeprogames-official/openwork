@@ -36,7 +36,9 @@ npx https://github.com/dedeprogames-official/openwork/releases/latest/download/o
 The installers put `openwork` in `~/.openwork/bin` (`%USERPROFILE%\.openwork\bin` on Windows) and add it to your PATH. The
 npm package is a small launcher that downloads the binary for your platform from the same release on first use.
 OpenWork keeps its data in `~/.local/share/openwork` and its global config in `~/.config/openwork`, apart from any
-opencode install, and `openwork upgrade` only ever installs OpenWork releases.
+opencode install, and `openwork upgrade` only ever installs OpenWork releases. When a newer release is out, Settings
+(`ctrl+x o` or ⚙) shows it at the top of General with an **Update** button: OpenWork closes and runs
+`openwork upgrade` in the same terminal.
 
 ## Running it from source
 
@@ -62,6 +64,20 @@ Inside the TUI:
 
 The scheduler runs inside the opencode server process (3 runs at a time, claims are atomic so several processes
 never run the same agent twice). Set `OPENCODE_DISABLE_WORK_SCHEDULER=1` to turn it off.
+
+## What OpenWork keeps between restarts
+
+Closing OpenWork (or a crash) loses nothing you would expect to come back:
+
+- Chats, agents, spaces, runs, inbox, todos, agenda, memories and the paused state live in the database.
+- An answer still streaming when OpenWork closed, and any question you sent while it was busy, are picked up again on
+  the next start. Pressing esc to interrupt an answer is final and is never resumed.
+- A run cut off the same way is marked "Interrupted" and reported in the Agent Inbox.
+- Each chat keeps its own unsent draft, and OpenWork reopens the page or chat you were on.
+- "Allow always" answers are saved per folder; Settings → Permissions lists them so you can forget one. They never
+  widen what an unattended agent may do.
+- Settings: the theme and every preference, the access and run-once defaults for new agents (also used when a chat
+  deploys one), integrations you switched off, the chat agent you picked and the model chosen for each agent.
 
 ## Pages
 

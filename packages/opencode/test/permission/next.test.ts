@@ -12,10 +12,11 @@ import { testEffect } from "../lib/effect"
 import { MessageID, SessionID } from "../../src/session/schema"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { Work } from "@opencode-ai/core/work"
 
 const noopBootstrap = Layer.succeed(InstanceBootstrap.Service, InstanceBootstrap.Service.of({ run: Effect.void }))
 const env = AppNodeBuilder.build(
-  LayerNode.group([Permission.node, EventV2Bridge.node, CrossSpawnSpawner.node, InstanceStore.node]),
+  LayerNode.group([Permission.node, EventV2Bridge.node, CrossSpawnSpawner.node, InstanceStore.node, Work.node]),
   [[InstanceStore.bootstrapNode, noopBootstrap]],
 )
 const it = testEffect(env)
@@ -800,6 +801,59 @@ it.instance(
         ruleset: [],
       })
       expect(result).toBeUndefined()
+    }),
+  { git: true },
+)
+
+it.instance(
+  "reply - always is saved for the folder and never overrides a deny",
+  () =>
+    Effect.gen(function* () {
+      const instance = yield* TestInstance
+      const work = yield* Work.Service
+      const fiber = yield* ask({
+        id: PermissionV1.ID.make("per_saved"),
+        sessionID: SessionID.make("session_saved"),
+        permission: "bash",
+        patterns: ["git status"],
+        metadata: {},
+        always: ["git status *"],
+        ruleset: [],
+      }).pipe(Effect.forkScoped)
+      yield* waitForPending(1)
+      yield* reply({ requestID: PermissionV1.ID.make("per_saved"), reply: "always" })
+      yield* Fiber.join(fiber)
+
+      // The approval is stored, so it outlives this process and shows up in Settings.
+      const saved = yield* work.permission.list(instance.directory)
+      expect(saved.map((item) => [item.permission, item.pattern])).toEqual([["bash", "git status *"]])
+
+      // A deny from the session's own rules still wins, e.g. an unattended agent with read access.
+      const denied = yield* fail(
+        ask({
+          sessionID: SessionID.make("session_run"),
+          permission: "bash",
+          patterns: ["git status --short"],
+          metadata: {},
+          always: [],
+          ruleset: [{ permission: "bash", pattern: "*", action: "deny" }],
+        }),
+      )
+      expect(denied).toBeInstanceOf(PermissionV1.DeniedError)
+
+      // Forgetting it in Settings makes OpenWork ask again.
+      yield* work.permission.remove(saved[0].id)
+      const again = yield* ask({
+        sessionID: SessionID.make("session_saved"),
+        permission: "bash",
+        patterns: ["git status"],
+        metadata: {},
+        always: [],
+        ruleset: [],
+      }).pipe(Effect.forkScoped)
+      yield* waitForPending(1)
+      yield* rejectAll()
+      expect(Exit.isFailure(yield* Fiber.await(again))).toBe(true)
     }),
   { git: true },
 )

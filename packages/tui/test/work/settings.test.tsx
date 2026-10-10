@@ -4,7 +4,7 @@ import { createTestRenderer, type TestRendererSetup } from "@opentui/core/testin
 import { Effect } from "effect"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { Global } from "@opencode-ai/core/global"
-import { createTuiResolvedConfig } from "../fixture/tui-runtime"
+import { createTuiResolvedConfig, resetTuiState } from "../fixture/tui-runtime"
 import { createEventSource, createFetch, directory, json } from "../fixture/tui-sdk"
 
 const now = Date.now()
@@ -12,6 +12,7 @@ const now = Date.now()
 const state: WorkState = {
   now,
   paused: false,
+  defaults: { access: "read", runOnDeploy: true },
   spaces: [],
   deployments: [],
   latest: [],
@@ -21,6 +22,7 @@ const state: WorkState = {
   todos: [],
   agenda: [],
   memories: [],
+  permissions: [],
   usage: {
     today: { tokens: 0, cost: 0 },
     hour: { tokens: 0, cost: 0 },
@@ -57,6 +59,7 @@ test("settings open from the gear and change preferences", async () => {
   })
 
   try {
+    await resetTuiState()
     const { run: start } = await import("../../src/app")
     const task = Effect.runPromise(
       start({

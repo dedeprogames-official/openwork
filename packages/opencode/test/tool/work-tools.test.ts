@@ -2,7 +2,10 @@ import { afterEach, describe, expect } from "bun:test"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Work } from "@opencode-ai/core/work"
 import { Effect, Exit } from "effect"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { AgendaTool } from "../../src/tool/agenda"
+import { DeployTool } from "../../src/tool/deploy"
+import { Session } from "@/session/session"
 import { MemoryTool } from "../../src/tool/memory"
 import { SessionID, MessageID } from "../../src/session/schema"
 import { Agent } from "../../src/agent/agent"
@@ -21,7 +24,9 @@ const ctx = {
   ask: () => Effect.void,
 }
 
-const it = testEffect(LayerNode.compile(LayerNode.group([Work.node, Truncate.node, Agent.node])))
+const it = testEffect(
+  LayerNode.compile(LayerNode.group([Work.node, Truncate.node, Agent.node, Session.node, FSUtil.node])),
+)
 
 afterEach(() => resetDatabase())
 
@@ -59,6 +64,29 @@ describe("work tools", () => {
       expect(Exit.isFailure(invalid)).toBe(true)
       const missing = yield* tool.execute({ action: "remove", id: "wag_missing" }, ctx).pipe(Effect.exit)
       expect(Exit.isFailure(missing)).toBe(true)
+    }),
+  )
+
+  it.instance("deploy follows the defaults chosen in Settings", () =>
+    Effect.gen(function* () {
+      const work = yield* Work.Service
+      yield* work.setDefaults({ access: "write", runOnDeploy: true })
+      const info = yield* DeployTool
+      const tool = yield* info.init()
+      const created = yield* tool.execute({ action: "create", request: "summarize my notes every morning at 8" }, ctx)
+      const deployment = (yield* work.deployment.get(Work.DeploymentID.make(created.metadata.deploymentID!)))!
+      expect(deployment.access).toBe("write")
+      // It runs once right away, like an agent deployed from the TUI.
+      expect(deployment.runRequestedAt).toBeNumber()
+
+      yield* work.setDefaults({ runOnDeploy: false })
+      const quiet = yield* tool.execute(
+        { action: "create", request: "check the rates daily at 9am", access: "read" },
+        ctx,
+      )
+      const second = (yield* work.deployment.get(Work.DeploymentID.make(quiet.metadata.deploymentID!)))!
+      expect(second.access).toBe("read")
+      expect(second.runRequestedAt).toBeUndefined()
     }),
   )
 })

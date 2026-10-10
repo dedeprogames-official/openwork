@@ -35,7 +35,12 @@ export function AgentsPage() {
   const dimensions = useTerminalDimensions()
   const inset = useShellInset()
   const zoom = () => (kv.get("work_calendar_zoom", "detail") === "day" ? "day" : "detail")
-  const [live, setLive] = createSignal(true)
+  // "Follow live" is a preference kept across restarts; moving through the runs pauses it until you turn it back on.
+  const [live, setLive] = createSignal(kv.get("work_calendar_live", true) !== false)
+  const toggleLive = () => {
+    setLive(!live())
+    kv.set("work_calendar_live", live())
+  }
   const [selected, setSelected] = createSignal(0)
   const click = useRowClick()
 
@@ -122,7 +127,7 @@ export function AgentsPage() {
     { key: "down,j", desc: "Later run", run: () => move(1) },
     { key: "return", desc: "Open agent", run: open },
     { key: "z", desc: "Zoom calendar", run: () => setZoom(zoom() === "day" ? "detail" : "day") },
-    { key: "l", desc: "Follow live", run: () => setLive(!live()) },
+    { key: "l", desc: "Follow live", run: toggleLive },
     { key: "p", desc: "Pause agents", run: () => void work.pause(!work.state.paused) },
     { key: "n", desc: "Create agent", run: () => void deploy() },
   ])
@@ -255,7 +260,7 @@ export function AgentsPage() {
               wrapMode="none"
               flexShrink={0}
               selectable={false}
-              onMouseUp={() => setLive(!live())}
+              onMouseUp={toggleLive}
             >
               {live() ? "   ● Live" : "   ○ Live"}
             </text>

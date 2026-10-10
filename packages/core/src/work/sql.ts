@@ -1,4 +1,4 @@
-import { index, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core"
+import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
 import { Timestamps } from "../database/schema.sql"
 import type { Work } from "@opencode-ai/schema/work"
 
@@ -123,3 +123,23 @@ export const WorkSettingTable = sqliteTable("work_setting", {
   value: text({ mode: "json" }).$type<unknown>().notNull(),
   ...Timestamps,
 })
+
+/** Sessions answering right now; rows whose process has died are picked up again on the next start. */
+export const WorkResumeTable = sqliteTable("work_resume", {
+  session_id: text().primaryKey(),
+  owner_pid: integer().notNull(),
+  ...Timestamps,
+})
+
+/** Permissions the user chose to always allow, per folder. */
+export const WorkPermissionTable = sqliteTable(
+  "work_permission",
+  {
+    id: text().$type<Work.PermissionID>().primaryKey(),
+    directory: text().notNull(),
+    permission: text().notNull(),
+    pattern: text().notNull(),
+    ...Timestamps,
+  },
+  (table) => [uniqueIndex("work_permission_rule_idx").on(table.directory, table.permission, table.pattern)],
+)

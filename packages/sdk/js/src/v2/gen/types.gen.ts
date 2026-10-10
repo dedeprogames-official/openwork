@@ -3864,6 +3864,16 @@ export type ConfigV2ExperimentalPolicy = {
   resource: string
 }
 
+export type WorkAccess = "read" | "write" | "full"
+
+export type WorkDefaults = {
+  access: WorkAccess
+  /**
+   * Run new agents once right after they are deployed
+   */
+  runOnDeploy: boolean
+}
+
 export type WorkColor = "purple" | "yellow" | "blue" | "green" | "pink" | "cyan" | "orange"
 
 export type WorkSpace = {
@@ -3904,8 +3914,6 @@ export type WorkSchedule =
        */
       at: string
     }
-
-export type WorkAccess = "read" | "write" | "full"
 
 export type WorkDeploymentStatus = "active" | "paused" | "done"
 
@@ -4020,6 +4028,19 @@ export type WorkMemory = {
   }
 }
 
+export type WorkPermission = {
+  id: string
+  /**
+   * Folder the approval applies to
+   */
+  directory: string
+  permission: string
+  pattern: string
+  time: {
+    created: number
+  }
+}
+
 export type WorkProviderUsage = {
   providerID: string
   tokens: number
@@ -4043,6 +4064,7 @@ export type WorkUsage = {
 export type WorkState = {
   now: number
   paused: boolean
+  defaults: WorkDefaults
   spaces: Array<WorkSpace>
   deployments: Array<WorkDeployment>
   /**
@@ -4061,11 +4083,35 @@ export type WorkState = {
   todos: Array<WorkTodo>
   agenda: Array<WorkAgenda>
   memories: Array<WorkMemory>
+  /**
+   * Permissions the user chose to always allow
+   */
+  permissions: Array<WorkPermission>
   usage: WorkUsage
+}
+
+export type WorkVersion = {
+  /**
+   * Installed version, or local for a development build
+   */
+  current: string
+  /**
+   * Newest release on GitHub, when it could be checked
+   */
+  latest?: string
+  /**
+   * A newer release can be installed with openwork upgrade
+   */
+  available: boolean
 }
 
 export type WorkPauseInput = {
   paused: boolean
+}
+
+export type WorkDefaultsPatch = {
+  access?: WorkAccess
+  runOnDeploy?: boolean
 }
 
 export type WorkDemoInput = {
@@ -4091,6 +4137,9 @@ export type WorkDeploymentCreate = {
   skill?: string
   schedule: WorkSchedule
   access?: WorkAccess
+  /**
+   * Run once right away; defaults to the runOnDeploy setting
+   */
   runNow?: boolean
 }
 
@@ -7762,6 +7811,31 @@ export type WorkStateResponses = {
 
 export type WorkStateResponse = WorkStateResponses[keyof WorkStateResponses]
 
+export type WorkVersionData = {
+  body?: never
+  path?: never
+  query?: never
+  url: "/work/version"
+}
+
+export type WorkVersionErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type WorkVersionError = WorkVersionErrors[keyof WorkVersionErrors]
+
+export type WorkVersionResponses = {
+  /**
+   * Installed and newest version
+   */
+  200: WorkVersion
+}
+
+export type WorkVersionResponse = WorkVersionResponses[keyof WorkVersionResponses]
+
 export type WorkPauseData = {
   body?: WorkPauseInput
   path?: never
@@ -7786,6 +7860,31 @@ export type WorkPauseResponses = {
 }
 
 export type WorkPauseResponse = WorkPauseResponses[keyof WorkPauseResponses]
+
+export type WorkDefaultsData = {
+  body?: WorkDefaultsPatch
+  path?: never
+  query?: never
+  url: "/work/defaults"
+}
+
+export type WorkDefaultsErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type WorkDefaultsError = WorkDefaultsErrors[keyof WorkDefaultsErrors]
+
+export type WorkDefaultsResponses = {
+  /**
+   * Agent defaults
+   */
+  200: WorkDefaults
+}
+
+export type WorkDefaultsResponse = WorkDefaultsResponses[keyof WorkDefaultsResponses]
 
 export type WorkDemoData = {
   body?: WorkDemoInput
@@ -8407,6 +8506,37 @@ export type WorkMemoryRemoveResponses = {
 }
 
 export type WorkMemoryRemoveResponse = WorkMemoryRemoveResponses[keyof WorkMemoryRemoveResponses]
+
+export type WorkPermissionRemoveData = {
+  body?: never
+  path: {
+    permissionID: string
+  }
+  query?: never
+  url: "/work/permission/{permissionID}"
+}
+
+export type WorkPermissionRemoveErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * WorkNotFoundError
+   */
+  404: WorkNotFoundError
+}
+
+export type WorkPermissionRemoveError = WorkPermissionRemoveErrors[keyof WorkPermissionRemoveErrors]
+
+export type WorkPermissionRemoveResponses = {
+  /**
+   * Permission removed
+   */
+  200: boolean
+}
+
+export type WorkPermissionRemoveResponse = WorkPermissionRemoveResponses[keyof WorkPermissionRemoveResponses]
 
 export type EventSubscribeData = {
   body?: never

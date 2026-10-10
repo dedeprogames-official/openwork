@@ -403,6 +403,9 @@ import type {
   WorkAgendaRemoveResponses,
   WorkAgendaUpdateErrors,
   WorkAgendaUpdateResponses,
+  WorkDefaultsErrors,
+  WorkDefaultsPatch,
+  WorkDefaultsResponses,
   WorkDemoErrors,
   WorkDemoInput,
   WorkDemoResponses,
@@ -436,6 +439,8 @@ import type {
   WorkPauseErrors,
   WorkPauseInput,
   WorkPauseResponses,
+  WorkPermissionRemoveErrors,
+  WorkPermissionRemoveResponses,
   WorkSpaceCreate,
   WorkSpaceCreateErrors,
   WorkSpaceCreateResponses,
@@ -465,6 +470,8 @@ import type {
   WorktreeResetErrors,
   WorktreeResetInput,
   WorktreeResetResponses,
+  WorkVersionErrors,
+  WorkVersionResponses,
 } from "./types.gen.js"
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<
@@ -1955,6 +1962,31 @@ export class Memory extends HeyApiClient {
   }
 }
 
+export class Permission extends HeyApiClient {
+  /**
+   * Forget allowed permission
+   *
+   * Stop always allowing a permission; OpenWork asks again next time.
+   */
+  public remove<ThrowOnError extends boolean = false>(
+    parameters: {
+      permissionID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "permissionID" }] }])
+    return (options?.client ?? this.client).delete<
+      WorkPermissionRemoveResponses,
+      WorkPermissionRemoveErrors,
+      ThrowOnError
+    >({
+      url: "/work/permission/{permissionID}",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Work extends HeyApiClient {
   /**
    * Get OpenWork state
@@ -1964,6 +1996,18 @@ export class Work extends HeyApiClient {
   public state<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
     return (options?.client ?? this.client).get<WorkStateResponses, WorkStateErrors, ThrowOnError>({
       url: "/work/state",
+      ...options,
+    })
+  }
+
+  /**
+   * Check for updates
+   *
+   * Compare the installed OpenWork with its newest GitHub release.
+   */
+  public version<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
+    return (options?.client ?? this.client).get<WorkVersionResponses, WorkVersionErrors, ThrowOnError>({
+      url: "/work/version",
       ...options,
     })
   }
@@ -1982,6 +2026,30 @@ export class Work extends HeyApiClient {
     const params = buildClientParams([parameters], [{ args: [{ key: "workPauseInput", map: "body" }] }])
     return (options?.client ?? this.client).post<WorkPauseResponses, WorkPauseErrors, ThrowOnError>({
       url: "/work/pause",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Set agent defaults
+   *
+   * Change the access and run-on-deploy defaults for new agents, including ones the deploy tool creates.
+   */
+  public defaults<ThrowOnError extends boolean = false>(
+    parameters?: {
+      workDefaultsPatch?: WorkDefaultsPatch
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ key: "workDefaultsPatch", map: "body" }] }])
+    return (options?.client ?? this.client).patch<WorkDefaultsResponses, WorkDefaultsErrors, ThrowOnError>({
+      url: "/work/defaults",
       ...options,
       ...params,
       headers: {
@@ -2044,6 +2112,11 @@ export class Work extends HeyApiClient {
   private _memory?: Memory
   get memory(): Memory {
     return (this._memory ??= new Memory({ client: this.client }))
+  }
+
+  private _permission?: Permission
+  get permission(): Permission {
+    return (this._permission ??= new Permission({ client: this.client }))
   }
 }
 
@@ -3747,7 +3820,7 @@ export class Question extends HeyApiClient {
   }
 }
 
-export class Permission extends HeyApiClient {
+export class Permission2 extends HeyApiClient {
   /**
    * List pending permissions
    *
@@ -5833,7 +5906,7 @@ export class Revert extends HeyApiClient {
   }
 }
 
-export class Permission2 extends HeyApiClient {
+export class Permission3 extends HeyApiClient {
   /**
    * List session permission requests
    *
@@ -6527,9 +6600,9 @@ export class Session3 extends HeyApiClient {
     return (this._revert ??= new Revert({ client: this.client }))
   }
 
-  private _permission?: Permission2
-  get permission(): Permission2 {
-    return (this._permission ??= new Permission2({ client: this.client }))
+  private _permission?: Permission3
+  get permission(): Permission3 {
+    return (this._permission ??= new Permission3({ client: this.client }))
   }
 
   private _question?: Question2
@@ -7057,7 +7130,7 @@ export class Saved extends HeyApiClient {
   }
 }
 
-export class Permission3 extends HeyApiClient {
+export class Permission4 extends HeyApiClient {
   private _request?: Request
   get request(): Request {
     return (this._request ??= new Request({ client: this.client }))
@@ -7693,9 +7766,9 @@ export class V2 extends HeyApiClient {
     return (this._credential ??= new Credential({ client: this.client }))
   }
 
-  private _permission?: Permission3
-  get permission(): Permission3 {
-    return (this._permission ??= new Permission3({ client: this.client }))
+  private _permission?: Permission4
+  get permission(): Permission4 {
+    return (this._permission ??= new Permission4({ client: this.client }))
   }
 
   private _fs?: Fs
@@ -7852,9 +7925,9 @@ export class OpencodeClient extends HeyApiClient {
     return (this._question ??= new Question({ client: this.client }))
   }
 
-  private _permission?: Permission
-  get permission(): Permission {
-    return (this._permission ??= new Permission({ client: this.client }))
+  private _permission?: Permission2
+  get permission(): Permission2 {
+    return (this._permission ??= new Permission2({ client: this.client }))
   }
 
   private _provider?: Provider

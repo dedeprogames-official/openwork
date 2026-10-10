@@ -1,7 +1,6 @@
 import path from "path"
 import type { WorkAccess, WorkDeployment } from "@opencode-ai/sdk/v2"
 import { WorkSchedule } from "@opencode-ai/core/work/schedule"
-import { useKV } from "../context/kv"
 import { useLocal } from "../context/local"
 import { useRoute } from "../context/route"
 import { useSDK } from "../context/sdk"
@@ -27,7 +26,6 @@ export function useDeploy() {
   const sdk = useSDK()
   const paths = useTuiPaths()
   const toast = useToast()
-  const kv = useKV()
 
   return async (initial?: string) => {
     const text = initial?.trim()
@@ -78,7 +76,7 @@ export function useDeploy() {
     if (when === undefined) return
 
     // The default from Settings comes first, so Enter keeps it.
-    const preferred = kv.get("work_default_access", "read")
+    const preferred = work.state.defaults.access
     const access = await choose<WorkAccess>(
       dialog,
       "What may it do?",
@@ -98,7 +96,6 @@ export function useDeploy() {
       directory,
       schedule: when,
       access,
-      runNow: kv.get("work_run_on_deploy", true) === true,
       ...(spaceID ? { spaceID } : {}),
       ...(model ? { model: { providerID: model.providerID, modelID: model.modelID } } : {}),
     })

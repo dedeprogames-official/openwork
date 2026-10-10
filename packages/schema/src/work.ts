@@ -25,6 +25,8 @@ export const AgendaID = id("wag_", "Work.AgendaID")
 export type AgendaID = typeof AgendaID.Type
 export const MemoryID = id("wmm_", "Work.MemoryID")
 export type MemoryID = typeof MemoryID.Type
+export const PermissionID = id("wpm_", "Work.PermissionID")
+export type PermissionID = typeof PermissionID.Type
 
 export const Color = Schema.Literals(["purple", "yellow", "blue", "green", "pink", "cyan", "orange"]).annotate({
   identifier: "Work.Color",
@@ -169,6 +171,15 @@ export const Memory = Schema.Struct({
 }).annotate({ identifier: "Work.Memory" })
 export interface Memory extends Schema.Schema.Type<typeof Memory> {}
 
+export const Permission = Schema.Struct({
+  id: PermissionID,
+  directory: Schema.String.annotate({ description: "Folder the approval applies to" }),
+  permission: Schema.String,
+  pattern: Schema.String,
+  time: Schema.Struct({ created: NonNegativeInt }),
+}).annotate({ identifier: "Work.Permission", description: "A permission the user chose to always allow" })
+export interface Permission extends Schema.Schema.Type<typeof Permission> {}
+
 export const ProviderUsage = Schema.Struct({
   providerID: Schema.String,
   tokens: NonNegativeInt,
@@ -191,9 +202,22 @@ export const Upcoming = Schema.Struct({
 }).annotate({ identifier: "Work.Upcoming" })
 export interface Upcoming extends Schema.Schema.Type<typeof Upcoming> {}
 
+export const Defaults = Schema.Struct({
+  access: Access.annotate({ description: "Access new agents get unless one is chosen" }),
+  runOnDeploy: Schema.Boolean.annotate({ description: "Run new agents once right after they are deployed" }),
+}).annotate({ identifier: "Work.Defaults" })
+export interface Defaults extends Schema.Schema.Type<typeof Defaults> {}
+
+export const DefaultsPatch = Schema.Struct({
+  access: optional(Access),
+  runOnDeploy: optional(Schema.Boolean),
+}).annotate({ identifier: "Work.DefaultsPatch" })
+export interface DefaultsPatch extends Schema.Schema.Type<typeof DefaultsPatch> {}
+
 export const State = Schema.Struct({
   now: NonNegativeInt,
   paused: Schema.Boolean,
+  defaults: Defaults,
   spaces: Schema.Array(Space),
   deployments: Schema.Array(Deployment),
   latest: Schema.Array(Run).annotate({ description: "Most recent run of each deployment" }),
@@ -203,6 +227,7 @@ export const State = Schema.Struct({
   todos: Schema.Array(Todo),
   agenda: Schema.Array(Agenda),
   memories: Schema.Array(Memory),
+  permissions: Schema.Array(Permission).annotate({ description: "Permissions the user chose to always allow" }),
   usage: Usage,
 }).annotate({ identifier: "Work.State" })
 export interface State extends Schema.Schema.Type<typeof State> {}
@@ -217,7 +242,9 @@ export const DeploymentCreate = Schema.Struct({
   skill: optional(Schema.String),
   schedule: Schedule,
   access: optional(Access),
-  runNow: optional(Schema.Boolean),
+  runNow: optional(
+    Schema.Boolean.annotate({ description: "Run once right away; defaults to the runOnDeploy setting" }),
+  ),
 }).annotate({ identifier: "Work.DeploymentCreate" })
 export interface DeploymentCreate extends Schema.Schema.Type<typeof DeploymentCreate> {}
 
@@ -315,6 +342,13 @@ export const DemoInput = Schema.Struct({
   directory: optional(Schema.String.annotate({ description: "Folder the demo agents work in" })),
 }).annotate({ identifier: "Work.DemoInput" })
 export interface DemoInput extends Schema.Schema.Type<typeof DemoInput> {}
+
+export const Version = Schema.Struct({
+  current: Schema.String.annotate({ description: "Installed version, or local for a development build" }),
+  latest: optional(Schema.String.annotate({ description: "Newest release on GitHub, when it could be checked" })),
+  available: Schema.Boolean.annotate({ description: "A newer release can be installed with openwork upgrade" }),
+}).annotate({ identifier: "Work.Version" })
+export interface Version extends Schema.Schema.Type<typeof Version> {}
 
 export const ChatResult = Schema.Struct({ sessionID: Schema.String }).annotate({ identifier: "Work.ChatResult" })
 export interface ChatResult extends Schema.Schema.Type<typeof ChatResult> {}

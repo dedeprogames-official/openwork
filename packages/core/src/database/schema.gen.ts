@@ -298,6 +298,24 @@ export default {
         );
       `)
       yield* tx.run(`
+        CREATE TABLE \`work_permission\` (
+          \`id\` text PRIMARY KEY,
+          \`directory\` text NOT NULL,
+          \`permission\` text NOT NULL,
+          \`pattern\` text NOT NULL,
+          \`time_created\` integer NOT NULL,
+          \`time_updated\` integer NOT NULL
+        );
+      `)
+      yield* tx.run(`
+        CREATE TABLE \`work_resume\` (
+          \`session_id\` text PRIMARY KEY,
+          \`owner_pid\` integer NOT NULL,
+          \`time_created\` integer NOT NULL,
+          \`time_updated\` integer NOT NULL
+        );
+      `)
+      yield* tx.run(`
         CREATE TABLE \`work_run\` (
           \`id\` text PRIMARY KEY,
           \`deployment_id\` text NOT NULL,
@@ -387,6 +405,9 @@ export default {
       yield* tx.run(`CREATE INDEX \`todo_session_idx\` ON \`todo\` (\`session_id\`);`)
       yield* tx.run(`CREATE INDEX \`work_agenda_starts_idx\` ON \`work_agenda\` (\`starts_at\`);`)
       yield* tx.run(`CREATE INDEX \`work_deployment_due_idx\` ON \`work_deployment\` (\`status\`,\`next_run_at\`);`)
+      yield* tx.run(
+        `CREATE UNIQUE INDEX \`work_permission_rule_idx\` ON \`work_permission\` (\`directory\`,\`permission\`,\`pattern\`);`,
+      )
       yield* tx.run(`CREATE INDEX \`work_run_deployment_idx\` ON \`work_run\` (\`deployment_id\`,\`number\`);`)
       yield* tx.run(`CREATE INDEX \`work_run_started_idx\` ON \`work_run\` (\`time_started\`);`)
     })

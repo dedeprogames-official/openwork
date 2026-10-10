@@ -1,12 +1,14 @@
 import type { TuiPlugin, TuiPluginApi } from "@opencode-ai/plugin/tui"
 import type { BuiltinTuiPlugin } from "../builtins"
-import { createMemo, For, Show, createSignal } from "solid-js"
+import { createMemo, For, Show } from "solid-js"
 import { TodoItem } from "../../component/todo-item"
 
 const id = "internal:sidebar-todo"
 
 function View(props: { api: TuiPluginApi; session_id: string }) {
-  const [open, setOpen] = createSignal(true)
+  // Collapsed or expanded stays as you left it, also after a restart.
+  const open = () => Boolean(props.api.kv.get("sidebar_todo_open", true))
+  const setOpen = (toggle: (open: boolean) => boolean) => props.api.kv.set("sidebar_todo_open", toggle(open()))
   const theme = () => props.api.theme.current
   const list = createMemo(() => props.api.state.session.todo(props.session_id))
   const show = createMemo(() => list().length > 0 && list().some((item) => item.status !== "completed"))

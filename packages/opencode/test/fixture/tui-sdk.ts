@@ -77,6 +77,7 @@ export function createFetch(override?: FetchHandler) {
         return json({
           now: 0,
           paused: false,
+          defaults: { access: "read", runOnDeploy: true },
           spaces: [],
           deployments: [],
           latest: [],
@@ -86,6 +87,7 @@ export function createFetch(override?: FetchHandler) {
           todos: [],
           agenda: [],
           memories: [],
+          permissions: [],
           usage: {
             today: { tokens: 0, cost: 0 },
             hour: { tokens: 0, cost: 0 },

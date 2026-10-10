@@ -126,8 +126,9 @@ describe("Work", () => {
       expect(run).toBeDefined()
       expect((yield* work.deployment.get(deployment.id))?.runRequestedAt).toBeUndefined()
 
-      yield* work.run.recover((pid) => pid === process.pid)
-      expect((yield* work.run.get(run!.id))?.status).toBe("error")
+      const recovered = yield* work.run.recover((pid) => pid === process.pid)
+      expect(recovered.map((item) => item.id)).toEqual([run!.id])
+      expect((yield* work.run.get(run!.id))?.error).toBe(Work.INTERRUPTED)
       expect((yield* work.state()).paused).toBe(true)
     }),
   )
@@ -146,6 +147,50 @@ describe("Work", () => {
       const updated = (yield* work.deployment.get(deployment.id))!
       expect(updated.status).toBe("done")
       expect(updated.nextRunAt).toBeUndefined()
+    }),
+  )
+
+  it.effect("keeps agent defaults, switched-off integrations and allowed permissions", () =>
+    Effect.gen(function* () {
+      const work = yield* Work.Service
+      expect(yield* work.defaults()).toEqual({ access: "read", runOnDeploy: true })
+      expect(yield* work.setDefaults({ access: "write" })).toEqual({ access: "write", runOnDeploy: true })
+      expect((yield* work.state()).defaults).toEqual({ access: "write", runOnDeploy: true })
+      // A new agent without an explicit access level gets the default.
+      expect((yield* deploy(work, { type: "manual" })).access).toBe("write")
+
+      yield* work.integrations.setEnabled("meeting-notes", false)
+      yield* work.integrations.setEnabled("meeting-notes", false)
+      expect(yield* work.integrations.disabled()).toEqual(["meeting-notes"])
+      yield* work.integrations.setEnabled("meeting-notes", true)
+      expect(yield* work.integrations.disabled()).toEqual([])
+
+      yield* work.permission.add({ directory: "/tmp/acme", permission: "bash", patterns: ["git status *", "ls"] })
+      yield* work.permission.add({ directory: "/tmp/acme", permission: "bash", patterns: ["ls"] })
+      yield* work.permission.add({ directory: "/tmp/other", permission: "edit", patterns: ["*"] })
+      const saved = yield* work.permission.list("/tmp/acme")
+      expect(saved.map((item) => item.pattern)).toEqual(["git status *", "ls"])
+      expect((yield* work.state()).permissions).toHaveLength(3)
+      yield* work.permission.remove(saved[0].id)
+      expect((yield* work.permission.list("/tmp/acme")).map((item) => item.pattern)).toEqual(["ls"])
+      const missing = yield* work.permission.remove(saved[0].id).pipe(Effect.flip)
+      expect(missing).toBeInstanceOf(Work.NotFoundError)
+    }),
+  )
+
+  it.effect("hands each interrupted session to one process", () =>
+    Effect.gen(function* () {
+      const work = yield* Work.Service
+      const alive = (pid: number) => pid === process.pid
+      yield* work.resume.add("ses_dead", 999_999_999)
+      yield* work.resume.add("ses_live", process.pid)
+      yield* work.resume.add("ses_done", 999_999_999)
+      yield* work.resume.remove("ses_done")
+      expect(yield* work.resume.has("ses_dead")).toBe(true)
+      // Sessions still answering in a live process are left alone.
+      expect(yield* work.resume.take(alive)).toEqual(["ses_dead"])
+      expect(yield* work.resume.take(alive)).toEqual([])
+      expect(yield* work.resume.has("ses_live")).toBe(true)
     }),
   )
 })

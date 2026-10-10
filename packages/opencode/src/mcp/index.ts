@@ -34,6 +34,7 @@ import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { McpCatalog } from "./catalog"
 import { McpEvent } from "@opencode-ai/schema/mcp-event"
 import { McpBrowser } from "./browser"
+import { Work } from "@opencode-ai/core/work"
 
 const DEFAULT_TIMEOUT = 30_000
 const CLIENT_OPTIONS = {
@@ -414,6 +415,7 @@ const layer = Layer.effect(
       }),
     )
     const cfgSvc = yield* Config.Service
+    const work = yield* Work.Service
 
     const descendants = Effect.fnUntraced(
       function* (pid: number) {
@@ -494,6 +496,8 @@ const layer = Layer.effect(
         const cfg = yield* cfgSvc.get()
         const bridge = yield* EffectBridge.make()
         const config = cfg.mcp ?? {}
+        // Servers switched off in OpenWork's settings stay off in every folder.
+        const off = new Set(yield* work.integrations.disabled())
         const s: State = {
           config: {},
           status: {},
@@ -511,7 +515,7 @@ const layer = Layer.effect(
                 return
               }
 
-              if (mcp.enabled === false) {
+              if (mcp.enabled === false || off.has(key)) {
                 s.status[key] = { status: "disabled" }
                 return
               }
@@ -647,11 +651,13 @@ const layer = Layer.effect(
 
     const connect = Effect.fn("MCP.connect")(function* (name: string) {
       const mcp = yield* requireMcpConfig(name)
+      yield* work.integrations.setEnabled(name, true)
       yield* createAndStore(name, { ...mcp, enabled: true })
     })
 
     const disconnect = Effect.fn("MCP.disconnect")(function* (name: string) {
       yield* requireMcpConfig(name)
+      yield* work.integrations.setEnabled(name, false)
       const s = yield* InstanceState.get(state)
       yield* closeClient(s, name)
       delete s.clients[name]
@@ -998,7 +1004,7 @@ export type AuthStatus = "authenticated" | "expired" | "not_authenticated"
 export const node = LayerNode.make({
   service: Service,
   layer: layer,
-  deps: [CrossSpawnSpawner.node, McpAuth.node, EventV2Bridge.node, Config.node, McpBrowser.node],
+  deps: [CrossSpawnSpawner.node, McpAuth.node, EventV2Bridge.node, Config.node, McpBrowser.node, Work.node],
 })
 
 export * as MCP from "."

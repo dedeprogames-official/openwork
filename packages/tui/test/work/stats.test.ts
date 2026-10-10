@@ -39,6 +39,7 @@ const deployment = (id: string, spaceID?: string): WorkDeployment => ({
 const empty: WorkState = {
   now: 0,
   paused: false,
+  defaults: { access: "read", runOnDeploy: true },
   spaces: [],
   deployments: [],
   latest: [],
@@ -48,6 +49,7 @@ const empty: WorkState = {
   todos: [],
   agenda: [],
   memories: [],
+  permissions: [],
   usage: { today: { tokens: 0, cost: 0 }, hour: { tokens: 0, cost: 0 }, providers: [], runsToday: 0, runsRemaining: 0 },
 }
 

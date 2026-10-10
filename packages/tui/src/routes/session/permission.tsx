@@ -141,11 +141,19 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
           body={
             <Switch>
               <Match when={props.request.always.length === 1 && props.request.always[0] === "*"}>
-                <TextBody title={"This will allow " + props.request.permission + " until OpenWork is restarted."} />
+                <TextBody
+                  title={
+                    "OpenWork will allow " +
+                    props.request.permission +
+                    " in this folder from now on. Undo it in Settings → Permissions."
+                  }
+                />
               </Match>
               <Match when={true}>
                 <box paddingLeft={1} gap={1}>
-                  <text fg={theme.textMuted}>This will allow the following patterns until OpenWork is restarted</text>
+                  <text fg={theme.textMuted}>
+                    OpenWork will allow these in this folder from now on. Undo it in Settings → Permissions.
+                  </text>
                   <box>
                     <For each={props.request.always}>
                       {(pattern) => (
