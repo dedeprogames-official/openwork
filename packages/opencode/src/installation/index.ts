@@ -8,14 +8,16 @@ import { withTransientReadRetry } from "@/util/effect-http-client"
 import { errorMessage } from "@/util/error"
 import { ChildProcess } from "effect/unstable/process"
 import { AppProcess } from "@opencode-ai/core/process"
-import path from "path"
 import { makeRuntime } from "@opencode-ai/core/effect/runtime"
 import semver from "semver"
 import { InstallationChannel, InstallationVersion } from "@opencode-ai/core/installation/version"
 import { NpmConfig } from "@opencode-ai/core/npm-config"
 import { InstallationEvent } from "@opencode-ai/schema/installation-event"
 
-export type Method = "curl" | "npm" | "yarn" | "pnpm" | "bun" | "brew" | "scoop" | "choco" | "unknown"
+// "launcher" is the npm package behind `npx <url>` and `npm install -g <url>`: it keeps one binary per version in
+// ~/.openwork/npm/<version> and always runs the version it was published with, so updating means installing the
+// newer launcher.
+export type Method = "curl" | "launcher" | "npm" | "yarn" | "pnpm" | "bun" | "brew" | "scoop" | "choco" | "unknown"
 
 // OpenWork ships through its own GitHub releases and install script. Package managers carry opencode, so OpenWork
 // never detects or upgrades through them.
@@ -25,6 +27,19 @@ const INSTALL_SCRIPT = `${RELEASES}/latest/download/install`
 const INSTALL_SCRIPT_WINDOWS = `${RELEASES}/latest/download/install.ps1`
 
 export type ReleaseType = "patch" | "minor" | "major"
+
+/** How this binary was installed, from where it runs; Windows and POSIX paths both work. */
+export function methodOf(execPath: string): Method {
+  const where = execPath.replaceAll("\\", "/").toLowerCase()
+  if (where.includes("/.openwork/bin/")) return "curl"
+  if (where.includes("/.openwork/npm/")) return "launcher"
+  return "unknown"
+}
+
+/** The launcher package of one release; `npm install -g` on it replaces the installed launcher. */
+export function launcherPackage(version: string) {
+  return `${RELEASES}/download/v${version}/openwork-cli.tgz`
+}
 
 export const Event = InstallationEvent
 
@@ -137,7 +152,13 @@ const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Serv
       return "opencode"
     })
 
-    const upgradeFailure = (method: Method, result?: { code: number; stdout: string; stderr: string }) => {
+    const upgradeFailure = (
+      method: Method,
+      result?: { code: number; stdout: string; stderr: string },
+      target?: string,
+    ) => {
+      if (method === "launcher" && target)
+        return `Upgrade failed (exit code ${result?.code ?? 1}). Install it yourself with: npm install -g ${launcherPackage(target)}`
       if (method === "choco") return "not running from an elevated command shell"
       if (result) return `Upgrade failed for ${method} (exit code ${result.code}).`
       return `Upgrade failed for ${method}.`
@@ -191,8 +212,7 @@ const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Serv
         }
       }),
       method: Effect.fn("Installation.method")(function* () {
-        if (process.execPath.includes(path.join(".openwork", "bin"))) return "curl" as Method
-        return "unknown" as Method
+        return methodOf(process.execPath)
       }),
       latest: Effect.fn("Installation.latest")(function* (installMethod?: Method) {
         const detectedMethod = installMethod || (yield* result.method())
@@ -253,6 +273,12 @@ const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Serv
           case "curl":
             upgradeResult = yield* upgradeCurl(target)
             break
+          case "launcher":
+            upgradeResult = yield* run(["npm", "install", "-g", launcherPackage(target)])
+            // The new launcher downloads its binary on first use; do that now so the next start is instant, and so
+            // a failed download shows up here. Best effort: it also runs on the next start.
+            if (upgradeResult.code === 0) yield* text(["openwork", "--version"])
+            break
           case "npm":
             upgradeResult = yield* run(["npm", "install", "-g", `opencode-ai@${target}`])
             break
@@ -294,7 +320,7 @@ const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Serv
             return yield* new UpgradeFailedError({ stderr: `Unknown installation method: ${m}` })
         }
         if (!upgradeResult || upgradeResult.code !== 0) {
-          return yield* new UpgradeFailedError({ stderr: upgradeFailure(m, upgradeResult) })
+          return yield* new UpgradeFailedError({ stderr: upgradeFailure(m, upgradeResult, target) })
         }
         yield* Effect.logInfo("upgraded", {
           method: m,

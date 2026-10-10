@@ -27,7 +27,8 @@ export async function upgrade() {
 
   const kind = Installation.getReleaseType(InstallationVersion, latest)
 
-  if (config.autoupdate === "notify" || kind !== "patch") {
+  // A launcher install is updated by `npm install -g`, which is the user's call rather than a silent background one.
+  if (config.autoupdate === "notify" || kind !== "patch" || method === "launcher") {
     GlobalBus.emit("event", {
       directory: "global",
       payload: {
