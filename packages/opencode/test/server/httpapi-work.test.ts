@@ -65,6 +65,10 @@ describe("work HttpApi", () => {
     expect(alone.status).toBe(200)
     expect((await alone.json()).spaceID).toBeUndefined()
 
+    // Clearing the inbox removes every message unless only the done ones are asked for.
+    const cleared = await request(WorkPaths.messagesClear, { method: "POST", body: { done: false } })
+    expect(await cleared.json()).toEqual({ removed: 0 })
+
     const todo = await (await request(WorkPaths.todos, { method: "POST", body: { content: "Book a table" } })).json()
     await request(WorkPaths.todo.replace(":todoID", todo.id), { method: "PATCH", body: { done: true } })
     await request(WorkPaths.agendas, { method: "POST", body: { title: "Sunset", startsAt: Date.now() + 60_000 } })

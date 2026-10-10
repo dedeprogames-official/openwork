@@ -1870,6 +1870,21 @@ function workScenarios(): Scenario[] {
       .at((ctx) => ({ path: `/work/message/${ctx.state.id}` }))
       .json(200, (body) => check(body === true, "remove should return true")),
     http.protected
+      .post("/work/message/clear", "work.message.clear")
+      .mutating()
+      .seeded((ctx) =>
+        ctx.work((work) =>
+          work.message
+            .post({ title: "Beach", body: "Sunny" })
+            .pipe(Effect.flatMap((message) => work.message.update(message.id, { done: true }))),
+        ),
+      )
+      .at(() => ({ path: "/work/message/clear", body: { done: true } }))
+      .json(200, (body) => {
+        object(body)
+        check(body.removed === 1, "clear should remove the done message")
+      }),
+    http.protected
       .post("/work/todo", "work.todo.create")
       .mutating()
       .at(() => ({ path: "/work/todo", body: { content: "Book a table" } }))

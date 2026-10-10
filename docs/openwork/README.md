@@ -13,7 +13,7 @@ and still runs on the opencode harness (same sessions, tools, permissions, provi
 | Agent   | A deployment: a task, a local folder to work in, a schedule (`every 10m`, `hourly`, `daily at 7:30`, once, or on demand), an access level and optionally a skill and model.                  |
 | Run     | One unattended execution of an agent. Each run is a real opencode session (`<agent> · run #N`) you can open as a transcript. Runs never ask questions: anything that would prompt is denied. |
 | Space   | A group of agents around a goal, an event or a client, with its own color.                                                                                                                   |
-| Inbox   | Where agents report back. Agents post with the `inbox` tool; you mark items read or done.                                                                                                    |
+| Inbox   | Where agents report back. Agents post with the `inbox` tool; you mark items read or done, delete them or clear the inbox.                                                                    |
 | Todos   | Your own todo list. Agents can add items (for example "from meeting notes") with the `user_todo` tool.                                                                                       |
 | Agenda  | A local agenda for today. Events link to a space, so Your Day shows how many of its agents already checked in.                                                                               |
 | Memory  | Facts about you that every chat and agent gets in its system context. Saved from the Memory page or by agents with the `memory` tool.                                                        |

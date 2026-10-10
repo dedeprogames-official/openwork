@@ -164,6 +164,7 @@ export const workHandlers = HttpApiBuilder.group(RootHttpApi, "work", (handlers)
           .remove(ctx.params.messageID)
           .pipe(Effect.as(true), Effect.catchTag("Work.NotFoundError", notFound)),
       )
+      .handle("messageClear", (ctx) => work.message.clear(ctx.payload).pipe(Effect.map((removed) => ({ removed }))))
       .handle("todoCreate", (ctx) => work.todo.add(ctx.payload))
       .handle("todoUpdate", (ctx) =>
         work.todo.update(ctx.params.todoID, ctx.payload).pipe(Effect.catchTag("Work.NotFoundError", notFound)),

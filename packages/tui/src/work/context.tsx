@@ -110,6 +110,15 @@ export const { use: useWork, provider: WorkProvider } = createSimpleContext({
         done: (messageID: string, done: boolean) =>
           act(sdk.client.work.message.update({ messageID, workMessagePatch: { done } })),
         remove: (messageID: string) => act(sdk.client.work.message.remove({ messageID })),
+        clear: (done: boolean) =>
+          act(sdk.client.work.message.clear({ workMessageClear: { done } })).then((result) => {
+            if (result)
+              toast.show({
+                variant: "success",
+                message: `Removed ${result.removed} message${result.removed === 1 ? "" : "s"}`,
+              })
+            return result
+          }),
       },
       todo: {
         add: (content: string) => act(sdk.client.work.todo.create({ workTodoCreate: { content } })),

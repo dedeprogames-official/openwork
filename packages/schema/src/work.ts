@@ -265,6 +265,12 @@ export const MessagePatch = Schema.Struct({
 }).annotate({ identifier: "Work.MessagePatch" })
 export interface MessagePatch extends Schema.Schema.Type<typeof MessagePatch> {}
 
+export const MessageClear = Schema.Struct({
+  // Only remove messages already marked done; otherwise the whole inbox is cleared.
+  done: optional(Schema.Boolean),
+}).annotate({ identifier: "Work.MessageClear" })
+export interface MessageClear extends Schema.Schema.Type<typeof MessageClear> {}
+
 export const TodoCreate = Schema.Struct({
   content: Schema.String,
   source: optional(Schema.String),

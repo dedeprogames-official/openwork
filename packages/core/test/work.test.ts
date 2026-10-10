@@ -31,6 +31,10 @@ describe("Work", () => {
       const message = yield* work.message.post({ title: "Beach watcher", body: "Fog clears at 5pm" })
       expect(message.priority).toBe("normal")
       expect((yield* work.message.update(message.id, { done: true })).time.read).toBeNumber()
+      // Clearing done messages keeps the open ones.
+      yield* work.message.post({ title: "Rate check", body: "No change" })
+      expect(yield* work.message.clear({ done: true })).toBe(1)
+      expect((yield* work.message.list()).map((item) => item.title)).toEqual(["Rate check"])
 
       yield* work.agenda.add({ title: "Beach date", startsAt: Date.now() + 1000, spaceID: space.id })
       yield* work.memory.save({ content: "My dog is called Biscuit" })
@@ -41,6 +45,9 @@ describe("Work", () => {
       expect(state.messages).toHaveLength(1)
       expect(state.agenda[0]?.spaceID).toBe(space.id)
       expect(state.memories[0]?.content).toBe("My dog is called Biscuit")
+
+      expect(yield* work.message.clear({})).toBe(1)
+      expect(yield* work.message.list()).toEqual([])
 
       yield* work.space.remove(space.id)
       expect((yield* work.agenda.list())[0]?.spaceID).toBeUndefined()
