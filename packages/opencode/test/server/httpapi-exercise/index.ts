@@ -1761,11 +1761,23 @@ function workScenarios(): Scenario[] {
       array(body.runs)
       object(body.usage)
     }),
+    http.protected.get("/work/version", "work.version").json(200, (body) => {
+      object(body)
+      check(body.current === "local" && body.available === false, "a development build never offers an update")
+    }),
     http.protected
       .post("/work/pause", "work.pause")
       .mutating()
       .at(() => ({ path: "/work/pause", body: { paused: true } }))
       .json(200, (body) => check(body === true, "pause should return true")),
+    http.protected
+      .patch("/work/defaults", "work.defaults")
+      .mutating()
+      .at(() => ({ path: "/work/defaults", body: { access: "write", runOnDeploy: false } }))
+      .json(200, (body) => {
+        object(body)
+        check(body.access === "write" && body.runOnDeploy === false, "defaults should be saved")
+      }),
     http.protected
       .post("/work/demo", "work.demo")
       .mutating()
@@ -1944,6 +1956,21 @@ function workScenarios(): Scenario[] {
       .mutating()
       .seeded((ctx) => ctx.work((work) => work.memory.save({ content: "Dog is called Biscuit" })))
       .at((ctx) => ({ path: `/work/memory/${ctx.state.id}` }))
+      .json(200, (body) => check(body === true, "remove should return true")),
+    http.protected
+      .delete("/work/permission/{permissionID}", "work.permission.remove")
+      .mutating()
+      .seeded((ctx) =>
+        ctx.work((work) =>
+          work.permission
+            .add({ directory: "/tmp/openwork-exercise", permission: "bash", patterns: ["git status *"] })
+            .pipe(
+              Effect.andThen(work.permission.list("/tmp/openwork-exercise")),
+              Effect.map((rows) => rows[0]),
+            ),
+        ),
+      )
+      .at((ctx) => ({ path: `/work/permission/${ctx.state.id}` }))
       .json(200, (body) => check(body === true, "remove should return true")),
   ]
 }

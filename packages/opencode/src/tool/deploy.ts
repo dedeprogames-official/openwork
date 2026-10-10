@@ -125,11 +125,15 @@ export const DeployTool = Tool.define<typeof Parameters, Metadata, Work.Service 
             directory,
             agent: "work",
             schedule: parsed.schedule,
-            access: params.access ?? "read",
+            // Without an explicit choice the agent gets the default access from Settings.
+            ...(params.access ? { access: params.access } : {}),
             ...(space ? { spaceID: space.id } : {}),
             ...(params.skill ? { skill: params.skill } : {}),
             ...(session?.model ? { model: { providerID: session.model.providerID, modelID: session.model.id } } : {}),
           })
+          // Interval agents run right away anyway; others follow the "run right after deploy" setting.
+          if (deployment.schedule.type !== "interval" && (yield* work.defaults()).runOnDeploy)
+            yield* work.deployment.requestRun(deployment.id).pipe(Effect.ignore)
           const output = `Deployed "${deployment.title}" (${deployment.id}) - ${WorkSchedule.label(deployment.schedule)} in ${deployment.directory}.`
           return {
             title: `Deployed: ${deployment.title}`,

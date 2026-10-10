@@ -11,6 +11,7 @@ import { RuntimeFlags } from "@/effect/runtime-flags"
 import { InstanceStore } from "@/project/instance-store"
 import { Provider } from "@/provider/provider"
 import { SessionPrompt } from "@/session/prompt"
+import { SessionID } from "@/session/schema"
 import { Session } from "@/session/session"
 import { WorkPermission } from "./permission"
 import { WorkPrompt } from "./prompt"
@@ -27,7 +28,7 @@ export interface Interface {
   readonly start: (id: Work.DeploymentID) => Effect.Effect<Work.Run, Work.NotFoundError | BusyError>
   /** Starts a manual run and waits for it to finish. */
   readonly run: (id: Work.DeploymentID) => Effect.Effect<Work.Run, Work.NotFoundError | BusyError>
-  /** One scheduler pass: recovers dead runs and starts every due agent. */
+  /** One scheduler pass: recovers dead runs, resumes interrupted chats and starts every due agent. */
   readonly tick: () => Effect.Effect<void>
 }
 
@@ -87,15 +88,58 @@ const layer = Layer.effect(
                     prompts.cancel(session.id).pipe(Effect.andThen(Effect.die(new Error("The run timed out")))),
                 }),
               )
-            return outcome(yield* sessions.messages({ sessionID: session.id }))
+            const messages = yield* sessions.messages({ sessionID: session.id })
+            // Closing OpenWork aborts the answer and lists the session to resume; a run reports it instead.
+            if (aborted(messages) && (yield* work.resume.has(session.id)))
+              return { ...outcome(messages), status: "error" as const, error: Work.INTERRUPTED }
+            return outcome(messages)
           }),
         )
         .pipe(slots.withPermits(1), Effect.exit)
-      yield* work.run.finish(
-        run.id,
-        Exit.isSuccess(exit)
-          ? exit.value
-          : { status: Cause.hasInterruptsOnly(exit.cause) ? "cancelled" : "error", error: failure(exit.cause) },
+      const result: Work.RunOutcome = Exit.isSuccess(exit)
+        ? exit.value
+        : { status: Cause.hasInterruptsOnly(exit.cause) ? "cancelled" : "error", error: failure(exit.cause) }
+      yield* work.run.finish(run.id, result)
+      if (result.error === Work.INTERRUPTED) yield* notifyInterrupted(deployment, run)
+    })
+
+    /** Tells the user in the inbox that a run stopped early because OpenWork closed. */
+    const notifyInterrupted = Effect.fn("WorkScheduler.notifyInterrupted")(function* (
+      deployment: Work.Deployment,
+      run: Work.Run,
+    ) {
+      const current = (yield* work.deployment.get(deployment.id)) ?? deployment
+      const next =
+        current.status === "active" && current.nextRunAt !== undefined
+          ? "It runs again at its next scheduled time, or open it to run it now."
+          : "Open it to run it again."
+      yield* work.message.post({
+        title: `Run #${run.number} didn't finish`,
+        body: `OpenWork closed while "${current.title}" was running, so this run stopped early. ${next}`,
+        deploymentID: current.id,
+        runID: run.id,
+        ...(run.sessionID ? { sessionID: run.sessionID } : {}),
+      })
+    })
+
+    /** Picks up chats that were still answering when the OpenWork process running them stopped. */
+    const resume = Effect.fn("WorkScheduler.resume")(function* () {
+      const pending = yield* work.resume.take(alive)
+      yield* Effect.forEach(
+        pending,
+        (id) =>
+          Effect.gen(function* () {
+            const session = yield* sessions.get(SessionID.make(id)).pipe(Effect.orElseSucceed(() => undefined))
+            // Runs are reported in the inbox instead, and a subagent's parent picks its work up again.
+            if (!session || session.parentID || WorkSession.meta(session.metadata)?.kind === "run") return
+            yield* instances.provide({ directory: session.directory }, prompts.loop({ sessionID: session.id })).pipe(
+              Effect.catchCause((cause) =>
+                Effect.logError("resuming an interrupted chat failed", { sessionID: id, cause: Cause.pretty(cause) }),
+              ),
+              Effect.forkIn(scope),
+            )
+          }),
+        { discard: true },
       )
     })
 
@@ -117,7 +161,17 @@ const layer = Layer.effect(
     })
 
     const tick = Effect.fn("WorkScheduler.tick")(function* () {
-      yield* work.run.recover(alive)
+      const recovered = yield* work.run.recover(alive)
+      yield* Effect.forEach(
+        recovered,
+        (run) =>
+          Effect.gen(function* () {
+            const deployment = yield* work.deployment.get(run.deploymentID)
+            if (deployment) yield* notifyInterrupted(deployment, run)
+          }),
+        { discard: true },
+      )
+      yield* resume()
       const due = (yield* work.deployment.due(Date.now())).filter((item) => !active.has(item.id))
       yield* Effect.forEach(
         due,
@@ -171,6 +225,11 @@ function alive(pid: number) {
   } catch {
     return false
   }
+}
+
+function aborted(messages: ReadonlyArray<SessionV1.WithParts>) {
+  const last = messages.findLast((message) => message.info.role === "assistant")?.info
+  return last?.role === "assistant" && last.error?.name === "MessageAbortedError"
 }
 
 function failure(cause: Cause.Cause<unknown>) {

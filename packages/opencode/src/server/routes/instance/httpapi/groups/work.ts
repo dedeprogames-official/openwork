@@ -8,7 +8,9 @@ const root = "/work"
 
 export const WorkPaths = {
   state: `${root}/state`,
+  version: `${root}/version`,
   pause: `${root}/pause`,
+  defaults: `${root}/defaults`,
   demo: `${root}/demo`,
   deployments: `${root}/deployment`,
   deployment: `${root}/deployment/:deploymentID`,
@@ -25,6 +27,7 @@ export const WorkPaths = {
   agenda: `${root}/agenda/:agendaID`,
   memories: `${root}/memory`,
   memory: `${root}/memory/:memoryID`,
+  permission: `${root}/permission/:permissionID`,
 } as const
 
 const DemoResult = Schema.Struct({
@@ -52,10 +55,25 @@ export const WorkApi = HttpApi.make("work").add(
           "Everything the OpenWork dashboard shows: spaces, deployed agents, today's runs, inbox, todos, agenda, memory and usage.",
         ),
       ),
+      HttpApiEndpoint.get("version", WorkPaths.version, {
+        success: described(Work.Version, "Installed and newest version"),
+      }).annotateMerge(
+        annotate("work.version", "Check for updates", "Compare the installed OpenWork with its newest GitHub release."),
+      ),
       HttpApiEndpoint.post("pause", WorkPaths.pause, {
         payload: Work.PauseInput,
         success: described(Schema.Boolean, "Agents paused or resumed"),
       }).annotateMerge(annotate("work.pause", "Pause agents", "Pause or resume every scheduled agent.")),
+      HttpApiEndpoint.patch("defaults", WorkPaths.defaults, {
+        payload: Work.DefaultsPatch,
+        success: described(Work.Defaults, "Agent defaults"),
+      }).annotateMerge(
+        annotate(
+          "work.defaults",
+          "Set agent defaults",
+          "Change the access and run-on-deploy defaults for new agents, including ones the deploy tool creates.",
+        ),
+      ),
       HttpApiEndpoint.post("demo", WorkPaths.demo, {
         payload: Work.DemoInput,
         success: described(DemoResult, "Demo workspace created"),
@@ -181,6 +199,17 @@ export const WorkApi = HttpApi.make("work").add(
         success: described(Schema.Boolean, "Memory removed"),
         error: WorkNotFoundError,
       }).annotateMerge(annotate("work.memory.remove", "Forget memory", "Delete a saved memory.")),
+      HttpApiEndpoint.delete("permissionRemove", WorkPaths.permission, {
+        params: { permissionID: Work.PermissionID },
+        success: described(Schema.Boolean, "Permission removed"),
+        error: WorkNotFoundError,
+      }).annotateMerge(
+        annotate(
+          "work.permission.remove",
+          "Forget allowed permission",
+          "Stop always allowing a permission; OpenWork asks again next time.",
+        ),
+      ),
     )
     .annotateMerge(OpenApi.annotations({ title: "work", description: "OpenWork dashboard routes." })),
 )

@@ -1,9 +1,11 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { InstanceState } from "@/effect/instance-state"
+import { RuntimeFlags } from "@/effect/runtime-flags"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
+import { Work } from "@opencode-ai/core/work"
 import { Runner } from "@/effect/runner"
 import { BackgroundJob } from "@/background/job"
-import { Effect, Latch, Layer, Scope, Context } from "effect"
+import { Cause, Effect, Exit, Latch, Layer, Scope, Context } from "effect"
 import { Session } from "./session"
 import { SessionID } from "./schema"
 import { SessionStatus } from "./status"
@@ -31,6 +33,8 @@ const layer = Layer.effect(
   Effect.gen(function* () {
     const background = yield* BackgroundJob.Service
     const status = yield* SessionStatus.Service
+    const resumable = (yield* Work.Service).resume
+    const flags = yield* RuntimeFlags.Service
 
     const state = yield* InstanceState.make(
       Effect.fn("SessionRunState.state")(function* () {
@@ -75,6 +79,8 @@ const layer = Layer.effect(
     })
 
     const cancel = Effect.fn("SessionRunState.cancel")(function* (sessionID: SessionID) {
+      // The user's own interrupt is final, so this answer is not picked up again on the next start.
+      yield* resumable.remove(sessionID).pipe(Effect.ignoreCause)
       yield* cancelBackgroundJobs(background, sessionID)
       const data = yield* InstanceState.get(state)
       const existing = data.runners.get(sessionID)
@@ -90,7 +96,22 @@ const layer = Layer.effect(
       onInterrupt: Effect.Effect<SessionV1.WithParts>,
       work: Effect.Effect<SessionV1.WithParts>,
     ) {
-      return yield* (yield* runner(sessionID, onInterrupt)).ensureRunning(work)
+      const active = yield* runner(sessionID, onInterrupt)
+      // Only processes running the OpenWork scheduler (the TUI and `serve`) resume answers; `run` and tests opt out.
+      if (flags.disableWorkScheduler) return yield* active.ensureRunning(work)
+      return yield* active.ensureRunning(
+        // Listed while it answers: if OpenWork stops first (closed, crashed or reloading the folder), the next start
+        // picks it up again. Finishing, failing or `cancel` takes it off the list.
+        resumable.add(sessionID, process.pid).pipe(
+          Effect.ignoreCause,
+          Effect.andThen(work),
+          Effect.onExit((exit) =>
+            Exit.isFailure(exit) && Cause.hasInterruptsOnly(exit.cause)
+              ? Effect.void
+              : resumable.remove(sessionID).pipe(Effect.ignoreCause),
+          ),
+        ),
+      )
     })
 
     const startShell = Effect.fn("SessionRunState.startShell")(function* (
@@ -146,6 +167,10 @@ function busyError(sessionID: SessionID) {
   return new Session.BusyError({ sessionID })
 }
 
-export const node = LayerNode.make({ service: Service, layer: layer, deps: [BackgroundJob.node, SessionStatus.node] })
+export const node = LayerNode.make({
+  service: Service,
+  layer: layer,
+  deps: [BackgroundJob.node, SessionStatus.node, Work.node, RuntimeFlags.node],
+})
 
 export * as SessionRunState from "./run-state"

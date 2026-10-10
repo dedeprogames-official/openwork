@@ -1,11 +1,14 @@
 import path from "path"
-import { Effect, Option, RcMap } from "effect"
+import semver from "semver"
+import { Effect, Exit, Option, RcMap } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { FSUtil } from "@opencode-ai/core/fs-util"
+import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { LocationServiceMap } from "@opencode-ai/core/location-services"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { Work } from "@opencode-ai/core/work"
+import { Installation } from "@/installation"
 import { InstanceStore } from "@/project/instance-store"
 import { Session } from "@/session/session"
 import { SessionID } from "@/session/schema"
@@ -24,6 +27,7 @@ export const workHandlers = HttpApiBuilder.group(RootHttpApi, "work", (handlers)
     const fs = yield* FSUtil.Service
     // Optional so minimal API layers (tests) can mount these routes without v2 location services.
     const locations = yield* Effect.serviceOption(LocationServiceMap.Service)
+    const installation = yield* Effect.serviceOption(Installation.Service)
 
     const notFound = (error: Work.NotFoundError) =>
       Effect.fail(
@@ -38,6 +42,21 @@ export const workHandlers = HttpApiBuilder.group(RootHttpApi, "work", (handlers)
       )
     })
 
+    const version = Effect.fn("WorkHttpApi.version")(function* () {
+      // Development builds never update themselves, so they skip the network.
+      if (!semver.valid(InstallationVersion) || Option.isNone(installation))
+        return { current: InstallationVersion, available: false }
+      const latest = yield* installation.value.latest().pipe(Effect.exit)
+      // Offline or rate limited: say nothing rather than fail the settings page.
+      if (Exit.isFailure(latest) || !semver.valid(latest.value))
+        return { current: InstallationVersion, available: false }
+      return {
+        current: InstallationVersion,
+        latest: latest.value,
+        available: semver.gt(latest.value, InstallationVersion),
+      }
+    })
+
     const deploymentCreate = Effect.fn("WorkHttpApi.deploymentCreate")(function* (ctx: {
       payload: Work.DeploymentCreate
     }) {
@@ -47,8 +66,9 @@ export const workHandlers = HttpApiBuilder.group(RootHttpApi, "work", (handlers)
         directory,
         agent: ctx.payload.agent ?? "work",
       })
-      if (ctx.payload.runNow && deployment.schedule.type !== "interval")
-        yield* scheduler.start(deployment.id).pipe(Effect.ignore)
+      // Interval agents run right away anyway.
+      const runNow = ctx.payload.runNow ?? (yield* work.defaults()).runOnDeploy
+      if (runNow && deployment.schedule.type !== "interval") yield* scheduler.start(deployment.id).pipe(Effect.ignore)
       return deployment
     })
 
@@ -118,7 +138,9 @@ export const workHandlers = HttpApiBuilder.group(RootHttpApi, "work", (handlers)
 
     return handlers
       .handle("state", () => work.state())
+      .handle("version", version)
       .handle("pause", (ctx) => work.setPaused(ctx.payload.paused).pipe(Effect.as(true)))
+      .handle("defaults", (ctx) => work.setDefaults(ctx.payload))
       .handle("demo", (ctx) =>
         Effect.gen(function* () {
           const directory = yield* folder(ctx.payload.directory ?? process.cwd())
@@ -182,6 +204,11 @@ export const workHandlers = HttpApiBuilder.group(RootHttpApi, "work", (handlers)
       .handle("memoryCreate", (ctx) => work.memory.save(ctx.payload))
       .handle("memoryRemove", (ctx) =>
         work.memory.remove(ctx.params.memoryID).pipe(Effect.as(true), Effect.catchTag("Work.NotFoundError", notFound)),
+      )
+      .handle("permissionRemove", (ctx) =>
+        work.permission
+          .remove(ctx.params.permissionID)
+          .pipe(Effect.as(true), Effect.catchTag("Work.NotFoundError", notFound)),
       )
   }),
 )
