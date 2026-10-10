@@ -6,7 +6,8 @@ import { DialogPrompt } from "../../ui/dialog-prompt"
 import { DialogConfirm } from "../../ui/dialog-confirm"
 import { useDialog } from "../../ui/dialog"
 import { useWork } from "../context"
-import { Empty, Hints, PageHeader, Pill, SectionTitle } from "../components"
+import { Button, Empty, Hints, PageHeader, SectionTitle } from "../components"
+import { Action, HoverRow } from "../hover"
 import { useDeploy } from "../dialog-deploy"
 import { useMoveIntoSpace } from "../dialog-space"
 import { ago, clock, schedule, truncate, until } from "../format"
@@ -73,18 +74,17 @@ export function SpacesPage(props: { spaceID?: string }) {
       <PageHeader
         title="Spaces"
         subtitle="Group agents around a goal, an event or a client."
-        right={<Pill label="+ New space" active onClick={() => void create()} />}
+        right={<Button label="+ New space" active onClick={() => void create()} />}
       />
       <box flexDirection="row" flexGrow={1} minHeight={0} gap={3}>
         <scrollbox ref={follow} width={44} flexShrink={0} verticalScrollbarOptions={{ visible: false }}>
           <For each={spaces()}>
             {(item, index) => (
-              <box
+              <HoverRow
                 id={`space-${index()}`}
-                flexShrink={0}
                 paddingBottom={1}
-                backgroundColor={index() === selected() ? theme.backgroundElement : undefined}
-                onMouseUp={() => click(index() === selected(), () => setSelected(index()), openFirst)}
+                selected={index() === selected()}
+                onClick={() => click(index() === selected(), () => setSelected(index()), openFirst)}
               >
                 <box flexDirection="row">
                   <text flexGrow={1} wrapMode="none">
@@ -100,7 +100,7 @@ export function SpacesPage(props: { spaceID?: string }) {
                     {"  " + truncate(item.goal ?? "", 40)}
                   </text>
                 </Show>
-              </box>
+              </HoverRow>
             )}
           </For>
           <Show when={spaces().length === 0}>
@@ -121,9 +121,9 @@ export function SpacesPage(props: { spaceID?: string }) {
                 <SectionTitle title="Agents" meta={`${agents().length}`} />
                 <For each={agents()}>
                   {(agent) => (
-                    <box
+                    <HoverRow
                       paddingTop={1}
-                      onMouseUp={() => pressed() && route.navigate({ type: "work", page: "agent", id: agent.id })}
+                      onClick={() => pressed() && route.navigate({ type: "work", page: "agent", id: agent.id })}
                     >
                       <box flexDirection="row">
                         <text flexGrow={1} wrapMode="none">
@@ -140,19 +140,16 @@ export function SpacesPage(props: { spaceID?: string }) {
                       <text fg={theme.textMuted} wrapMode="none" paddingLeft={2}>
                         {truncate(latest(agent.id)?.summary ?? agent.task, 100)}
                       </text>
-                    </box>
+                    </HoverRow>
                   )}
                 </For>
                 <Show when={agents().length === 0}>
                   <Empty>No agents in this space yet.</Empty>
                 </Show>
-                <text fg={theme.textMuted} paddingTop={1} selectable={false} onMouseUp={() => void deploy()}>
-                  + Deploy an agent...
-                </text>
+                <box height={1} flexShrink={0} />
+                <Action label="+ Deploy an agent..." pad={false} onClick={() => void deploy()} />
                 <Show when={work.state.deployments.some((item) => item.spaceID !== current().id)}>
-                  <text fg={theme.textMuted} selectable={false} onMouseUp={moveHere}>
-                    + Move an agent here...
-                  </text>
+                  <Action label="+ Move an agent here..." pad={false} onClick={moveHere} />
                 </Show>
                 <box height={1} />
                 <SectionTitle title="On the agenda" />

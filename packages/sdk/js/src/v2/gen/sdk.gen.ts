@@ -109,6 +109,8 @@ import type {
   McpDisconnectResponses,
   McpLocalConfig,
   McpRemoteConfig,
+  McpRemoveErrors,
+  McpRemoveResponses,
   McpStatusErrors,
   McpStatusResponses,
   ModelRef,
@@ -423,6 +425,15 @@ import type {
   WorkDeploymentRunsResponses,
   WorkDeploymentUpdateErrors,
   WorkDeploymentUpdateResponses,
+  WorkIntegrationCreate,
+  WorkIntegrationCreateErrors,
+  WorkIntegrationCreateResponses,
+  WorkIntegrationListErrors,
+  WorkIntegrationListResponses,
+  WorkIntegrationRemoveErrors,
+  WorkIntegrationRemoveResponses,
+  WorkIntegrationSyncErrors,
+  WorkIntegrationSyncResponses,
   WorkMemoryCreate,
   WorkMemoryCreateErrors,
   WorkMemoryCreateResponses,
@@ -1987,6 +1998,82 @@ export class Permission extends HeyApiClient {
   }
 }
 
+export class Integration extends HeyApiClient {
+  /**
+   * List integrations
+   *
+   * The MCP servers of the global opencode.json and the ones OpenWork holds until it can write them there.
+   */
+  public list<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
+    return (options?.client ?? this.client).get<WorkIntegrationListResponses, WorkIntegrationListErrors, ThrowOnError>({
+      url: "/work/integration",
+      ...options,
+    })
+  }
+
+  /**
+   * Add integration
+   *
+   * Save an MCP server. It is kept by OpenWork at once and written to the global opencode.json when OpenWork closes.
+   */
+  public create<ThrowOnError extends boolean = false>(
+    parameters?: {
+      workIntegrationCreate?: WorkIntegrationCreate
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ key: "workIntegrationCreate", map: "body" }] }])
+    return (options?.client ?? this.client).post<
+      WorkIntegrationCreateResponses,
+      WorkIntegrationCreateErrors,
+      ThrowOnError
+    >({
+      url: "/work/integration",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Write integrations to opencode.json
+   *
+   * Move the integrations OpenWork holds into the global opencode.json. OpenWork does this when it closes.
+   */
+  public sync<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
+    return (options?.client ?? this.client).post<WorkIntegrationSyncResponses, WorkIntegrationSyncErrors, ThrowOnError>(
+      { url: "/work/integration/sync", ...options },
+    )
+  }
+
+  /**
+   * Remove integration
+   *
+   * Delete an MCP server from OpenWork and from the global opencode.json.
+   */
+  public remove<ThrowOnError extends boolean = false>(
+    parameters: {
+      name: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "name" }] }])
+    return (options?.client ?? this.client).delete<
+      WorkIntegrationRemoveResponses,
+      WorkIntegrationRemoveErrors,
+      ThrowOnError
+    >({
+      url: "/work/integration/{name}",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Work extends HeyApiClient {
   /**
    * Get OpenWork state
@@ -2117,6 +2204,11 @@ export class Work extends HeyApiClient {
   private _permission?: Permission
   get permission(): Permission {
     return (this._permission ??= new Permission({ client: this.client }))
+  }
+
+  private _integration?: Integration
+  get integration(): Integration {
+    return (this._integration ??= new Integration({ client: this.client }))
   }
 }
 
@@ -3254,6 +3346,36 @@ export class Mcp extends HeyApiClient {
     )
     return (options?.client ?? this.client).post<McpDisconnectResponses, McpDisconnectErrors, ThrowOnError>({
       url: "/mcp/{name}/disconnect",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Close an MCP server and forget it in this folder. The config file is not changed; OpenWork's integration routes do that.
+   */
+  public remove<ThrowOnError extends boolean = false>(
+    parameters: {
+      name: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "name" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<McpRemoveResponses, McpRemoveErrors, ThrowOnError>({
+      url: "/mcp/{name}",
       ...options,
       ...params,
     })
@@ -6910,7 +7032,7 @@ export class Attempt extends HeyApiClient {
   }
 }
 
-export class Integration extends HeyApiClient {
+export class Integration2 extends HeyApiClient {
   /**
    * List integrations
    *
@@ -7756,9 +7878,9 @@ export class V2 extends HeyApiClient {
     return (this._provider ??= new Provider2({ client: this.client }))
   }
 
-  private _integration?: Integration
-  get integration(): Integration {
-    return (this._integration ??= new Integration({ client: this.client }))
+  private _integration?: Integration2
+  get integration(): Integration2 {
+    return (this._integration ??= new Integration2({ client: this.client }))
   }
 
   private _credential?: Credential

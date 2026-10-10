@@ -6,10 +6,11 @@ import { useSync } from "../../context/sync"
 import { useTheme } from "../../context/theme"
 import { useDialog } from "../../ui/dialog"
 import { useWork } from "../context"
-import { Empty, Hints, PageHeader, Pill, SectionTitle } from "../components"
+import { Empty, Hints, PageHeader, Button, SectionTitle } from "../components"
 import { tokens, truncate } from "../format"
 import { step, useFollowSelection, usePageKeys, usePressed } from "../keys"
 import { isLocal } from "../stats"
+import { HoverRow } from "../hover"
 
 export function ModelsPage() {
   const sync = useSync()
@@ -45,7 +46,7 @@ export function ModelsPage() {
       <PageHeader
         title="Models"
         subtitle="Local models keep agents private and free to run; cloud models handle the hard tasks."
-        right={<Pill label="+ Connect provider" active onClick={connect} />}
+        right={<Button label="+ Connect provider" active onClick={connect} />}
       />
       <text fg={theme.textMuted} flexShrink={0}>
         <span style={{ fg: theme.text }}>Default model </span>
@@ -55,11 +56,11 @@ export function ModelsPage() {
       <scrollbox ref={follow} flexGrow={1} minHeight={0} verticalScrollbarOptions={{ visible: false }}>
         <For each={providers()}>
           {(provider, index) => (
-            <box
+            <HoverRow
               id={`provider-${index()}`}
               paddingBottom={1}
-              backgroundColor={index() === selected() ? theme.backgroundElement : undefined}
-              onMouseUp={() => {
+              selected={index() === selected()}
+              onClick={() => {
                 if (!pressed()) return
                 setSelected(index())
                 choose()
@@ -84,7 +85,7 @@ export function ModelsPage() {
                   110,
                 )}
               </text>
-            </box>
+            </HoverRow>
           )}
         </For>
         <Show when={providers().length === 0}>

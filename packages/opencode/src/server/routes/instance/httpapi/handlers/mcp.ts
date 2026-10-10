@@ -98,6 +98,11 @@ export const mcpHandlers = HttpApiBuilder.group(InstanceHttpApi, "mcp", (handler
       return true
     })
 
+    const remove = Effect.fn("McpHttpApi.remove")(function* (ctx: { params: { name: string } }) {
+      yield* mcp.remove(ctx.params.name)
+      return true
+    })
+
     return handlers
       .handle("status", status)
       .handle("add", add)
@@ -107,5 +112,6 @@ export const mcpHandlers = HttpApiBuilder.group(InstanceHttpApi, "mcp", (handler
       .handle("authRemove", authRemove)
       .handle("connect", connect)
       .handle("disconnect", disconnect)
+      .handle("remove", remove)
   }),
 )

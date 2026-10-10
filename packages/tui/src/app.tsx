@@ -33,6 +33,7 @@ import { PluginRouteMissing } from "./component/plugin-route-missing"
 import { ProjectProvider, useProject } from "./context/project"
 import { EditorContextProvider } from "./context/editor"
 import { useEvent } from "./context/event"
+import { createOpencodeClient } from "@opencode-ai/sdk/v2"
 import { SDKProvider, useSDK } from "./context/sdk"
 import { StartupLoading } from "./component/startup-loading"
 import { SyncProvider, useSync } from "./context/sync"
@@ -382,8 +383,19 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
     }
     if (result.epilogue) process.stdout.write(result.epilogue + "\n")
   })
+  yield* Effect.promise(() => saveIntegrations(input))
   if (result.upgrade) yield* Effect.promise(upgradeAfterExit)
 })
+
+/**
+ * Integrations added in OpenWork are kept in its database while it runs; closing is when they are written to the
+ * global opencode.json, the file that stays the source of truth. A failure is not fatal: they stay in the database and
+ * the next start tries again.
+ */
+async function saveIntegrations(input: TuiInput) {
+  const client = createOpencodeClient({ baseUrl: input.url, fetch: input.fetch, headers: input.headers })
+  await client.work.integration.sync({ signal: AbortSignal.timeout(5000) }).catch(() => undefined)
+}
 
 /** Runs `openwork upgrade` where OpenWork just closed, so its progress and any questions stay visible. */
 async function upgradeAfterExit() {

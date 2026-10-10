@@ -7,12 +7,13 @@ import { useRoute } from "../../context/route"
 import { useSync } from "../../context/sync"
 import { tint, useTheme } from "../../context/theme"
 import { useWork } from "../context"
-import { Card, Hints, PageHeader, Pill } from "../components"
+import { Button, Card, Hints, PageHeader } from "../components"
 import { useDeploy } from "../dialog-deploy"
 import { clock, count, money, tokens, truncate } from "../format"
 import { step, usePageKeys, useRowClick } from "../keys"
 import { spaceColor } from "../palette"
 import { Donut, Gauge } from "../raster"
+import { Action, hoverFill, useHover } from "../hover"
 import { useShellInset } from "../shell"
 import { REFERENCE, runTokens, shares, usage } from "../stats"
 
@@ -136,20 +137,20 @@ export function AgentsPage() {
     <box flexGrow={1} minHeight={0} paddingLeft={2} paddingRight={2} paddingTop={1}>
       <PageHeader
         title="Agents"
-        subtitle="Every run today, in order — the outlined run is what is working right now."
+        subtitle="Every run today, in order — the highlighted run is what is working right now."
         right={
           <>
-            <Pill
+            <Button
               label={work.state.paused ? "▶ Resume Agents" : "◼ Pause Agents"}
               fg={work.state.paused ? theme.success : theme.warning}
               onClick={() => void work.pause(!work.state.paused)}
             />
-            <Pill label="+ Create Agent" active onClick={() => void deploy()} />
+            <Button label="+ Create Agent" active onClick={() => void deploy()} />
           </>
         }
       />
       <box flexDirection="row" flexGrow={1} minHeight={0} gap={2}>
-        <box width={STATS_WIDTH} flexShrink={0} gap={0}>
+        <box width={STATS_WIDTH} flexShrink={0} gap={1}>
           <Card title="Estimated daily token spend">
             <box alignItems="center">
               <Gauge
@@ -157,8 +158,8 @@ export function AgentsPage() {
                 height={6}
                 fraction={stats().perDay > 0 ? stats().today / stats().perDay : 0}
                 color={theme.primary}
-                track={tint(theme.background, theme.text, 0.14)}
-                background={theme.background}
+                track={tint(theme.backgroundPanel, theme.text, 0.14)}
+                background={theme.backgroundPanel}
               />
               <text fg={theme.text} attributes={TextAttributes.BOLD}>
                 {tokens(stats().perDay)}
@@ -190,8 +191,8 @@ export function AgentsPage() {
                 <Donut
                   width={14}
                   slices={slices().map((item) => ({ value: item.value, color: spaceColor(theme, item.color) }))}
-                  track={tint(theme.background, theme.text, 0.14)}
-                  background={theme.background}
+                  track={tint(theme.backgroundPanel, theme.text, 0.14)}
+                  background={theme.backgroundPanel}
                 />
                 <text fg={theme.text} wrapMode="none">
                   <b>{` ${work.state.deployments.length}`}</b>
@@ -200,21 +201,26 @@ export function AgentsPage() {
               </box>
               <box flexGrow={1}>
                 <For each={slices()}>
-                  {(item) => (
-                    <box
-                      flexDirection="row"
-                      onMouseUp={() => {
-                        if (work.state.spaces.some((space) => space.id === item.key))
-                          route.navigate({ type: "work", page: "spaces", id: item.key })
-                      }}
-                    >
-                      <text flexGrow={1} wrapMode="none">
-                        <span style={{ fg: spaceColor(theme, item.color) }}>● </span>
-                        <span style={{ fg: theme.textMuted }}>{truncate(item.label, 12)}</span>
-                      </text>
-                      <text fg={theme.text}>{`${Math.round((item.value / Math.max(1, sliceTotal())) * 100)}%`}</text>
-                    </box>
-                  )}
+                  {(item) => {
+                    const hover = useHover()
+                    return (
+                      <box
+                        flexDirection="row"
+                        backgroundColor={hover.active() ? hoverFill(theme, theme.backgroundPanel) : undefined}
+                        {...hover.bind}
+                        onMouseUp={() => {
+                          if (work.state.spaces.some((space) => space.id === item.key))
+                            route.navigate({ type: "work", page: "spaces", id: item.key })
+                        }}
+                      >
+                        <text flexGrow={1} wrapMode="none">
+                          <span style={{ fg: spaceColor(theme, item.color) }}>● </span>
+                          <span style={{ fg: theme.textMuted }}>{truncate(item.label, 12)}</span>
+                        </text>
+                        <text fg={theme.text}>{`${Math.round((item.value / Math.max(1, sliceTotal())) * 100)}%`}</text>
+                      </box>
+                    )
+                  }}
                 </For>
                 <Show when={slices().length === 0}>
                   <text fg={theme.textMuted}>No runs yet today</text>
@@ -228,42 +234,27 @@ export function AgentsPage() {
             <text fg={theme.text} flexGrow={1}>
               <b>Agent Calendar</b>
             </text>
-            <text
+            <Action
+              label="whole day"
               fg={zoom() === "day" ? theme.text : theme.textMuted}
-              wrapMode="none"
-              flexShrink={0}
-              selectable={false}
-              onMouseUp={() => setZoom("day")}
-            >
-              whole day{" "}
-            </text>
-            <text
+              onClick={() => setZoom("day")}
+            />
+            <Action
+              label={zoom() === "day" ? "●━━━━━━━━" : "━━━━━━━━●"}
               fg={theme.borderActive}
-              wrapMode="none"
-              flexShrink={0}
-              selectable={false}
-              onMouseUp={() => setZoom(zoom() === "day" ? "detail" : "day")}
-            >
-              {zoom() === "day" ? "●━━━━━━━━" : "━━━━━━━━●"}
-            </text>
-            <text
+              pad={false}
+              onClick={() => setZoom(zoom() === "day" ? "detail" : "day")}
+            />
+            <Action
+              label="detail"
               fg={zoom() === "detail" ? theme.text : theme.textMuted}
-              wrapMode="none"
-              flexShrink={0}
-              selectable={false}
-              onMouseUp={() => setZoom("detail")}
-            >
-              {" detail"}
-            </text>
-            <text
+              onClick={() => setZoom("detail")}
+            />
+            <Action
+              label={live() ? "● Live" : "○ Live"}
               fg={live() ? theme.success : theme.textMuted}
-              wrapMode="none"
-              flexShrink={0}
-              selectable={false}
-              onMouseUp={toggleLive}
-            >
-              {live() ? "   ● Live" : "   ○ Live"}
-            </text>
+              onClick={toggleLive}
+            />
           </box>
           <text fg={theme.textMuted} flexShrink={0}>
             Every run today, in order. Zoom in to read them, out to see the size of the day. Enter opens that agent.
@@ -274,31 +265,44 @@ export function AgentsPage() {
             fallback={
               <box flexGrow={1} minHeight={0}>
                 <For each={hours()}>
-                  {(hour) => (
-                    <box flexDirection="row" flexShrink={0} onMouseUp={() => openHour(hour.items)}>
-                      <text fg={hour.hour === currentHour() ? theme.text : theme.textMuted} width={7} flexShrink={0}>
-                        {`${String(hour.hour).padStart(2, "0")}:00`}
-                      </text>
-                      <text flexGrow={1} wrapMode="none">
-                        <For each={hourBar(hour.items, busiest(), calendarWidth() - 22)}>
-                          {(segment) => (
-                            <span
-                              style={{
-                                fg: segment.upcoming
-                                  ? tint(theme.background, spaceColor(theme, spaceOf(segment.deployment)?.color), 0.35)
-                                  : spaceColor(theme, spaceOf(segment.deployment)?.color),
-                              }}
-                            >
-                              {segment.text}
-                            </span>
-                          )}
-                        </For>
-                      </text>
-                      <text fg={theme.textMuted} flexShrink={0}>
-                        {hour.items.length ? `${count(hour.items.length)} runs` : ""}
-                      </text>
-                    </box>
-                  )}
+                  {(hour) => {
+                    const hover = useHover()
+                    return (
+                      <box
+                        flexDirection="row"
+                        flexShrink={0}
+                        backgroundColor={hover.active() ? hoverFill(theme, theme.background) : undefined}
+                        {...hover.bind}
+                        onMouseUp={() => openHour(hour.items)}
+                      >
+                        <text fg={hour.hour === currentHour() ? theme.text : theme.textMuted} width={7} flexShrink={0}>
+                          {`${String(hour.hour).padStart(2, "0")}:00`}
+                        </text>
+                        <text flexGrow={1} wrapMode="none">
+                          <For each={hourBar(hour.items, busiest(), calendarWidth() - 22)}>
+                            {(segment) => (
+                              <span
+                                style={{
+                                  fg: segment.upcoming
+                                    ? tint(
+                                        theme.background,
+                                        spaceColor(theme, spaceOf(segment.deployment)?.color),
+                                        0.35,
+                                      )
+                                    : spaceColor(theme, spaceOf(segment.deployment)?.color),
+                                }}
+                              >
+                                {segment.text}
+                              </span>
+                            )}
+                          </For>
+                        </text>
+                        <text fg={theme.textMuted} flexShrink={0}>
+                          {hour.items.length ? `${count(hour.items.length)} runs` : ""}
+                        </text>
+                      </box>
+                    )
+                  }}
                 </For>
               </box>
             }
@@ -371,8 +375,11 @@ function CalendarRow(props: {
   const running = () => props.entry.run?.status === "running"
   const upcoming = () => !props.entry.run
   const failed = () => props.entry.run?.status === "error"
+  const hover = useHover()
   const background = () =>
-    props.selected ? tint(theme.background, color(), 0.5) : tint(theme.background, color(), upcoming() ? 0.1 : 0.28)
+    props.selected
+      ? tint(theme.background, color(), 0.5)
+      : tint(theme.background, color(), hover.active() ? 0.4 : upcoming() ? 0.1 : 0.28)
   // Secondary text is mixed from the row's own background, so it stays readable over any space color and theme.
   const soft = () => tint(background(), theme.text, 0.6)
   const right = () => {
@@ -386,7 +393,7 @@ function CalendarRow(props: {
   const title = () => truncate(`Agent: ${props.entry.deployment?.title ?? "removed agent"}`, Math.ceil(room() * 0.62))
   const spaceName = () => (props.space ? truncate(props.space.name, room() - title().length - 2) : "")
   return (
-    <box flexDirection="row" flexShrink={0} onMouseUp={props.onClick}>
+    <box flexDirection="row" flexShrink={0} {...hover.bind} onMouseUp={props.onClick}>
       <text fg={theme.textMuted} width={7} flexShrink={0}>
         {props.showTime ? clock(props.entry.at) : ""}
       </text>
@@ -394,12 +401,17 @@ function CalendarRow(props: {
         flexGrow={1}
         flexDirection="row"
         backgroundColor={background()}
-        border={running() ? true : ["left"]}
-        borderStyle={running() ? "rounded" : "heavy"}
+        border={["left"]}
+        borderStyle="heavy"
         borderColor={running() ? theme.error : color()}
         paddingRight={1}
       >
-        <text flexGrow={1} wrapMode="none" fg={upcoming() ? theme.textMuted : theme.text}>
+        <text
+          flexGrow={1}
+          wrapMode="none"
+          fg={upcoming() ? theme.textMuted : theme.text}
+          attributes={running() ? TextAttributes.BOLD : undefined}
+        >
           {title()}
           <span style={{ fg: soft() }}>{spaceName() ? `  ${spaceName()}` : ""}</span>
         </text>

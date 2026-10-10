@@ -14,7 +14,8 @@ import { DialogSelect } from "../../ui/dialog-select"
 import { useDialog } from "../../ui/dialog"
 import { useOpencodeKeymap } from "../../keymap"
 import { useWork } from "../context"
-import { Hints, Pill, SectionTitle } from "../components"
+import { Button, Hints, SectionTitle } from "../components"
+import { Action, HoverRow } from "../hover"
 import { ACCESS, ago, clock, day, truncate, until } from "../format"
 import { step, useFollowSelection, usePageKeys, usePressed, useRowClick } from "../keys"
 import { spaceColor } from "../palette"
@@ -204,7 +205,6 @@ export function DayPage() {
     { key: "c", desc: "Chat about your day", run: () => promptRef.current?.focus() },
   ])
 
-  const row = (section: Section, index: number) => (selected(section, index) ? theme.backgroundElement : undefined)
   const followTodos = useFollowSelection("todo", () => (selection.section === "todos" ? selection.index : undefined))
   const followInbox = useFollowSelection("inbox", () => (selection.section === "inbox" ? selection.index : undefined))
   const followAgents = useFollowSelection("agent", () => (selection.section === "agents" ? selection.index : undefined))
@@ -219,7 +219,7 @@ export function DayPage() {
           <text fg={theme.textMuted}>{day(work.now())}</text>
         </box>
         <box flexDirection="row" gap={1} flexShrink={0}>
-          <Pill
+          <Button
             label={
               work.state.paused
                 ? "◼ agents paused"
@@ -228,9 +228,8 @@ export function DayPage() {
             fg={work.state.paused ? theme.warning : theme.text}
             onClick={() => route.navigate({ type: "work", page: "agents" })}
           />
-          <Pill
+          <Button
             label={showAgents() ? "◧ Hide agents" : "◧ Show agents"}
-            active={showAgents()}
             onClick={() => setShowAgents(!showAgents())}
           />
         </box>
@@ -241,10 +240,9 @@ export function DayPage() {
           <box height={1} flexShrink={0} />
           <For each={agenda()}>
             {(item, index) => (
-              <box
-                flexShrink={0}
-                backgroundColor={row("agenda", index())}
-                onMouseUp={() =>
+              <HoverRow
+                selected={selected("agenda", index())}
+                onClick={() =>
                   click(selected("agenda", index()), () => setSelection({ section: "agenda", index: index() }), open)
                 }
               >
@@ -266,7 +264,7 @@ export function DayPage() {
                       left() - 6,
                     )}
                 </text>
-              </box>
+              </HoverRow>
             )}
           </For>
           <Show when={agenda().length === 0}>
@@ -274,37 +272,35 @@ export function DayPage() {
               Nothing on the agenda today.
             </text>
           </Show>
-          <text fg={theme.textMuted} flexShrink={0} selectable={false} onMouseUp={() => void addEvent()}>
-            + Add an event...
-          </text>
+          <Action label="+ Add an event..." pad={false} onClick={() => void addEvent()} />
           <box height={1} flexShrink={0} />
           <SectionTitle title="Your Todos" />
           <box height={1} flexShrink={0} />
           <scrollbox ref={followTodos} flexGrow={1} minHeight={0} verticalScrollbarOptions={{ visible: false }}>
             <For each={todos()}>
               {(item, index) => (
-                <box
+                <HoverRow
                   id={`todo-${index()}`}
                   flexDirection="row"
                   gap={1}
-                  backgroundColor={row("todos", index())}
-                  onMouseUp={() =>
+                  selected={selected("todos", index())}
+                  onClick={() =>
                     click(selected("todos", index()), () => setSelection({ section: "todos", index: index() }), open)
                   }
                 >
-                  <text
+                  {/* The checkbox toggles right away; the rest of the row selects first. */}
+                  <Action
+                    label={item.time.done ? "✓" : "○"}
+                    pad={false}
+                    stop
                     fg={item.time.done ? theme.success : theme.textMuted}
-                    flexShrink={0}
-                    selectable={false}
-                    onMouseUp={(event: { stopPropagation(): void }) => {
-                      // The checkbox toggles right away; the rest of the row selects first.
-                      event.stopPropagation()
+                    hoverFg={item.time.done ? theme.success : theme.primary}
+                    base={selected("todos", index()) ? theme.backgroundElement : theme.background}
+                    onClick={() => {
                       setSelection({ section: "todos", index: index() })
                       void work.todo.toggle(item.id, !item.time.done)
                     }}
-                  >
-                    {item.time.done ? "✓" : "○"}
-                  </text>
+                  />
                   <box flexGrow={1}>
                     <text
                       fg={item.time.done ? theme.textMuted : theme.text}
@@ -317,12 +313,10 @@ export function DayPage() {
                       <text fg={theme.textMuted}>{item.source}</text>
                     </Show>
                   </box>
-                </box>
+                </HoverRow>
               )}
             </For>
-            <text fg={theme.textMuted} selectable={false} onMouseUp={() => void addTodo()}>
-              + Add a todo...
-            </text>
+            <Action label="+ Add a todo..." pad={false} onClick={() => void addTodo()} />
           </scrollbox>
         </box>
         <box width={middle()} flexShrink={0} minHeight={0}>
@@ -331,9 +325,7 @@ export function DayPage() {
             meta={unread() > 0 ? `${unread()} unread` : "all caught up"}
             right={
               <Show when={inbox().length > 0}>
-                <text fg={theme.textMuted} flexShrink={0} selectable={false} onMouseUp={() => void clearInbox()}>
-                  ✕ clear
-                </text>
+                <Action label="✕ clear" onClick={() => void clearInbox()} />
               </Show>
             }
           />
@@ -347,7 +339,6 @@ export function DayPage() {
                   agent={titleOf(item.deploymentID)}
                   width={middle()}
                   now={work.now()}
-                  background={row("inbox", index())}
                   selected={selected("inbox", index())}
                   onDelete={() => void work.message.remove(item.id)}
                   onClick={() =>
@@ -413,11 +404,7 @@ export function DayPage() {
                           width={right()}
                           now={work.now()}
                           color={spaceColor(theme, group.space?.color)}
-                          background={
-                            selection.section === "agents" && agentList()[selection.index]?.id === agent.id
-                              ? theme.backgroundElement
-                              : undefined
-                          }
+                          selected={selection.section === "agents" && agentList()[selection.index]?.id === agent.id}
                           onClick={() => pressed() && route.navigate({ type: "work", page: "agent", id: agent.id })}
                         />
                       )}
@@ -459,7 +446,6 @@ function InboxRow(props: {
   agent: string | undefined
   width: number
   now: number
-  background: ReturnType<typeof useTheme>["theme"]["background"] | undefined
   selected: boolean
   onClick: () => void
   onToggle: () => void
@@ -473,20 +459,17 @@ function InboxRow(props: {
   const room = () => Math.max(16, props.width - 18 - (props.selected ? 9 : 0))
   const agentWidth = () => Math.min(agent().length, Math.max(10, room() - props.message.title.length))
   return (
-    <box id={props.id} flexShrink={0} paddingBottom={1} backgroundColor={props.background} onMouseUp={props.onClick}>
+    <HoverRow id={props.id} paddingBottom={1} selected={props.selected} onClick={props.onClick}>
       <box flexDirection="row">
-        <text
-          fg={theme.textMuted}
-          flexShrink={0}
-          selectable={false}
-          onMouseUp={(event: { stopPropagation(): void }) => {
-            // Only toggle done; the row's own click would also select and mark the message read.
-            event.stopPropagation()
-            props.onToggle()
-          }}
-        >
-          {done() ? "☑ " : "☐ "}
-        </text>
+        {/* Only toggles done; the row's own click would also select and mark the message read. */}
+        <Action
+          label={done() ? "☑ " : "☐ "}
+          pad={false}
+          stop
+          hoverFg={theme.primary}
+          base={props.selected ? theme.backgroundElement : theme.background}
+          onClick={props.onToggle}
+        />
         <text flexGrow={1} wrapMode="none">
           <span style={{ fg: theme.primary }}>● </span>
           <span style={{ fg: done() ? theme.textMuted : theme.text, bold: unread() }}>
@@ -499,23 +482,21 @@ function InboxRow(props: {
           <span style={{ fg: theme.textMuted }}>{ago(props.message.time.created, props.now)}</span>
         </text>
         <Show when={props.selected}>
-          <text
+          <Action
+            label=" ✕ delete"
+            pad={false}
+            stop
             fg={theme.error}
-            flexShrink={0}
-            selectable={false}
-            onMouseUp={(event: { stopPropagation(): void }) => {
-              event.stopPropagation()
-              props.onDelete()
-            }}
-          >
-            {" ✕ delete"}
-          </text>
+            hoverFg={theme.error}
+            base={theme.backgroundElement}
+            onClick={props.onDelete}
+          />
         </Show>
       </box>
       <text fg={done() ? theme.textMuted : theme.text} wrapMode="word" paddingLeft={2}>
         {props.message.body}
       </text>
-    </box>
+    </HoverRow>
   )
 }
 
@@ -526,7 +507,7 @@ function AgentRow(props: {
   width: number
   now: number
   color: ReturnType<typeof useTheme>["theme"]["background"]
-  background: ReturnType<typeof useTheme>["theme"]["background"] | undefined
+  selected: boolean
   onClick: () => void
 }) {
   const { theme } = useTheme()
@@ -542,7 +523,7 @@ function AgentRow(props: {
       : `${ago(props.agent.lastRunAt, props.now)} · ${props.agent.status === "paused" ? "paused" : until(props.agent.nextRunAt, props.now)}`
   const summary = () => props.run?.summary ?? props.run?.error ?? props.agent.task
   return (
-    <box id={props.id} paddingLeft={2} paddingTop={1} backgroundColor={props.background} onMouseUp={props.onClick}>
+    <HoverRow id={props.id} paddingLeft={2} paddingTop={1} selected={props.selected} onClick={props.onClick}>
       <text wrapMode="none">
         <span style={{ fg: status().fg }}>{status().icon} </span>
         <span style={{ fg: theme.textMuted }}>Agent: </span>
@@ -566,7 +547,7 @@ function AgentRow(props: {
         <span style={{ fg: theme.success }}>✓ </span>
         {"permissions: " + ACCESS[props.agent.access]}
       </text>
-    </box>
+    </HoverRow>
   )
 }
 

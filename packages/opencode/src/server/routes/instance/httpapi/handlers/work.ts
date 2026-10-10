@@ -8,11 +8,13 @@ import { LocationServiceMap } from "@opencode-ai/core/location-services"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { Work } from "@opencode-ai/core/work"
+import { Config } from "@/config/config"
 import { Installation } from "@/installation"
 import { InstanceStore } from "@/project/instance-store"
 import { Session } from "@/session/session"
 import { SessionID } from "@/session/schema"
 import { WorkDemo } from "@/work/demo"
+import { WorkIntegration } from "@/work/integration"
 import { WorkScheduler } from "@/work/scheduler"
 import { WorkSession } from "@/work/session"
 import { RootHttpApi } from "../api"
@@ -25,6 +27,7 @@ export const workHandlers = HttpApiBuilder.group(RootHttpApi, "work", (handlers)
     const instances = yield* InstanceStore.Service
     const sessions = yield* Session.Service
     const fs = yield* FSUtil.Service
+    const config = yield* Config.Service
     // Optional so minimal API layers (tests) can mount these routes without v2 location services.
     const locations = yield* Effect.serviceOption(LocationServiceMap.Service)
     const installation = yield* Effect.serviceOption(Installation.Service)
@@ -55,6 +58,32 @@ export const workHandlers = HttpApiBuilder.group(RootHttpApi, "work", (handlers)
         latest: latest.value,
         available: semver.gt(latest.value, InstallationVersion),
       }
+    })
+
+    const integrationCreate = Effect.fn("WorkHttpApi.integrationCreate")(function* (ctx: {
+      payload: Work.IntegrationCreate
+    }) {
+      const parsed = WorkIntegration.parse(ctx.payload)
+      if ("message" in parsed) return yield* new InvalidRequestError(parsed)
+      if (yield* WorkIntegration.exists(work, config, parsed.name))
+        return yield* new InvalidRequestError({
+          message: `An integration named ${parsed.name} already exists`,
+          field: "name",
+        })
+      yield* work.integrations.stage(parsed.name, parsed.config)
+      // A name used before may have been switched off.
+      yield* work.integrations.setEnabled(parsed.name, true)
+      return WorkIntegration.summarize(parsed.name, parsed.config, false)
+    })
+
+    const integrationRemove = Effect.fn("WorkHttpApi.integrationRemove")(function* (ctx: { params: { name: string } }) {
+      const result = yield* WorkIntegration.remove(work, config, ctx.params.name)
+      if ("warning" in result)
+        return yield* new InvalidRequestError({
+          message: `OpenWork could not edit opencode.json: ${result.warning}`,
+          field: "name",
+        })
+      return true
     })
 
     const deploymentCreate = Effect.fn("WorkHttpApi.deploymentCreate")(function* (ctx: {
@@ -205,6 +234,10 @@ export const workHandlers = HttpApiBuilder.group(RootHttpApi, "work", (handlers)
       .handle("memoryRemove", (ctx) =>
         work.memory.remove(ctx.params.memoryID).pipe(Effect.as(true), Effect.catchTag("Work.NotFoundError", notFound)),
       )
+      .handle("integrations", () => WorkIntegration.list(work, config))
+      .handle("integrationCreate", integrationCreate)
+      .handle("integrationsSync", () => WorkIntegration.sync(work, config))
+      .handle("integrationRemove", integrationRemove)
       .handle("permissionRemove", (ctx) =>
         work.permission
           .remove(ctx.params.permissionID)

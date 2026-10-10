@@ -4,6 +4,7 @@ import { useRoute, type WorkPage } from "../context/route"
 import { useSync } from "../context/sync"
 import { useTheme } from "../context/theme"
 import { useWork } from "./context"
+import { Action, hoverFill, useHover } from "./hover"
 import { useSettings } from "./dialog-settings"
 import { isWorkRun } from "./session"
 import { tokens, truncate } from "./format"
@@ -60,26 +61,28 @@ export function WorkNav(props: { collapsed: boolean; onToggle: () => void }) {
             <span style={{ fg: theme.text, bold: true }}>Work</span>
           </text>
         </Show>
-        <text fg={theme.textMuted} onMouseUp={props.onToggle} selectable={false}>
-          {props.collapsed ? "»" : "«"}
-        </text>
+        <Action
+          label={props.collapsed ? "»" : "«"}
+          pad={!props.collapsed}
+          base={theme.backgroundPanel}
+          onClick={props.onToggle}
+        />
       </box>
       <box height={1} flexShrink={0} />
-      <text
-        fg={route.data.type === "home" ? theme.text : theme.textMuted}
-        onMouseUp={() => route.navigate({ type: "home" })}
-        selectable={false}
-        flexShrink={0}
-      >
-        {props.collapsed ? "+" : "+ New chat"}
-      </text>
+      <NavLink
+        label={props.collapsed ? "+" : "+ New chat"}
+        active={route.data.type === "home"}
+        onClick={() => route.navigate({ type: "home" })}
+      />
       <box height={1} flexShrink={0} />
       <For each={PAGES}>
         {(item, index) => (
           <box
             flexDirection="row"
             flexShrink={0}
-            backgroundColor={current() === item.page || hover() === item.page ? theme.backgroundElement : undefined}
+            backgroundColor={
+              current() === item.page || hover() === item.page ? hoverFill(theme, theme.backgroundPanel) : undefined
+            }
             onMouseOver={() => setHover(item.page)}
             onMouseOut={() => setHover(undefined)}
             onMouseUp={() => route.navigate({ type: "work", page: item.page })}
@@ -114,7 +117,7 @@ export function WorkNav(props: { collapsed: boolean; onToggle: () => void }) {
                   ? theme.text
                   : theme.textMuted
               }
-              bg={hover() === session.id ? theme.backgroundElement : undefined}
+              bg={hover() === session.id ? hoverFill(theme, theme.backgroundPanel) : undefined}
               wrapMode="none"
               flexShrink={0}
               selectable={false}
@@ -131,45 +134,33 @@ export function WorkNav(props: { collapsed: boolean; onToggle: () => void }) {
             {"  No chats yet"}
           </text>
         </Show>
-        <text
-          fg={theme.borderActive}
-          flexShrink={0}
-          selectable={false}
-          onMouseUp={() => route.navigate({ type: "work", page: "chats" })}
-        >
-          {"  View all"}
-        </text>
+        <NavLink label="  View all" onClick={() => route.navigate({ type: "work", page: "chats" })} />
       </Show>
       <box flexGrow={1} minHeight={0} />
       <Show when={!props.collapsed}>
-        <box
-          border
-          borderStyle="rounded"
-          borderColor={theme.borderSubtle}
-          title=" Usage "
-          titleColor={theme.textMuted}
-          paddingLeft={1}
-          paddingRight={1}
-          flexShrink={0}
-          onMouseUp={() => route.navigate({ type: "work", page: "agents" })}
-        >
-          <Row label="Local tokens" value={tokens(stats().local)} />
-          <Row label="Cloud tokens" value={tokens(stats().cloud)} />
-          <Row label="Tokens/hr" value={"~" + tokens(stats().perHour)} />
-        </box>
+        <UsageBlock
+          rows={[
+            ["Local tokens", tokens(stats().local)],
+            ["Cloud tokens", tokens(stats().cloud)],
+            ["Tokens/hr", "~" + tokens(stats().perHour)],
+          ]}
+          onClick={() => route.navigate({ type: "work", page: "agents" })}
+        />
       </Show>
-      <box flexDirection="row" flexShrink={0} gap={2} paddingTop={1}>
-        <text fg={theme.textMuted} selectable={false} onMouseUp={() => openSettings()}>
-          ⚙
-        </text>
+      <box flexDirection="row" flexShrink={0} paddingTop={1}>
+        <Action
+          label={props.collapsed ? "⚙ " : "⚙"}
+          pad={!props.collapsed}
+          base={theme.backgroundPanel}
+          onClick={() => openSettings()}
+        />
         <Show when={!props.collapsed}>
-          <text
+          <Action
+            label={work.state.paused ? "▶ resume" : "◼ pause"}
             fg={work.state.paused ? theme.warning : theme.textMuted}
-            selectable={false}
-            onMouseUp={() => void work.pause(!work.state.paused)}
-          >
-            {work.state.paused ? "▶ resume" : "◼ pause"}
-          </text>
+            base={theme.backgroundPanel}
+            onClick={() => void work.pause(!work.state.paused)}
+          />
           <box flexGrow={1} />
           <text fg={sync.status === "complete" ? theme.success : theme.warning} selectable={false}>
             ●
@@ -180,14 +171,50 @@ export function WorkNav(props: { collapsed: boolean; onToggle: () => void }) {
   )
 }
 
-function Row(props: { label: string; value: string }) {
+/** A full-width link in the navigation that lights up under the pointer. */
+function NavLink(props: { label: string; active?: boolean; onClick: () => void }) {
   const { theme } = useTheme()
+  const hover = useHover()
   return (
-    <box flexDirection="row">
-      <text fg={theme.textMuted} flexGrow={1}>
+    <box
+      flexShrink={0}
+      backgroundColor={hover.active() ? hoverFill(theme, theme.backgroundPanel) : undefined}
+      {...hover.bind}
+      onMouseUp={() => props.onClick()}
+    >
+      <text fg={props.active || hover.active() ? theme.text : theme.textMuted} wrapMode="none" selectable={false}>
         {props.label}
       </text>
-      <text fg={theme.text}>{props.value}</text>
+    </box>
+  )
+}
+
+/** Token usage as a plain section, like the ones in the sidebar of a chat: a bold title and a few rows. */
+function UsageBlock(props: { rows: ReadonlyArray<readonly [string, string]>; onClick: () => void }) {
+  const { theme } = useTheme()
+  const hover = useHover()
+  return (
+    <box
+      flexShrink={0}
+      backgroundColor={hover.active() ? hoverFill(theme, theme.backgroundPanel) : undefined}
+      {...hover.bind}
+      onMouseUp={props.onClick}
+    >
+      <text fg={theme.text} attributes={TextAttributes.BOLD} selectable={false}>
+        Usage
+      </text>
+      <For each={props.rows}>
+        {(row) => (
+          <box flexDirection="row">
+            <text fg={theme.textMuted} flexGrow={1} selectable={false}>
+              {row[0]}
+            </text>
+            <text fg={theme.text} selectable={false}>
+              {row[1]}
+            </text>
+          </box>
+        )}
+      </For>
     </box>
   )
 }

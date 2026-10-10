@@ -28,6 +28,9 @@ export const WorkPaths = {
   memories: `${root}/memory`,
   memory: `${root}/memory/:memoryID`,
   permission: `${root}/permission/:permissionID`,
+  integrations: `${root}/integration`,
+  integrationsSync: `${root}/integration/sync`,
+  integration: `${root}/integration/:name`,
 } as const
 
 const DemoResult = Schema.Struct({
@@ -208,6 +211,49 @@ export const WorkApi = HttpApi.make("work").add(
           "work.permission.remove",
           "Forget allowed permission",
           "Stop always allowing a permission; OpenWork asks again next time.",
+        ),
+      ),
+      HttpApiEndpoint.get("integrations", WorkPaths.integrations, {
+        success: described(
+          Schema.Array(Work.Integration),
+          "Integrations added in OpenWork or the global opencode.json",
+        ),
+      }).annotateMerge(
+        annotate(
+          "work.integration.list",
+          "List integrations",
+          "The MCP servers of the global opencode.json and the ones OpenWork holds until it can write them there.",
+        ),
+      ),
+      HttpApiEndpoint.post("integrationCreate", WorkPaths.integrations, {
+        payload: Work.IntegrationCreate,
+        success: described(Work.Integration, "Integration added"),
+        error: InvalidRequestError,
+      }).annotateMerge(
+        annotate(
+          "work.integration.create",
+          "Add integration",
+          "Save an MCP server. It is kept by OpenWork at once and written to the global opencode.json when OpenWork closes.",
+        ),
+      ),
+      HttpApiEndpoint.post("integrationsSync", WorkPaths.integrationsSync, {
+        success: described(Work.IntegrationSync, "Integrations written to opencode.json"),
+      }).annotateMerge(
+        annotate(
+          "work.integration.sync",
+          "Write integrations to opencode.json",
+          "Move the integrations OpenWork holds into the global opencode.json. OpenWork does this when it closes.",
+        ),
+      ),
+      HttpApiEndpoint.delete("integrationRemove", WorkPaths.integration, {
+        params: { name: Schema.String },
+        success: described(Schema.Boolean, "Integration removed"),
+        error: InvalidRequestError,
+      }).annotateMerge(
+        annotate(
+          "work.integration.remove",
+          "Remove integration",
+          "Delete an MCP server from OpenWork and from the global opencode.json.",
         ),
       ),
     )

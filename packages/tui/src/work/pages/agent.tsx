@@ -13,7 +13,8 @@ import { DialogConfirm } from "../../ui/dialog-confirm"
 import { useDialog } from "../../ui/dialog"
 import { useWork } from "../context"
 import { useMoveToSpace } from "../dialog-space"
-import { Hints, Pill } from "../components"
+import { Button, Hints } from "../components"
+import { Action, hoverFill, useHover } from "../hover"
 import { ACCESS, ago, clock, kind, money, schedule, tokens, truncate, until } from "../format"
 import { usePageKeys, usePressed } from "../keys"
 import { spaceColor } from "../palette"
@@ -130,9 +131,8 @@ export function AgentPage(props: { deploymentID: string }) {
       {(agent) => (
         <box flexGrow={1} minHeight={0} paddingLeft={3} paddingRight={3} paddingTop={1}>
           <box flexDirection="row" flexShrink={0}>
-            <text fg={theme.textMuted} flexShrink={0} selectable={false} onMouseUp={back}>
-              {"← "}
-            </text>
+            <Action label="←" pad={false} onClick={back} />
+            <text flexShrink={0}> </text>
             <text flexGrow={1} wrapMode="none">
               <span style={{ fg: spaceColor(theme, space()?.color) }}>◆ </span>
               <span style={{ fg: theme.textMuted }}>Agent: </span>
@@ -142,9 +142,9 @@ export function AgentPage(props: { deploymentID: string }) {
               </span>
             </text>
             <box flexDirection="row" gap={1} flexShrink={0}>
-              <Pill label="◆ Move" onClick={() => void move(agent().id)} />
-              <Pill label={agent().status === "paused" ? "▶ Resume" : "◼ Pause"} onClick={togglePause} />
-              <Pill label="▷ Run now" active onClick={() => void work.run(agent().id)} />
+              <Button label="◆ Move" onClick={() => void move(agent().id)} />
+              <Button label={agent().status === "paused" ? "▶ Resume" : "◼ Pause"} onClick={togglePause} />
+              <Button label="▷ Run now" active onClick={() => void work.run(agent().id)} />
             </box>
           </box>
           <text fg={theme.textMuted} wrapMode="word" flexShrink={0}>
@@ -173,40 +173,40 @@ export function AgentPage(props: { deploymentID: string }) {
                 runs{" "}
               </text>
               <For each={strip()}>
-                {(item) => (
-                  <text
-                    fg={
-                      item.status === "error"
-                        ? theme.error
-                        : item.status === "running"
-                          ? theme.warning
-                          : item.id === run()?.id
-                            ? theme.text
-                            : theme.textMuted
-                    }
-                    bg={item.id === run()?.id ? theme.backgroundElement : undefined}
-                    wrapMode="none"
-                    flexShrink={0}
-                    selectable={false}
-                    onMouseUp={() =>
-                      setIndex(
-                        Math.max(
-                          0,
-                          runs().findIndex((other) => other.id === item.id),
-                        ),
-                      )
-                    }
-                  >
-                    {` #${item.number} ${item.status === "error" ? "✗" : item.status === "running" ? "◐" : "✓"} `}
-                  </text>
-                )}
+                {(item) => {
+                  const hover = useHover()
+                  return (
+                    <text
+                      fg={
+                        item.status === "error"
+                          ? theme.error
+                          : item.status === "running"
+                            ? theme.warning
+                            : item.id === run()?.id || hover.active()
+                              ? theme.text
+                              : theme.textMuted
+                      }
+                      bg={item.id === run()?.id || hover.active() ? hoverFill(theme, theme.background) : undefined}
+                      wrapMode="none"
+                      flexShrink={0}
+                      selectable={false}
+                      {...hover.bind}
+                      onMouseUp={() =>
+                        setIndex(
+                          Math.max(
+                            0,
+                            runs().findIndex((other) => other.id === item.id),
+                          ),
+                        )
+                      }
+                    >
+                      {` #${item.number} ${item.status === "error" ? "✗" : item.status === "running" ? "◐" : "✓"} `}
+                    </text>
+                  )
+                }}
               </For>
-              <text fg={theme.textMuted} wrapMode="none" flexShrink={0} selectable={false} onMouseUp={older}>
-                {" ◀"}
-              </text>
-              <text fg={theme.textMuted} wrapMode="none" flexShrink={0} selectable={false} onMouseUp={newer}>
-                {" ▶"}
-              </text>
+              <Action label="◀" onClick={older} />
+              <Action label="▶" onClick={newer} />
             </box>
           </box>
           <box height={1} flexShrink={0} />
@@ -275,6 +275,7 @@ export function AgentPage(props: { deploymentID: string }) {
 function Activity(props: { part: Part; step: number; steps: number; onClick: () => void }) {
   const { theme } = useTheme()
   const pressed = usePressed()
+  const hover = useHover()
   return (
     <Show
       when={props.part.type === "tool" ? props.part : undefined}
@@ -287,7 +288,12 @@ function Activity(props: { part: Part; step: number; steps: number; onClick: () 
       }
     >
       {(tool) => (
-        <box paddingBottom={1} onMouseUp={() => pressed() && props.onClick()}>
+        <box
+          paddingBottom={1}
+          backgroundColor={hover.active() ? hoverFill(theme, theme.background) : undefined}
+          {...hover.bind}
+          onMouseUp={() => pressed() && props.onClick()}
+        >
           <ToolStep part={tool()} />
           <text fg={theme.textMuted} wrapMode="none">
             <span style={{ fg: theme.borderActive }}>▸ Step </span>

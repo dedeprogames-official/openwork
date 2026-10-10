@@ -164,7 +164,7 @@ export const { use: useWork, provider: WorkProvider } = createSimpleContext({
 
 export type WorkContext = ReturnType<typeof useWork>
 
-function message(error: unknown) {
+export function message(error: unknown) {
   if (error && typeof error === "object" && "message" in error && typeof error.message === "string")
     return error.message
   if (error && typeof error === "object" && "data" in error) return message(error.data)

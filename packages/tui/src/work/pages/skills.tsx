@@ -3,9 +3,10 @@ import { useData } from "../../context/data"
 import { useRoute } from "../../context/route"
 import { useTheme } from "../../context/theme"
 import { useTuiPaths } from "../../context/runtime"
-import { Empty, Hints, PageHeader, Pill } from "../components"
+import { Empty, Hints, PageHeader, Button } from "../components"
 import { truncate } from "../format"
 import { step, useFollowSelection, usePageKeys, useRowClick } from "../keys"
+import { HoverRow } from "../hover"
 
 export function SkillsPage() {
   const data = useData()
@@ -42,11 +43,11 @@ export function SkillsPage() {
         <scrollbox ref={follow} width={44} flexShrink={0} verticalScrollbarOptions={{ visible: false }}>
           <For each={skills()}>
             {(item, index) => (
-              <box
+              <HoverRow
                 id={`skill-${index()}`}
                 paddingBottom={1}
-                backgroundColor={index() === selected() ? theme.backgroundElement : undefined}
-                onMouseUp={() => click(index() === selected(), () => setSelected(index()), use)}
+                selected={index() === selected()}
+                onClick={() => click(index() === selected(), () => setSelected(index()), use)}
               >
                 <text fg={theme.text} wrapMode="none">
                   <span style={{ fg: theme.primary }}>✦ </span>
@@ -55,7 +56,7 @@ export function SkillsPage() {
                 <text fg={theme.textMuted} wrapMode="none">
                   {"  " + truncate(item.description ?? "", 40)}
                 </text>
-              </box>
+              </HoverRow>
             )}
           </For>
           <Show when={skills().length === 0}>
@@ -73,7 +74,7 @@ export function SkillsPage() {
                   {current().location.replace(paths.home, "~")}
                 </text>
                 <box flexDirection="row" flexShrink={0} paddingTop={1} paddingBottom={1}>
-                  <Pill label="▷ Use in a chat" active onClick={use} />
+                  <Button label="▷ Use in a chat" active onClick={use} />
                 </box>
                 <scrollbox flexGrow={1} minHeight={0} verticalScrollbarOptions={{ visible: false }}>
                   <text fg={theme.text} wrapMode="word">

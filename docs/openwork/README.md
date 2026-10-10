@@ -92,8 +92,26 @@ Closing OpenWork (or a crash) loses nothing you would expect to come back:
 | Agent        | One agent: task, schedule, access, the tool calls and result of each run, run history, and a chat bound to that agent.               |
 | Skills       | Skills from `.opencode/skills` and `~/.agents/skills`.                                                                               |
 | Memory       | What chats and agents know about you.                                                                                                |
-| Models       | Local and cloud models; local tokens are counted separately in the Usage card.                                                       |
+| Models       | Local and cloud models; local tokens are counted separately in the Usage section of the sidebar.                                     |
 | Integrations | MCP servers and connected accounts.                                                                                                  |
+
+## Adding an integration
+
+Integrations are MCP servers. You do not have to edit `opencode.json` to add one: open **Settings → Integrations** and
+press **+ Add** (top right), or use **+ Add** / `n` on the Integrations page. OpenWork asks, one question at a time:
+
+1. a name (letters, numbers, `-` and `_`; the server's tools are listed under it),
+2. whether it is a **remote server** (a URL) or a **local command** (a program started on this computer),
+3. the URL, or the command line (quotes keep words with spaces together),
+4. optionally, headers (`Authorization: Bearer …`) or environment variables (`API_KEY=…`). Values are masked in the
+   summary and never printed.
+
+It is kept by OpenWork and connects at once in the folder that is open, without interrupting a chat or an agent that is
+running. When OpenWork closes, it is written to the global `opencode.json` (comments in a `.jsonc` file are kept),
+which stays the source of truth: from then on the file alone defines it, and editing or deleting it there works as
+usual. If the file cannot be written (for example, it has a syntax error), the integration keeps working from
+OpenWork's own storage and the write is retried the next time OpenWork opens or closes. **Settings → Integrations →
+Remove an integration…** deletes one from both places.
 
 ## Screenshots
 

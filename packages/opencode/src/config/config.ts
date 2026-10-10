@@ -665,7 +665,8 @@ const layer = Layer.effect(
         ConfigParse.schema(ConfigV1.Info, ConfigV2Compat.lower(normalizeLoadedConfig(existing), file).value, file)
         const merged = mergeDeep(isRecord(existing) ? existing : {}, patch)
         const serialized = JSON.stringify(merged, null, 2)
-        next = yield* decodeConfig(merged, file)
+        // Decode what will be on disk: a key patched to undefined is gone from it, but still in `merged`.
+        next = yield* decodeConfig(ConfigParse.jsonc(serialized, file), file)
         changed = serialized !== before
         if (changed) yield* fs.writeFileString(file, serialized).pipe(Effect.orDie)
       } else {

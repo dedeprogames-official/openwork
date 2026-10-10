@@ -26,13 +26,14 @@ import { McpOAuthCallback } from "./oauth-callback"
 import { McpAuth } from "./auth"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { TuiEvent } from "@/server/tui-event"
-import { Cause, Effect, Exit, Layer, Context, Schema, Stream } from "effect"
+import { Cause, Effect, Exit, Layer, Context, Option, Schema, Stream } from "effect"
 import { EffectBridge } from "@/effect/bridge"
 import { InstanceState } from "@/effect/instance-state"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { McpCatalog } from "./catalog"
 import { McpEvent } from "@opencode-ai/schema/mcp-event"
+import { WorkIntegration } from "@/work/integration"
 import { McpBrowser } from "./browser"
 import { Work } from "@opencode-ai/core/work"
 
@@ -146,6 +147,8 @@ interface State {
   clients: Record<string, MCPClient>
   defs: Record<string, MCPToolDef[]>
   instructions: Record<string, string>
+  /** Servers taken away in this folder; their entry may still be in the config this instance loaded. */
+  removed: Set<string>
 }
 
 export interface ServerInstructions {
@@ -175,6 +178,8 @@ export interface Interface {
   readonly add: (name: string, mcp: ConfigMCPV1.Info) => Effect.Effect<{ status: Record<string, Status> | Status }>
   readonly connect: (name: string) => Effect.Effect<void, NotFoundError>
   readonly disconnect: (name: string) => Effect.Effect<void, NotFoundError>
+  /** Closes the server and forgets it in this folder; the config file is not touched. */
+  readonly remove: (name: string) => Effect.Effect<void>
   readonly getPrompt: (
     clientName: string,
     name: string,
@@ -498,16 +503,22 @@ const layer = Layer.effect(
         const config = cfg.mcp ?? {}
         // Servers switched off in OpenWork's settings stay off in every folder.
         const off = new Set(yield* work.integrations.disabled())
+        // Servers added in OpenWork wait in its database until opencode.json has them; the file wins by name.
+        const staged = Object.entries(yield* work.integrations.staged()).flatMap(([key, value]) => {
+          const mcp = Option.getOrUndefined(Schema.decodeUnknownOption(ConfigMCPV1.Info)(value))
+          return key in config || !mcp ? [] : [[key, mcp] as const]
+        })
         const s: State = {
-          config: {},
+          config: Object.fromEntries(staged),
           status: {},
           clients: {},
           defs: {},
           instructions: {},
+          removed: new Set(),
         }
 
         yield* Effect.forEach(
-          Object.entries(config),
+          [...Object.entries(config), ...staged],
           ([key, mcp]) =>
             Effect.gen(function* () {
               if (!isMcpConfigured(mcp)) {
@@ -531,6 +542,13 @@ const layer = Layer.effect(
             }),
           { concurrency: "unbounded" },
         )
+
+        // The write to opencode.json normally happens when OpenWork closes; this catches a close that never came.
+        if (staged.length > 0) {
+          const written = yield* WorkIntegration.sync(work, cfgSvc).pipe(Effect.catchCause(() => Effect.succeed({})))
+          if ("warning" in written)
+            yield* Effect.logWarning("Could not write integrations to opencode.json", { reason: written.warning })
+        }
 
         yield* Effect.addFinalizer(() =>
           Effect.gen(function* () {
@@ -600,7 +618,7 @@ const layer = Layer.effect(
       const result: Record<string, Status> = {}
 
       for (const [key, mcp] of Object.entries(config)) {
-        if (!isMcpConfigured(mcp)) continue
+        if (!isMcpConfigured(mcp) || s.removed.has(key)) continue
         result[key] = s.status[key] ?? { status: "disabled" }
       }
 
@@ -644,9 +662,18 @@ const layer = Layer.effect(
 
     const add = Effect.fn("MCP.add")(function* (name: string, mcp: ConfigMCPV1.Info) {
       const s = yield* InstanceState.get(state)
+      s.removed.delete(name)
       s.config[name] = mcp
       yield* createAndStore(name, mcp)
       return { status: s.status }
+    })
+
+    const remove = Effect.fn("MCP.remove")(function* (name: string) {
+      const s = yield* InstanceState.get(state)
+      yield* closeClient(s, name)
+      delete s.config[name]
+      delete s.status[name]
+      s.removed.add(name)
     })
 
     const connect = Effect.fn("MCP.connect")(function* (name: string) {
@@ -796,6 +823,7 @@ const layer = Layer.effect(
     const getMcpConfig = Effect.fnUntraced(function* (mcpName: string) {
       const s = yield* InstanceState.get(state)
       if (s.config[mcpName]) return s.config[mcpName]
+      if (s.removed.has(mcpName)) return undefined
 
       const cfg = yield* cfgSvc.get()
       const mcpConfig = cfg.mcp?.[mcpName]
@@ -986,6 +1014,7 @@ const layer = Layer.effect(
       add,
       connect,
       disconnect,
+      remove,
       getPrompt,
       readResource,
       startAuth,
