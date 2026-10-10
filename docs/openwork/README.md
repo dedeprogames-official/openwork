@@ -13,7 +13,7 @@ and still runs on the opencode harness (same sessions, tools, permissions, provi
 | Agent   | A deployment: a task, a local folder to work in, a schedule (`every 10m`, `hourly`, `daily at 7:30`, once, or on demand), an access level and optionally a skill and model.                  |
 | Run     | One unattended execution of an agent. Each run is a real opencode session (`<agent> · run #N`) you can open as a transcript. Runs never ask questions: anything that would prompt is denied. |
 | Space   | A group of agents around a goal, an event or a client, with its own color.                                                                                                                   |
-| Inbox   | Where agents report back. Agents post with the `inbox` tool; you mark items read or done.                                                                                                    |
+| Inbox   | Where agents report back. Agents post with the `inbox` tool; you mark items read or done, delete them or clear the inbox.                                                                    |
 | Todos   | Your own todo list. Agents can add items (for example "from meeting notes") with the `user_todo` tool.                                                                                       |
 | Agenda  | A local agenda for today. Events link to a space, so Your Day shows how many of its agents already checked in.                                                                               |
 | Memory  | Facts about you that every chat and agent gets in its system context. Saved from the Memory page or by agents with the `memory` tool.                                                        |
@@ -21,7 +21,9 @@ and still runs on the opencode harness (same sessions, tools, permissions, provi
 
 Chats use the new `work` agent: a knowledge-work persona (folders are workspaces, files are deliverables) that can use
 the inbox, todo, agenda and memory tools and can **deploy other agents** with the `deploy` tool — "check the Half
-Moon Bay cam every 10m and tell me if it's sunny" in a chat creates a scheduled agent.
+Moon Bay cam every 10m and tell me if it's sunny" in a chat creates a scheduled agent. In the chat and on the agent page
+each of these calls reads as one friendly line, such as "Remembered a memory · Dog is called Biscuit" or "Checked your
+agents · 17 agents".
 
 ## Installing it
 
@@ -101,6 +103,7 @@ the day only looks full later on.
 | ![Integrations](screenshots/13-integrations.png)           | ![Deploy an agent](screenshots/14-deploy.png)                            |
 | ![Deploy: pick a folder](screenshots/15-deploy-folder.png) | ![Commands](screenshots/16-command-palette.png)                          |
 | ![New chat](screenshots/17-new-chat.png)                   | ![Navigation collapsed](screenshots/18-nav-collapsed.png)                |
+| ![Chat with tools](screenshots/19-chat-tools.png)          |                                                                          |
 
 ## Releases
 

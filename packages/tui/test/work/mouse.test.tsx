@@ -88,6 +88,7 @@ test("OpenWork pages respond to the mouse", async () => {
       })
     if (url.pathname === "/work/state") return json(state)
     if (url.pathname === `/work/deployment/${agent.id}/runs`) return json(runs.toReversed())
+    if (url.pathname === "/work/message/clear") return json({ removed: 1 })
     if (url.pathname.startsWith("/work/")) return json(true)
   }, events)
   // Mutations the pages send, as "METHOD /path body".
@@ -224,7 +225,20 @@ test("OpenWork pages respond to the mouse", async () => {
     await setup.mockMouse.click(2, 44)
     await setup.waitForFrame((frame) => !frame.includes("Say what it should do"))
 
+    // Your Day: the selected inbox message has a delete button, and the inbox header clears the inbox.
+    await mouse.click("M-1")
+    await setup.waitForFrame((frame) => frame.includes("✕ delete") && frame.includes("✕ clear"))
+    await mouse.click("✕ delete")
+    await until(() => sent.some((item) => item.startsWith("DELETE /work/message/wms_sunny")))
+    await mouse.click("✕ clear")
+    await setup.waitForFrame((frame) => frame.includes("Clear the Agent Inbox"))
+    await mouse.click("All messages")
+    await until(() => sent.includes('POST /work/message/clear {"done":false}'))
+    await setup.waitForFrame((frame) => !frame.includes("Clear the Agent Inbox"))
+
     // An agent opened from its space can move: the Move button offers every space, "No space" takes it out.
+    await mouse.click("M-3")
+    await setup.waitForFrame((frame) => frame.includes("make tonight easy"))
     await mouse.click("Beach watcher")
     await setup.waitForFrame((frame) => frame.includes("AGENT ACTIVITY"))
     await mouse.click("◆ Move")

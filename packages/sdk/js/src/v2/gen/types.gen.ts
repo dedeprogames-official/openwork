@@ -4128,6 +4128,14 @@ export type WorkMessagePatch = {
   done?: boolean
 }
 
+export type WorkMessageClear = {
+  done?: boolean
+}
+
+export type WorkMessageClearResult = {
+  removed: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+}
+
 export type WorkTodoCreate = {
   content: string
   source?: string
@@ -8144,6 +8152,31 @@ export type WorkMessageUpdateResponses = {
 }
 
 export type WorkMessageUpdateResponse = WorkMessageUpdateResponses[keyof WorkMessageUpdateResponses]
+
+export type WorkMessageClearData = {
+  body?: WorkMessageClear
+  path?: never
+  query?: never
+  url: "/work/message/clear"
+}
+
+export type WorkMessageClearErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type WorkMessageClearError = WorkMessageClearErrors[keyof WorkMessageClearErrors]
+
+export type WorkMessageClearResponses = {
+  /**
+   * Inbox cleared
+   */
+  200: WorkMessageClearResult
+}
+
+export type WorkMessageClearResponse = WorkMessageClearResponses[keyof WorkMessageClearResponses]
 
 export type WorkTodoCreateData = {
   body?: WorkTodoCreate

@@ -205,7 +205,7 @@ try {
   await keys("tab")
   await keys("Enter")
   await until("AGENT ACTIVITY")
-  await until("inbox", 10_000)
+  await until("Sent you a message", 10_000)
   await shot("05-agent-detail", "OpenWork — Agent")
 
   // The beach run is held open by the offline model, so it is the live run on the calendar.
@@ -272,6 +272,14 @@ try {
   await keys("C-x", "w")
   await shot("18-nav-collapsed", "OpenWork — Your Day (navigation collapsed)")
   await keys("C-x", "w")
+
+  // The offline model walks through OpenWork's own tools; each call reads as one friendly line.
+  await keys("C-x", "n")
+  await until("Ask anything")
+  await type("Remember that I like the window table, then sort out tonight")
+  await keys("Enter")
+  await until("kicked off the beach watcher", 30_000)
+  await shot("19-chat-tools", "OpenWork — Chat")
 } finally {
   await linux?.stop()
   await tmux("kill-server")

@@ -132,6 +132,8 @@ export interface Interface {
     readonly post: (input: Work.MessageCreate) => Effect.Effect<Work.Message>
     readonly update: (id: MessageID, patch: Work.MessagePatch) => Effect.Effect<Work.Message, NotFoundError>
     readonly remove: (id: MessageID) => Effect.Effect<void, NotFoundError>
+    /** Removes every message, or only the done ones, and returns how many were removed. */
+    readonly clear: (input: Work.MessageClear) => Effect.Effect<number>
   }
   readonly todo: {
     readonly list: () => Effect.Effect<Work.Todo[]>
@@ -743,6 +745,16 @@ const layer = Layer.effect(
           if (!(yield* getMessage(id))) return yield* missing("message", id)
           yield* db.delete(WorkMessageTable).where(eq(WorkMessageTable.id, id)).run().pipe(Effect.orDie)
           yield* changed("message", id)
+        }),
+        clear: Effect.fn("Work.message.clear")(function* (input: Work.MessageClear) {
+          const removed = yield* db
+            .delete(WorkMessageTable)
+            .where(input.done ? isNotNull(WorkMessageTable.time_done) : undefined)
+            .returning({ id: WorkMessageTable.id })
+            .all()
+            .pipe(Effect.orDie)
+          if (removed.length > 0) yield* changed("message")
+          return removed.length
         }),
       },
       todo: {

@@ -18,6 +18,7 @@ export const WorkPaths = {
   spaces: `${root}/space`,
   space: `${root}/space/:spaceID`,
   message: `${root}/message/:messageID`,
+  messagesClear: `${root}/message/clear`,
   todos: `${root}/todo`,
   todo: `${root}/todo/:todoID`,
   agendas: `${root}/agenda`,
@@ -31,6 +32,10 @@ const DemoResult = Schema.Struct({
   agents: Schema.Number,
   directory: Schema.String,
 }).annotate({ identifier: "Work.DemoResult" })
+
+const MessageClearResult = Schema.Struct({
+  removed: Schema.Number,
+}).annotate({ identifier: "Work.MessageClearResult" })
 
 const annotate = (identifier: string, summary: string, description: string) =>
   OpenApi.annotations({ identifier, summary, description })
@@ -131,6 +136,12 @@ export const WorkApi = HttpApi.make("work").add(
         success: described(Schema.Boolean, "Inbox message removed"),
         error: WorkNotFoundError,
       }).annotateMerge(annotate("work.message.remove", "Remove inbox message", "Delete an Agent Inbox message.")),
+      HttpApiEndpoint.post("messageClear", WorkPaths.messagesClear, {
+        payload: Work.MessageClear,
+        success: described(MessageClearResult, "Inbox cleared"),
+      }).annotateMerge(
+        annotate("work.message.clear", "Clear inbox", "Delete every Agent Inbox message, or only the done ones."),
+      ),
       HttpApiEndpoint.post("todoCreate", WorkPaths.todos, {
         payload: Work.TodoCreate,
         success: described(Work.Todo, "Created todo"),

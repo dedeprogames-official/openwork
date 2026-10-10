@@ -1,7 +1,7 @@
 import { TextAttributes } from "@opentui/core"
 import { useTerminalDimensions } from "@opentui/solid"
 import type { WorkDeployment, WorkMessage, WorkSpace } from "@opencode-ai/sdk/v2"
-import { createMemo, For, Show } from "solid-js"
+import { createEffect, createMemo, For, Show } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Prompt } from "../../component/prompt"
 import { useKV } from "../../context/kv"
@@ -10,6 +10,7 @@ import { useRoute } from "../../context/route"
 import { useTheme } from "../../context/theme"
 import { HomeSessionDestinationProvider } from "../../routes/home/session-destination"
 import { DialogPrompt } from "../../ui/dialog-prompt"
+import { DialogSelect } from "../../ui/dialog-select"
 import { useDialog } from "../../ui/dialog"
 import { useOpencodeKeymap } from "../../keymap"
 import { useWork } from "../context"
@@ -69,6 +70,11 @@ export function DayPage() {
     agents: agentsVisible() ? agentList().length : 0,
   })
   const selected = (section: Section, index: number) => selection.section === section && selection.index === index
+  // Deleting the last row would otherwise leave the selection past the end of its list.
+  createEffect(() => {
+    const size = sizes()[selection.section]
+    if (selection.index >= size) setSelection("index", Math.max(0, size - 1))
+  })
 
   const checkedIn = (spaceID: string | undefined) => {
     if (!spaceID) return 0
@@ -145,6 +151,31 @@ export function DayPage() {
     }
   }
 
+  // Clears the done messages or the whole inbox, whichever the user picks.
+  const clearInbox = async () => {
+    const all = inbox().length
+    if (all === 0) return
+    const done = inbox().filter((item) => item.time.done).length
+    const onlyDone = await new Promise<boolean | undefined>((resolve) => {
+      dialog.replace(
+        () => (
+          <DialogSelect
+            title="Clear the Agent Inbox"
+            options={[
+              ...(done > 0 ? [{ title: "Done messages", value: true, description: `${done} of ${all}` }] : []),
+              { title: "All messages", value: false, description: `${all}` },
+            ]}
+            onSelect={(option) => resolve(option.value)}
+          />
+        ),
+        () => resolve(undefined),
+      )
+    })
+    dialog.clear()
+    if (onlyDone === undefined) return
+    await work.message.clear(onlyDone)
+  }
+
   const cycle = (delta: number) => {
     const visible = SECTIONS.filter((section) => section !== "agents" || agentsVisible())
     const next = visible[(visible.indexOf(selection.section) + delta + visible.length) % visible.length]
@@ -167,6 +198,7 @@ export function DayPage() {
     { key: "return", desc: "Open", run: open },
     { key: "space", desc: "Mark done", run: toggle },
     { key: "x", desc: "Remove", run: remove },
+    { key: "shift+x", desc: "Clear inbox", run: () => void clearInbox() },
     { key: "n", desc: "New todo or event", run: () => void (selection.section === "agenda" ? addEvent() : addTodo()) },
     { key: "a", desc: "Show agents", run: () => setShowAgents(!showAgents()) },
     { key: "c", desc: "Chat about your day", run: () => promptRef.current?.focus() },
@@ -294,7 +326,17 @@ export function DayPage() {
           </scrollbox>
         </box>
         <box width={middle()} flexShrink={0} minHeight={0}>
-          <SectionTitle title="Agent Inbox" meta={unread() > 0 ? `${unread()} unread` : "all caught up"} />
+          <SectionTitle
+            title="Agent Inbox"
+            meta={unread() > 0 ? `${unread()} unread` : "all caught up"}
+            right={
+              <Show when={inbox().length > 0}>
+                <text fg={theme.textMuted} flexShrink={0} selectable={false} onMouseUp={() => void clearInbox()}>
+                  ✕ clear
+                </text>
+              </Show>
+            }
+          />
           <box height={1} flexShrink={0} />
           <scrollbox ref={followInbox} flexGrow={1} minHeight={0} verticalScrollbarOptions={{ visible: false }}>
             <For each={inbox()}>
@@ -306,6 +348,8 @@ export function DayPage() {
                   width={middle()}
                   now={work.now()}
                   background={row("inbox", index())}
+                  selected={selected("inbox", index())}
+                  onDelete={() => void work.message.remove(item.id)}
                   onClick={() =>
                     click(
                       selected("inbox", index()),
@@ -397,6 +441,7 @@ export function DayPage() {
             ["tab", "section", () => cycle(1)],
             ["enter", "open", open],
             ["space", "done", toggle],
+            ["x", "delete", remove],
             ["n", "new", () => void (selection.section === "agenda" ? addEvent() : addTodo())],
             ["c", "chat", () => promptRef.current?.focus()],
             ["a", "agents", () => setShowAgents(!showAgents())],
@@ -415,15 +460,17 @@ function InboxRow(props: {
   width: number
   now: number
   background: ReturnType<typeof useTheme>["theme"]["background"] | undefined
+  selected: boolean
   onClick: () => void
   onToggle: () => void
+  onDelete: () => void
 }) {
   const { theme } = useTheme()
   const done = () => Boolean(props.message.time.done)
   const unread = () => !props.message.time.read
   const agent = () => props.agent ?? "OpenWork"
-  // Columns left for "agent · title" after the checkbox, dot, separator and time.
-  const room = () => Math.max(16, props.width - 18)
+  // Columns left for "agent · title" after the checkbox, dot, separator, time and the selected row's delete button.
+  const room = () => Math.max(16, props.width - 18 - (props.selected ? 9 : 0))
   const agentWidth = () => Math.min(agent().length, Math.max(10, room() - props.message.title.length))
   return (
     <box id={props.id} flexShrink={0} paddingBottom={1} backgroundColor={props.background} onMouseUp={props.onClick}>
@@ -451,6 +498,19 @@ function InboxRow(props: {
           <span style={{ fg: theme.secondary }}>{unread() ? "• " : "  "}</span>
           <span style={{ fg: theme.textMuted }}>{ago(props.message.time.created, props.now)}</span>
         </text>
+        <Show when={props.selected}>
+          <text
+            fg={theme.error}
+            flexShrink={0}
+            selectable={false}
+            onMouseUp={(event: { stopPropagation(): void }) => {
+              event.stopPropagation()
+              props.onDelete()
+            }}
+          >
+            {" ✕ delete"}
+          </text>
+        </Show>
       </box>
       <text fg={done() ? theme.textMuted : theme.text} wrapMode="word" paddingLeft={2}>
         {props.message.body}

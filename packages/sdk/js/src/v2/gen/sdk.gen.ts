@@ -425,6 +425,9 @@ import type {
   WorkMemoryCreateResponses,
   WorkMemoryRemoveErrors,
   WorkMemoryRemoveResponses,
+  WorkMessageClear,
+  WorkMessageClearErrors,
+  WorkMessageClearResponses,
   WorkMessagePatch,
   WorkMessageRemoveErrors,
   WorkMessageRemoveResponses,
@@ -1712,6 +1715,30 @@ export class Message extends HeyApiClient {
     )
     return (options?.client ?? this.client).patch<WorkMessageUpdateResponses, WorkMessageUpdateErrors, ThrowOnError>({
       url: "/work/message/{messageID}",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Clear inbox
+   *
+   * Delete every Agent Inbox message, or only the done ones.
+   */
+  public clear<ThrowOnError extends boolean = false>(
+    parameters?: {
+      workMessageClear?: WorkMessageClear
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ key: "workMessageClear", map: "body" }] }])
+    return (options?.client ?? this.client).post<WorkMessageClearResponses, WorkMessageClearErrors, ThrowOnError>({
+      url: "/work/message/clear",
       ...options,
       ...params,
       headers: {

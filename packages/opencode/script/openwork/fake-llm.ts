@@ -3,6 +3,7 @@
  * Offline OpenAI-compatible model for OpenWork demos and screenshots.
  *
  * Deployed agent runs call the `inbox` tool once and then answer with a short result; chats get a short reply.
+ * A chat that mentions "remember" walks through OpenWork's own tools one call at a time, to show how each one reads.
  * Requests that mention `FAKE_LLM_HOLD` (e.g. "beach") are held open so a run stays visibly "running".
  *
  *   bun script/openwork/fake-llm.ts --port 4998
@@ -43,6 +44,18 @@ function reply(messages: Message[], tools: string[]) {
   const prompt = text(user?.content)
   const task = /Task:\n([^\n]+)/.exec(prompt)?.[1] ?? prompt
   const usage = { input: 1800 + Math.floor(Math.random() * 1600), output: 90 + Math.floor(Math.random() * 120) }
+  if (/remember/i.test(prompt) && tools.includes("memory")) {
+    const results = messages
+      .slice(messages.findLastIndex((item) => item.role === "user") + 1)
+      .filter((item) => item.role === "tool")
+    const next = TOUR[results.length]
+    if (next) return { kind: "tool" as const, ...next(results.map((item) => text(item.content)).join("\n")), usage }
+    return {
+      kind: "text" as const,
+      text: "Saved. I added the dinner to your todos, put the call with Ana on today's agenda and kicked off the beach watcher.",
+      usage,
+    }
+  }
   if (last?.role === "tool") return { kind: "text" as const, text: summary(task), usage }
   if (prompt.includes("Nobody is watching this run") && tools.includes("inbox"))
     return { kind: "tool" as const, name: "inbox", args: inbox(task), usage }
@@ -111,6 +124,23 @@ const TOPICS: ReadonlyArray<{ match: RegExp; title: string; message: string; sum
     message: "Hotel de la Poste has 2 rooms left for the wedding dates - worth booking today.",
     summary: "2 rooms left at Hotel de la Poste.",
   },
+]
+
+// One call per step; each step sees the earlier tool results, so it can reuse an id the list returned.
+const TOUR: ReadonlyArray<(results: string) => { name: string; args: Record<string, unknown> }> = [
+  () => ({ name: "memory", args: { action: "save", content: "Prefers the window table at Sam's Chowder House" } }),
+  () => ({ name: "memory", args: { action: "list" } }),
+  () => ({ name: "user_todo", args: { action: "add", content: "Book the Okafor dinner", source: "from chat" } }),
+  () => ({ name: "agenda", args: { action: "add", title: "Call with Ana", starts_at: "16:30" } }),
+  () => ({ name: "deploy", args: { action: "list" } }),
+  (results) => ({
+    name: "deploy",
+    args: { action: "run", id: /(wdp_\w+) \[\w+\] Checking if the beach/.exec(results)?.[1] ?? "" },
+  }),
+  () => ({
+    name: "inbox",
+    args: { title: "Dinner is set", message: "Window table held for 7pm - confirm by 3pm.", priority: "high" },
+  }),
 ]
 
 function topic(task: string) {

@@ -32,6 +32,10 @@ export const Parameters = Schema.Struct({
 
 type Metadata = {
   deploymentID?: string
+  title?: string
+  schedule?: string
+  space?: string
+  count?: number
 }
 
 export const DeployTool = Tool.define<typeof Parameters, Metadata, Work.Service | Session.Service | FSUtil.Service>(
@@ -65,46 +69,52 @@ export const DeployTool = Tool.define<typeof Parameters, Metadata, Work.Service 
                     )
                     .join("\n")
                 : "No agents deployed yet.",
-              metadata: {},
+              metadata: { count: deployments.length },
             }
           }
           if (params.action !== "create") {
-            if (!params.id) return { title: "Missing id", output: "Provide the agent `id`.", metadata: {} }
+            if (!params.id) return yield* Effect.fail(new Error("Provide the agent `id`."))
             yield* ctx.ask({ permission: "deploy", patterns: [params.action], always: [], metadata: {} })
-            const id = Work.DeploymentID.make(params.id)
+            const deployment = yield* work.deployment.get(Work.DeploymentID.make(params.id))
+            if (!deployment) return yield* Effect.fail(new Error(`No agent with id ${params.id}.`))
             const space = params.action === "move" && params.space ? yield* spaceNamed(params.space) : undefined
-            const action =
-              params.action === "remove"
-                ? work.deployment.remove(id).pipe(Effect.as(`Removed agent ${id}.`))
-                : params.action === "run"
-                  ? work.deployment.requestRun(id).pipe(Effect.as(`Agent ${id} will run in a few seconds.`))
-                  : params.action === "move"
-                    ? work.deployment
-                        .update(id, { spaceID: space?.id ?? null })
-                        .pipe(
-                          Effect.map((item) =>
-                            space
-                              ? `Moved ${item.title} to ${space.name}.`
-                              : `${item.title} no longer belongs to a space.`,
-                          ),
-                        )
-                    : work.deployment
-                        .update(id, { status: params.action === "pause" ? "paused" : "active" })
-                        .pipe(Effect.map((item) => `${item.title} is now ${item.status}.`))
-            const output = yield* action.pipe(
-              Effect.catchTag("Work.NotFoundError", () => Effect.succeed(`No agent with id ${id}.`)),
-            )
-            return { title: output, output, metadata: {} }
+            yield* params.action === "remove"
+              ? work.deployment.remove(deployment.id)
+              : params.action === "run"
+                ? work.deployment.requestRun(deployment.id)
+                : work.deployment.update(
+                    deployment.id,
+                    params.action === "move"
+                      ? { spaceID: space?.id ?? null }
+                      : { status: params.action === "pause" ? "paused" : "active" },
+                  )
+            const output = {
+              remove: `Removed agent ${deployment.title} (${deployment.id}).`,
+              run: `${deployment.title} will run in a few seconds.`,
+              move: space
+                ? `Moved ${deployment.title} to ${space.name}.`
+                : `${deployment.title} no longer belongs to a space.`,
+              pause: `${deployment.title} is now paused.`,
+              resume: `${deployment.title} is now active.`,
+            }[params.action]
+            return {
+              title: output,
+              output,
+              metadata: {
+                deploymentID: deployment.id,
+                title: deployment.title,
+                ...(space ? { space: space.name } : {}),
+              },
+            }
           }
 
           const description = [params.request ?? params.task ?? "", params.schedule ?? ""].join(" ").trim()
-          if (!description)
-            return { title: "Missing request", output: "Describe what the agent should do in `request`.", metadata: {} }
+          if (!description) return yield* Effect.fail(new Error("Describe what the agent should do in `request`."))
           const parsed = WorkSchedule.parse(description, Date.now())
           const instance = yield* InstanceState.context
           const directory = path.resolve(instance.directory, params.directory ?? ".")
           if (!(yield* fs.isDir(directory)))
-            return { title: "Folder not found", output: `The folder ${directory} does not exist.`, metadata: {} }
+            return yield* Effect.fail(new Error(`The folder ${directory} does not exist.`))
           yield* ctx.ask({ permission: "deploy", patterns: [directory], always: [], metadata: { directory } })
 
           const space = params.space ? yield* spaceNamed(params.space) : undefined
@@ -121,8 +131,17 @@ export const DeployTool = Tool.define<typeof Parameters, Metadata, Work.Service 
             ...(session?.model ? { model: { providerID: session.model.providerID, modelID: session.model.id } } : {}),
           })
           const output = `Deployed "${deployment.title}" (${deployment.id}) - ${WorkSchedule.label(deployment.schedule)} in ${deployment.directory}.`
-          return { title: `Deployed: ${deployment.title}`, output, metadata: { deploymentID: deployment.id } }
-        }),
+          return {
+            title: `Deployed: ${deployment.title}`,
+            output,
+            metadata: {
+              deploymentID: deployment.id,
+              title: deployment.title,
+              schedule: WorkSchedule.label(deployment.schedule),
+              ...(space ? { space: space.name } : {}),
+            },
+          }
+        }).pipe(Effect.orDie),
     } satisfies Tool.DefWithoutID<typeof Parameters, Metadata>
   }),
 )

@@ -9,7 +9,12 @@ export const Parameters = Schema.Struct({
   id: Schema.optional(Schema.String).annotate({ description: "The memory id, for forget" }),
 })
 
-export const MemoryTool = Tool.define(
+type Metadata = {
+  count?: number
+  content?: string
+}
+
+export const MemoryTool = Tool.define<typeof Parameters, Metadata, Work.Service>(
   "memory",
   Effect.gen(function* () {
     const work = yield* Work.Service
@@ -26,24 +31,29 @@ export const MemoryTool = Tool.define(
               output: memories.length
                 ? memories.map((memory) => `${memory.id} ${memory.content}`).join("\n")
                 : "Nothing saved yet.",
-              metadata: {},
+              metadata: { count: memories.length },
             }
           }
           yield* ctx.ask({ permission: "memory", patterns: [params.action], always: ["*"], metadata: {} })
           if (params.action === "save") {
-            if (!params.content)
-              return { title: "Missing content", output: "Provide `content` to remember.", metadata: {} }
+            if (!params.content) return yield* Effect.fail(new Error("Provide `content` to remember."))
             const memory = yield* work.memory.save({ content: params.content, source: ctx.agent })
-            return { title: `Remembered: ${memory.content}`, output: `Saved ${memory.id}.`, metadata: {} }
+            return {
+              title: `Remembered: ${memory.content}`,
+              output: `Saved ${memory.id}.`,
+              metadata: { content: memory.content },
+            }
           }
-          if (!params.id) return { title: "Missing id", output: "Provide the memory `id` to forget.", metadata: {} }
-          const id = Work.MemoryID.make(params.id)
-          const output = yield* work.memory.remove(id).pipe(
-            Effect.as(`Forgot ${id}.`),
-            Effect.catchTag("Work.NotFoundError", () => Effect.succeed(`No memory with id ${id}.`)),
-          )
-          return { title: output, output, metadata: {} }
-        }),
+          if (!params.id) return yield* Effect.fail(new Error("Provide the memory `id` to forget."))
+          const memory = (yield* work.memory.list()).find((item) => item.id === params.id)
+          if (!memory) return yield* Effect.fail(new Error(`No memory with id ${params.id}.`))
+          yield* work.memory.remove(memory.id)
+          return {
+            title: `Forgot: ${memory.content}`,
+            output: `Forgot ${memory.id}.`,
+            metadata: { content: memory.content },
+          }
+        }).pipe(Effect.orDie),
     } satisfies Tool.DefWithoutID<typeof Parameters>
   }),
 )

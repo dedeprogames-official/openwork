@@ -1395,6 +1395,52 @@
         ]
       }
     },
+    "/work/message/clear": {
+      "post": {
+        "tags": ["work"],
+        "operationId": "work.message.clear",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Inbox cleared",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkMessageClearResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Delete every Agent Inbox message, or only the done ones.",
+        "summary": "Clear inbox",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkMessageClear"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.work.message.clear({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/work/todo": {
       "post": {
         "tags": ["work"],
@@ -29248,6 +29294,45 @@
             "type": "boolean"
           }
         },
+        "additionalProperties": false
+      },
+      "WorkMessageClear": {
+        "type": "object",
+        "properties": {
+          "done": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "WorkMessageClearResult": {
+        "type": "object",
+        "properties": {
+          "removed": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity", "-Infinity", "NaN"]
+              }
+            ]
+          }
+        },
+        "required": ["removed"],
         "additionalProperties": false
       },
       "WorkTodoCreate": {
