@@ -127,7 +127,7 @@ const LABELS: Record<string, (input: Values, metadata: Values) => Label> = {
     pending: "Searching the web…",
   }),
   task: (input) => ({
-    icon: "│",
+    icon: "↳",
     text: "Handed off a task",
     detail: text(input.description),
     pending: "Handing off a task…",
@@ -138,8 +138,14 @@ const LABELS: Record<string, (input: Values, metadata: Values) => Label> = {
   execute: () => ({ icon: "$", text: "Ran a script", pending: "Running a script…" }),
 }
 
+// Other tools (MCP servers, plugins) show their name and the first text they were given.
 function fallback(tool: string) {
-  return (): Label => ({ icon: "⚙", text: `Used ${tool}`, pending: `Using ${tool}…` })
+  return (input: Values): Label => ({
+    icon: "⚙",
+    text: `Used ${tool}`,
+    detail: Object.values(input).map(text).find(Boolean),
+    pending: `Using ${tool}…`,
+  })
 }
 
 // Picks the label for the tool's action; while the input is still streaming the action may not be known yet.

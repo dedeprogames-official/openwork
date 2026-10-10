@@ -88,17 +88,18 @@ export type Hint = readonly [string, string] | readonly [string, string, () => v
 export function Hints(props: { items: ReadonlyArray<Hint> }) {
   const { theme } = useTheme()
   return (
-    <box flexDirection="row" flexShrink={0} overflow="hidden">
+    // Narrow terminals wrap the hints onto more lines; each hint keeps its separator so a line never starts with one.
+    <box flexDirection="row" flexWrap="wrap" flexShrink={0}>
       <For each={props.items}>
         {(item, index) => (
-          <>
-            <Show when={index() > 0}>
+          <box flexDirection="row" flexShrink={0}>
+            <HintItem item={item} />
+            <Show when={index() < props.items.length - 1}>
               <text fg={theme.textMuted} flexShrink={0} wrapMode="none" selectable={false}>
                 {"  ·  "}
               </text>
             </Show>
-            <HintItem item={item} />
-          </>
+          </box>
         )}
       </For>
     </box>
