@@ -21,7 +21,9 @@ and still runs on the opencode harness (same sessions, tools, permissions, provi
 
 Chats use the new `work` agent: a knowledge-work persona (folders are workspaces, files are deliverables) that can use
 the inbox, todo, agenda and memory tools and can **deploy other agents** with the `deploy` tool — "check the Half
-Moon Bay cam every 10m and tell me if it's sunny" in a chat creates a scheduled agent.
+Moon Bay cam every 10m and tell me if it's sunny" in a chat creates a scheduled agent. In the chat and on the agent page
+each of these calls reads as one friendly line, such as "Remembered a memory · Dog is called Biscuit" or "Checked your
+agents · 17 agents".
 
 ## Installing it
 
@@ -101,6 +103,7 @@ the day only looks full later on.
 | ![Integrations](screenshots/13-integrations.png)           | ![Deploy an agent](screenshots/14-deploy.png)                            |
 | ![Deploy: pick a folder](screenshots/15-deploy-folder.png) | ![Commands](screenshots/16-command-palette.png)                          |
 | ![New chat](screenshots/17-new-chat.png)                   | ![Navigation collapsed](screenshots/18-nav-collapsed.png)                |
+| ![Chat with tools](screenshots/19-chat-tools.png)          |                                                                          |
 
 ## Releases
 

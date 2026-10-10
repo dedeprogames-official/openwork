@@ -82,6 +82,7 @@ import { OPENCODE_BASE_MODE, useBindings, useCommandShortcut, useOpencodeKeymap 
 import { usePathFormatter } from "../../context/path-format"
 import { LocationProvider } from "../../context/location"
 import { useShellInset } from "../../work/shell"
+import { toolLabel, WORK_TOOLS } from "../../work/tool-label"
 
 addDefaultParsers(parsers.parsers)
 
@@ -1783,6 +1784,9 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
         <Match when={display() === "skill"}>
           <Skill {...toolprops} />
         </Match>
+        <Match when={display() === "work"}>
+          <WorkTool {...toolprops} />
+        </Match>
         <Match when={true}>
           <GenericTool {...toolprops} />
         </Match>
@@ -2583,6 +2587,23 @@ function Skill(props: ToolProps) {
   )
 }
 
+// OpenWork's tools (inbox, todos, agenda, memory, deploy) read as one friendly line, e.g. "Remembered a memory".
+function WorkTool(props: ToolProps) {
+  const label = createMemo(() => toolLabel(props.part))
+  return (
+    <InlineTool
+      icon={label().icon}
+      pending={label().pending}
+      failure={label().failure}
+      complete={props.part.state.status === "completed"}
+      part={props.part}
+    >
+      {label().text}
+      <Show when={label().detail}>{(detail) => ` · ${detail()}`}</Show>
+    </InlineTool>
+  )
+}
+
 function Diagnostics(props: { diagnostics: unknown; filePath: string }) {
   const { theme } = useTheme()
   const terminalEnvironment = useTuiTerminalEnvironment()
@@ -2644,6 +2665,7 @@ const toolDisplays = new Set([
 ])
 
 export function toolDisplay(tool: string) {
+  if (WORK_TOOLS.has(tool)) return "work"
   return toolDisplays.has(tool) ? tool : "generic"
 }
 

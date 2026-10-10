@@ -17,7 +17,13 @@ export const Parameters = Schema.Struct({
   id: Schema.optional(Schema.String).annotate({ description: "The event id, for remove" }),
 })
 
-export const AgendaTool = Tool.define(
+type Metadata = {
+  count?: number
+  title?: string
+  startsAt?: number
+}
+
+export const AgendaTool = Tool.define<typeof Parameters, Metadata, Work.Service>(
   "agenda",
   Effect.gen(function* () {
     const work = yield* Work.Service
@@ -38,22 +44,24 @@ export const AgendaTool = Tool.define(
                     .map((event) => `${event.id} ${new Date(event.startsAt).toLocaleString()} ${event.title}`)
                     .join("\n")
                 : "Nothing on the agenda.",
-              metadata: {},
+              metadata: { count: events.length },
             }
           }
           yield* ctx.ask({ permission: "agenda", patterns: [params.action], always: ["*"], metadata: {} })
           if (params.action === "remove") {
-            if (!params.id) return { title: "Missing id", output: "Provide the event `id`.", metadata: {} }
-            const id = Work.AgendaID.make(params.id)
-            const output = yield* work.agenda.remove(id).pipe(
-              Effect.as(`Removed ${id}.`),
-              Effect.catchTag("Work.NotFoundError", () => Effect.succeed(`No event with id ${id}.`)),
-            )
-            return { title: output, output, metadata: {} }
+            if (!params.id) return yield* Effect.fail(new Error("Provide the event `id`."))
+            const event = (yield* work.agenda.list()).find((item) => item.id === params.id)
+            if (!event) return yield* Effect.fail(new Error(`No event with id ${params.id}.`))
+            yield* work.agenda.remove(event.id)
+            return {
+              title: `Removed: ${event.title}`,
+              output: `Removed ${event.id}.`,
+              metadata: { title: event.title, startsAt: event.startsAt },
+            }
           }
           const startsAt = time(params.starts_at, now)
           if (!params.title || startsAt === undefined)
-            return { title: "Missing details", output: "Provide `title` and a valid `starts_at`.", metadata: {} }
+            return yield* Effect.fail(new Error("Provide `title` and a valid `starts_at`."))
           const endsAt = time(params.ends_at, now)
           const space = params.space
             ? (yield* work.space.list()).find((item) => item.name.toLowerCase() === params.space?.toLowerCase())
@@ -68,9 +76,9 @@ export const AgendaTool = Tool.define(
           return {
             title: `Added: ${event.title}`,
             output: `Added ${event.id} at ${new Date(event.startsAt).toLocaleString()}.`,
-            metadata: {},
+            metadata: { title: event.title, startsAt: event.startsAt },
           }
-        }),
+        }).pipe(Effect.orDie),
     } satisfies Tool.DefWithoutID<typeof Parameters>
   }),
 )

@@ -17,6 +17,7 @@ import { Hints, Pill } from "../components"
 import { ACCESS, ago, clock, kind, money, schedule, tokens, truncate, until } from "../format"
 import { usePageKeys, usePressed } from "../keys"
 import { spaceColor } from "../palette"
+import { toolLabel } from "../tool-label"
 import { runTokens } from "../stats"
 
 export function AgentPage(props: { deploymentID: string }) {
@@ -287,16 +288,7 @@ function Activity(props: { part: Part; step: number; steps: number; onClick: () 
     >
       {(tool) => (
         <box paddingBottom={1} onMouseUp={() => pressed() && props.onClick()}>
-          <text wrapMode="none">
-            <span style={{ fg: theme.primary }}>⚙ </span>
-            <span style={{ fg: theme.text, bold: true }}>{tool().tool}</span>
-            <span style={{ fg: theme.textMuted }}>{"  " + truncate(title(tool()), 90)}</span>
-          </text>
-          <Show when={tool().state.status === "completed" || tool().state.status === "error"}>
-            <text fg={tool().state.status === "error" ? theme.error : theme.textMuted} wrapMode="word" paddingLeft={2}>
-              {truncate(detail(tool()), 220)}
-            </text>
-          </Show>
+          <ToolStep part={tool()} />
           <text fg={theme.textMuted} wrapMode="none">
             <span style={{ fg: theme.borderActive }}>▸ Step </span>
             {`  action ${props.step} of ${props.steps}`}
@@ -307,21 +299,30 @@ function Activity(props: { part: Part; step: number; steps: number; onClick: () 
   )
 }
 
-function describe(input: unknown) {
-  if (!input || typeof input !== "object") return ""
-  return Object.values(input)
-    .filter((value) => typeof value === "string")
-    .join(" · ")
-}
-
-function title(tool: ToolPart) {
-  if (tool.state.status === "completed" && tool.state.title) return tool.state.title
-  return describe(tool.state.input)
-}
-
-function detail(tool: ToolPart) {
-  if (tool.state.status === "error") return tool.state.error
-  if (tool.state.status !== "completed") return ""
-  if (tool.tool === "inbox") return describe(tool.state.input)
-  return tool.state.output
+// One friendly line per tool call ("Remembered a memory · Dog is called Biscuit"); failures add the error below it.
+function ToolStep(props: { part: ToolPart }) {
+  const { theme } = useTheme()
+  const label = createMemo(() => toolLabel(props.part))
+  const status = () => props.part.state.status
+  const error = () => (props.part.state.status === "error" ? props.part.state.error : undefined)
+  return (
+    <>
+      <text wrapMode="none">
+        <span style={{ fg: error() ? theme.error : theme.primary }}>{label().icon} </span>
+        <span style={{ fg: error() ? theme.error : theme.text, bold: true }}>
+          {status() === "completed" ? label().text : error() ? label().failure : label().pending}
+        </span>
+        <Show when={status() === "completed" && label().detail}>
+          {(detail) => <span style={{ fg: theme.textMuted }}>{" · " + truncate(detail(), 90)}</span>}
+        </Show>
+      </text>
+      <Show when={error()}>
+        {(message) => (
+          <text fg={theme.error} wrapMode="word" paddingLeft={2}>
+            {truncate(message(), 220)}
+          </text>
+        )}
+      </Show>
+    </>
+  )
 }
